@@ -1,9 +1,9 @@
 module github.com/VictoriaMetrics-Community/mcp-victoriametrics
 
-go 1.25.5
+go 1.25.6
 
 require (
-	github.com/VictoriaMetrics/VictoriaMetrics v1.133.0
+	github.com/VictoriaMetrics/VictoriaMetrics v1.134.0
 	github.com/VictoriaMetrics/metrics v1.40.2
 	github.com/VictoriaMetrics/metricsql v0.84.8
 	github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.0.4
