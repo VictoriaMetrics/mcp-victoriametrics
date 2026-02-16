@@ -2,7 +2,7 @@
 # syntax=docker/dockerfile:1
 
 # Build stage
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 
 # Install Git for potential dependencies and ca-certificates
