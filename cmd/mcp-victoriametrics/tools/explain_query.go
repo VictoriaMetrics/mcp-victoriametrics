@@ -30,6 +30,7 @@ var (
 			DestructiveHint: ptr(false),
 			OpenWorldHint:   ptr(false),
 		}),
+		withEnvironmentParam(),
 		mcp.WithString("query",
 			mcp.Required(),
 			mcp.Title("MetricsQL or PromQL expression"),
@@ -39,12 +40,17 @@ var (
 )
 
 func toolExplainQueryHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	query, err := GetToolReqParam[string](tcr, "query", true)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	info, err := getQueryInfo(ctx, cfg, tcr, query)
+	info, err := getQueryInfo(ctx, cfg, tcr, env, query)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("error explaining query: %s", err)), nil
 	}
@@ -72,7 +78,7 @@ func RegisterToolExplainQuery(s *server.MCPServer, c *config.Config) {
 	})
 }
 
-func getQueryInfo(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, query string) (map[string]any, error) {
+func getQueryInfo(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, env *config.InstanceConfig, query string) (map[string]any, error) {
 	expr, err := metricsql.Parse(query)
 	if err != nil {
 		return nil, fmt.Errorf("query parsing error: %w", err)
@@ -85,7 +91,7 @@ func getQueryInfo(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReque
 		"syntax_tree":    st,
 		"types_info":     getTypesDescriptions(types),
 		"functions_info": getFunctionsInfo(functions),
-		"metrics_info":   getMetricsInfo(ctx, cfg, tcr, metrics),
+		"metrics_info":   getMetricsInfo(ctx, cfg, tcr, env, metrics),
 	}
 	return result, nil
 }
@@ -129,13 +135,13 @@ var metricsMetadataDBDir embed.FS
 var metricsInfo map[string]any
 
 // fetchMetricsMetadataFromAPI fetches metrics metadata from VictoriaMetrics API
-func fetchMetricsMetadataFromAPI(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, metricNames []string) (map[string]metricInfo, error) {
+func fetchMetricsMetadataFromAPI(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, env *config.InstanceConfig, metricNames []string) (map[string]metricInfo, error) {
 	if len(metricNames) == 0 {
 		return make(map[string]metricInfo), nil
 	}
 
 	// Skip API fetch if config is not properly initialized
-	if cfg == nil || (cfg.EntryPointURL() == nil && !cfg.IsCloud()) {
+	if env == nil || (env.EntryPointURL() == nil && !env.IsCloud()) {
 		return make(map[string]metricInfo), nil
 	}
 
@@ -195,17 +201,17 @@ func fetchMetricsMetadataFromAPI(ctx context.Context, cfg *config.Config, tcr mc
 	return result, nil
 }
 
-func getMetricsInfo(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, metrics map[string]struct{}) map[string]metricInfo {
+func getMetricsInfo(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, env *config.InstanceConfig, metrics map[string]struct{}) map[string]metricInfo {
 	result := make(map[string]metricInfo)
 
 	// First, try to fetch metadata from API if config is available
-	if cfg != nil {
+	if env != nil {
 		metricNames := make([]string, 0, len(metrics))
 		for metric := range metrics {
 			metricNames = append(metricNames, metric)
 		}
 
-		apiMetadata, err := fetchMetricsMetadataFromAPI(ctx, cfg, tcr, metricNames)
+		apiMetadata, err := fetchMetricsMetadataFromAPI(ctx, cfg, tcr, env, metricNames)
 		if err == nil && len(apiMetadata) > 0 {
 			// Use API metadata
 			for metric, info := range apiMetadata {

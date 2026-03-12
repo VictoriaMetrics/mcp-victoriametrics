@@ -48,7 +48,7 @@ This tool use "/downsampling-filters-debug" API endpoint of VictoriaMetrics API.
 			mcp.Pattern(`^([a-zA-Z_]*\{\s*(([a-zA-Z-_]+\s*\=\s*\".*\"))?(\s*,\s*([a-zA-Z-_]+\s*\=\s*\".*\"))*\s*\}\n)+$`),
 		),
 	)
-	return mcp.NewTool(toolNameDownsamplingFiltersDebug, options...)
+	return mcp.NewTool(toolNameDownsamplingFiltersDebug, append(options, withEnvironmentParam())...)
 }
 
 func toolDownsamplingFiltersDebugHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

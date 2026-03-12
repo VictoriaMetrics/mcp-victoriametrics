@@ -23,11 +23,17 @@ func toolDeployments(_ *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	return mcp.NewTool(toolNameDeployments, options...)
+	return mcp.NewTool(toolNameDeployments, append(options, withEnvironmentParam())...)
 }
 
-func toolDeploymentsHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	deployments, err := cfg.VMC().ListDeployments(ctx)
+func toolDeploymentsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	deployments, err := env.VMC().ListDeployments(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list deployments: %v", err)), nil
 	}

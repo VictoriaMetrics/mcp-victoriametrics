@@ -82,7 +82,7 @@ func toolQueryRange(c *config.Config) mcp.Tool {
 			mcp.DefaultBool(false),
 		),
 	)
-	return mcp.NewTool(toolNameQueryRange, options...)
+	return mcp.NewTool(toolNameQueryRange, append(options, withEnvironmentParam())...)
 }
 
 func toolQueryRangeHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

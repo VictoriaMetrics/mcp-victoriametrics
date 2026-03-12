@@ -52,10 +52,16 @@ func toolPrettifyQuery(c *config.Config) mcp.Tool {
 			mcp.Description(`MetricsQL or PromQL expression for prettification. This is the query that will be formatted.`),
 		),
 	)
-	return mcp.NewTool(toolNamePrettifyQuery, options...)
+	return mcp.NewTool(toolNamePrettifyQuery, append(options, withEnvironmentParam())...)
 }
 
 func toolPrettifyQueryHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
 	query, err := GetToolReqParam[string](tcr, "query", true)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -72,7 +78,7 @@ func toolPrettifyQueryHandler(ctx context.Context, cfg *config.Config, tcr mcp.C
 			return mcp.NewToolResultError(fmt.Sprintf("failed to marshal result: %v", err)), nil
 		}
 		return mcp.NewToolResultText(string(data)), nil
-	} else if cfg.IsCloud() {
+	} else if env.IsCloud() {
 		deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", false)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil

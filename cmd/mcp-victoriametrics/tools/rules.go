@@ -78,7 +78,7 @@ func toolRules(c *config.Config) mcp.Tool {
 			mcp.Items(map[string]any{"type": "string"}),
 		),
 	)
-	return mcp.NewTool(toolNameRules, options...)
+	return mcp.NewTool(toolNameRules, append(options, withEnvironmentParam())...)
 }
 
 func toolRulesHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

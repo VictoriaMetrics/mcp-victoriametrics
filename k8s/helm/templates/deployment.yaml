@@ -1,4 +1,6 @@
-{{- $isCloud := gt (len .Values.vm.cloudAPIKey) 0 }}
+{{- if and .Values.vm.entrypoint (osEnv "VM_ENVIRONMENTS") }}
+{{- fail "Cannot set both .Values.vm.entrypoint and VM_ENVIRONMENTS. Please use only one configuration mode." }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,14 +44,18 @@ spec:
               value: "0.0.0.0:{{  .Values.service.port }}"
             - name: MCP_SERVER_MODE
               value: "{{ .Values.mcp.mode }}"
-            {{- if $isCloud }}
+            {{- with .Values.vm.cloudAPIKey }}
             - name: VMC_API_KEY
-              value: "{{ .Values.vm.cloudAPIKey }}"
-            {{- else }}
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.vm.entrypoint }}
             - name: VM_INSTANCE_ENTRYPOINT
-              value: "{{ required "either .Values.vm.cloudAPIKey or .Values.vm.entrypoint should be set" .Values.vm.entrypoint }}"
+              value: "{{ . }}"
+            {{- end }}
+            {{- with .Values.vm.type }}
             - name: VM_INSTANCE_TYPE
-              value: "{{ .Values.vm.type }}"
+              value: "{{ . }}"
+            {{- end }}
             {{- with .Values.vm.bearerToken }}
             - name: VM_INSTANCE_BEARER_TOKEN
               {{- if kindIs "map" . }}
@@ -57,7 +63,6 @@ spec:
               {{- else }}
               value: "{{ . }}"
               {{- end }}
-            {{- end }}
             {{- end }}
             {{- with .Values.vm.headers }}
             - name: VM_INSTANCE_HEADERS
@@ -80,7 +85,7 @@ spec:
             {{- end }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              container_Port: {{ .Values.service.port }}
               protocol: TCP
           {{- with .Values.livenessProbe }}
           livenessProbe: {{ toYaml . | nindent 12 }}

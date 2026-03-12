@@ -32,10 +32,16 @@ func toolAccessTokens(_ *config.Config) mcp.Tool {
 			mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
 		),
 	)
-	return mcp.NewTool(toolNameAccessTokens, options...)
+	return mcp.NewTool(toolNameAccessTokens, append(options, withEnvironmentParam())...)
 }
 
 func toolAccessTokensHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
 	deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
@@ -43,7 +49,7 @@ func toolAccessTokensHandler(ctx context.Context, cfg *config.Config, tcr mcp.Ca
 	if deploymentID == "" {
 		return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
 	}
-	accessTokens, err := cfg.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
+	accessTokens, err := env.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list access_tokens: %v", err)), nil
 	}

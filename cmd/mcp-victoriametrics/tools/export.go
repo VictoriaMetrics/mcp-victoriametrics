@@ -72,7 +72,7 @@ func toolExport(c *config.Config) mcp.Tool {
 		),
 	)
 
-	return mcp.NewTool(toolNameExport, options...)
+	return mcp.NewTool(toolNameExport, append(options, withEnvironmentParam())...)
 }
 
 func toolExportHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

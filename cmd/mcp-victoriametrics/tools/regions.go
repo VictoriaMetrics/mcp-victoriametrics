@@ -23,11 +23,17 @@ func toolRegions(_ *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	return mcp.NewTool(toolNameRegions, options...)
+	return mcp.NewTool(toolNameRegions, append(options, withEnvironmentParam())...)
 }
 
-func toolRegionsHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	regions, err := cfg.VMC().ListRegions(ctx)
+func toolRegionsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	regions, err := env.VMC().ListRegions(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list regions: %v", err)), nil
 	}

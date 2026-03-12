@@ -82,7 +82,7 @@ This tool returns TSDB stats from "/api/v1/status/tsdb" endpoint of VictoriaMetr
 			mcp.DefaultString(""),
 		),
 	)
-	return mcp.NewTool(toolNameTSDBStatus, options...)
+	return mcp.NewTool(toolNameTSDBStatus, append(options, withEnvironmentParam())...)
 }
 
 func toolTSDBStatusHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
