@@ -61,7 +61,7 @@ func toolMetricStats(c *config.Config) mcp.Tool {
 			mcp.Description("less than or equal, is an integer threshold for filtering metric names by their usage count in queries. For example, with ?le=1 API returns metric names that were queried <=1 times."),
 		),
 	)
-	return mcp.NewTool(toolNameMetricStats, options...)
+	return mcp.NewTool(toolNameMetricStats, append(options, withEnvironmentParam())...)
 }
 
 func toolMetricStatsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

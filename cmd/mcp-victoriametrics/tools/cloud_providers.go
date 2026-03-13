@@ -23,11 +23,17 @@ func toolCloudProviders(_ *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	return mcp.NewTool(toolNameCloudProviders, options...)
+	return mcp.NewTool(toolNameCloudProviders, append(options, withEnvironmentParam())...)
 }
 
-func toolCloudProvidersHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	cloudProviders, err := cfg.VMC().ListCloudProviders(ctx)
+func toolCloudProvidersHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	cloudProviders, err := env.VMC().ListCloudProviders(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list cloud providers: %v", err)), nil
 	}

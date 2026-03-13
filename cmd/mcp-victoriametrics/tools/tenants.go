@@ -32,7 +32,7 @@ func toolTenants(c *config.Config) mcp.Tool {
 			),
 		)
 	}
-	return mcp.NewTool(toolNameTenants, options...)
+	return mcp.NewTool(toolNameTenants, append(options, withEnvironmentParam())...)
 }
 
 func toolTenantsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

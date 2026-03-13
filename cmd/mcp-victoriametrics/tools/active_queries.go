@@ -44,7 +44,7 @@ This information is obtained from the "/api/v1/status/active_queries" HTTP endpo
 			),
 		)
 	}
-	return mcp.NewTool(toolNameActiveQueries, options...)
+	return mcp.NewTool(toolNameActiveQueries, append(options, withEnvironmentParam())...)
 }
 
 func toolActiveQueriesHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -48,7 +48,7 @@ The tool use "/metric-relabel-debug" endpoint of the VictoriaMetrics API. `),
 			mcp.Pattern(`^\{\s*(([a-zA-Z-_]+\s*\=\s*\".*\"))?(\s*,\s*([a-zA-Z-_]+\s*\=\s*\".*\"))*\s*\}$`),
 		),
 	)
-	return mcp.NewTool(toolNameMetricRelabelDebug, options...)
+	return mcp.NewTool(toolNameMetricRelabelDebug, append(options, withEnvironmentParam())...)
 }
 
 func toolMetricRelabelDebugHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

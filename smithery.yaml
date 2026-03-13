@@ -5,33 +5,101 @@ startCommand:
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
-    (config) => ({
-      command: 'mcp-victoriametrics',
-      args: [],
-      env: {
-        VM_INSTANCE_ENTRYPOINT: config.vmInstanceEntrypoint,
-        VM_INSTANCE_TYPE: config.vmInstanceType,
-        ...(config.vmInstanceBearerToken ? {VM_INSTANCE_BEARER_TOKEN: config.vmInstanceBearerToken} : {}),
+    (config) => {
+      const env = {};
+
+      if (config.vmEnvironments && Object.keys(config.vmEnvironments).length > 0) {
+        const environmentNames = Object.keys(config.vmEnvironments);
+        env.VM_ENVIRONMENTS = environmentNames.join(',');
+        if (config.vmDefaultEnvironment) {
+          env.VM_DEFAULT_ENVIRONMENT = config.vmDefaultEnvironment;
+        }
+
+        for (const [name, value] of Object.entries(config.vmEnvironments)) {
+          const suffix = name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+          const prefix = `VM_INSTANCE_${suffix}_`;
+          env[`${prefix}ENTRYPOINT`] = value.entrypoint;
+          env[`${prefix}TYPE`] = value.type;
+          if (value.bearerToken) {
+            env[`${prefix}BEARER_TOKEN`] = value.bearerToken;
+          }
+          if (value.headers && value.headers.length > 0) {
+            env[`${prefix}HEADERS`] = value.headers.join(',');
+          }
+          if (value.defaultTenantId) {
+            env[`${prefix}DEFAULT_TENANT_ID`] = value.defaultTenantId;
+          }
+        }
+      } else {
+        env.VM_INSTANCE_ENTRYPOINT = config.vmInstanceEntrypoint;
+        env.VM_INSTANCE_TYPE = config.vmInstanceType;
+        if (config.vmInstanceBearerToken) {
+          env.VM_INSTANCE_BEARER_TOKEN = config.vmInstanceBearerToken;
+        }
       }
-    })
+
+      return {
+        command: 'mcp-victoriametrics',
+        args: [],
+        env,
+      };
+    }
   configSchema:
     # JSON Schema defining the configuration options for the MCP.
     type: object
-    required:
-      - vmInstanceEntrypoint
-      - vmInstanceType
     properties:
       vmInstanceEntrypoint:
         type: string
         description: URL to VictoriaMetrics instance
       vmInstanceType:
-        type:  string
+        type: string
         enum: [cluster, single]
         description: Type of VictoriaMetrics instance (cluster/single)
       vmInstanceBearerToken:
         type: string
         default: ""
         description: Authentication token for VictoriaMetrics API
+      vmDefaultEnvironment:
+        type: string
+        default: ""
+        description: Default environment used when a tool call omits env
+      vmEnvironments:
+        type: object
+        minProperties: 1
+        description: Named VictoriaMetrics environments exposed by a single MCP instance
+        additionalProperties:
+          type: object
+          required:
+            - entrypoint
+            - type
+          properties:
+            entrypoint:
+              type: string
+              description: URL to the VictoriaMetrics instance for this environment
+            type:
+              type: string
+              enum: [cluster, single]
+              description: Type of VictoriaMetrics instance (cluster/single) for this environment
+            bearerToken:
+              type: string
+              default: ""
+              description: Authentication token for this environment
+            headers:
+              type: array
+              default: []
+              description: Custom headers for this environment in key=value format
+              items:
+                type: string
+            defaultTenantId:
+              type: string
+              default: ""
+              description: Default tenant ID for this environment
+    oneOf:
+      - required:
+          - vmInstanceEntrypoint
+          - vmInstanceType
+      - required:
+          - vmEnvironments
   exampleConfig:
     vmInstanceEntrypoint: https://play.victoriametrics.com
     vmInstanceType: cluster

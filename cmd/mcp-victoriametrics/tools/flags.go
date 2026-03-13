@@ -35,11 +35,17 @@ func toolFlags(c *config.Config) mcp.Tool {
 			),
 		)
 	}
-	return mcp.NewTool(toolNameFlags, options...)
+	return mcp.NewTool(toolNameFlags, append(options, withEnvironmentParam())...)
 }
 
 func toolFlagsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if cfg.IsCloud() {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	if env.IsCloud() {
 		deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
@@ -47,7 +53,7 @@ func toolFlagsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolR
 		if deploymentID == "" {
 			return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
 		}
-		dd, err := cfg.VMC().GetDeploymentDetails(ctx, deploymentID)
+		dd, err := env.VMC().GetDeploymentDetails(ctx, deploymentID)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment details: %v", err)), nil
 		}

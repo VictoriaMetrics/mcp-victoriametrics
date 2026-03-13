@@ -69,7 +69,7 @@ func toolMetrics(c *config.Config) mcp.Tool {
 			mcp.Min(0),
 		),
 	)
-	return mcp.NewTool(toolNameMetrics, options...)
+	return mcp.NewTool(toolNameMetrics, append(options, withEnvironmentParam())...)
 }
 
 func toolMetricsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

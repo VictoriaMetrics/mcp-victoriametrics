@@ -66,7 +66,7 @@ This information is obtained from the "/api/v1/status/top_queries" HTTP endpoint
 			mcp.Pattern(`^([0-9]+)([a-z]+)$`),
 		),
 	)
-	return mcp.NewTool(toolNameTopQueries, options...)
+	return mcp.NewTool(toolNameTopQueries, append(options, withEnvironmentParam())...)
 }
 
 func toolTopQueriesHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

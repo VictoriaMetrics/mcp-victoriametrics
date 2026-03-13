@@ -76,7 +76,7 @@ func toolLabelsValues(c *config.Config) mcp.Tool {
 			mcp.Min(0),
 		),
 	)
-	return mcp.NewTool(toolNameLabelValues, options...)
+	return mcp.NewTool(toolNameLabelValues, append(options, withEnvironmentParam())...)
 }
 
 func toolLabelValuesHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

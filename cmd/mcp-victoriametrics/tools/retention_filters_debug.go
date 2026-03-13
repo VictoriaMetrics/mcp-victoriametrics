@@ -47,7 +47,7 @@ This tool use "/retention-filters-debug" API endpoint of VictoriaMetrics API.`),
 			mcp.Pattern(`^([a-zA-Z_]*\{\s*(([a-zA-Z-_]+\s*\=\s*\".*\"))?(\s*,\s*([a-zA-Z-_]+\s*\=\s*\".*\"))*\s*\}\n)+$`),
 		),
 	)
-	return mcp.NewTool(toolNameRetentionFiltersDebug, options...)
+	return mcp.NewTool(toolNameRetentionFiltersDebug, append(options, withEnvironmentParam())...)
 }
 
 func toolRetentionFiltersDebugHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

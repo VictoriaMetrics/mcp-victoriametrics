@@ -42,10 +42,16 @@ func toolRuleFile(_ *config.Config) mcp.Tool {
 			mcp.Max(255),
 		),
 	)
-	return mcp.NewTool(toolNameRuleFile, options...)
+	return mcp.NewTool(toolNameRuleFile, append(options, withEnvironmentParam())...)
 }
 
 func toolRuleFileHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
 	deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
@@ -59,7 +65,7 @@ func toolRuleFileHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallTo
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get rules_filename parameter: %v", err)), nil
 	}
 
-	ruleFilenames, err := cfg.VMC().GetDeploymentRuleFileContent(ctx, deploymentID, filename)
+	ruleFilenames, err := env.VMC().GetDeploymentRuleFileContent(ctx, deploymentID, filename)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list of rule filenames: %v", err)), nil
 	}

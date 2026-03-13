@@ -235,15 +235,11 @@ func TestGetToolReqParamStringSlice(t *testing.T) {
 
 // TestGetSelectURLWithDefaultTenant tests that getSelectURL uses default tenant from config
 func TestGetSelectURLWithDefaultTenant(t *testing.T) {
-	originalEntrypoint := os.Getenv("VM_INSTANCE_ENTRYPOINT")
-	originalInstanceType := os.Getenv("VM_INSTANCE_TYPE")
-	originalDefaultTenantID := os.Getenv("VM_DEFAULT_TENANT_ID")
-
-	defer func() {
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", originalEntrypoint)
-		os.Setenv("VM_INSTANCE_TYPE", originalInstanceType)
-		os.Setenv("VM_DEFAULT_TENANT_ID", originalDefaultTenantID)
-	}()
+	// Clear env for clean state
+	os.Unsetenv("VM_INSTANCE_ENTRYPOINT")
+	os.Unsetenv("VM_INSTANCE_TYPE")
+	os.Unsetenv("VM_DEFAULT_TENANT_ID")
+	os.Unsetenv("VM_ENVIRONMENTS")
 
 	testCases := []struct {
 		name            string
@@ -313,7 +309,9 @@ func TestGetSelectURLWithDefaultTenant(t *testing.T) {
 				tcr.Params.Arguments = map[string]any{"tenant": tc.requestTenant}
 			}
 
-			url, err := getSelectURL(context.Background(), cfg, tcr, "api", "v1", "query")
+			// Environment lookup in test context
+			env, _ := cfg.Environment("")
+			url, err := getSelectURL(context.Background(), env, tcr, "api", "v1", "query")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -323,4 +321,69 @@ func TestGetSelectURLWithDefaultTenant(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestEnvRouting tests that requests are routed to the correct environment
+func TestEnvRouting(t *testing.T) {
+	// Clear env for clean state
+	os.Unsetenv("VM_INSTANCE_ENTRYPOINT")
+	os.Unsetenv("VM_INSTANCE_TYPE")
+	os.Unsetenv("VM_INSTANCE_BEARER_TOKEN")
+	os.Unsetenv("VM_INSTANCE_HEADERS")
+	os.Unsetenv("VM_DEFAULT_TENANT_ID")
+	os.Unsetenv("VM_INSTANCE_DEFAULT_ENTRYPOINT")
+	os.Unsetenv("VM_INSTANCE_DEFAULT_TYPE")
+	os.Unsetenv("VM_INSTANCE_DEMO_ENTRYPOINT")
+	os.Unsetenv("VM_INSTANCE_DEMO_TYPE")
+	os.Setenv("VM_ENVIRONMENTS", "default,demo")
+	os.Setenv("VM_INSTANCE_DEFAULT_ENTRYPOINT", "http://default.com")
+	os.Setenv("VM_INSTANCE_DEFAULT_TYPE", "single")
+	os.Setenv("VM_INSTANCE_DEMO_ENTRYPOINT", "http://demo.com")
+	os.Setenv("VM_INSTANCE_DEMO_TYPE", "single")
+
+	cfg, err := config.InitConfig()
+	if err != nil {
+		t.Fatalf("Failed to create config: %v", err)
+	}
+
+	t.Run("Route to default environment", func(t *testing.T) {
+		tcr := mcp.CallToolRequest{}
+		tcr.Params.Arguments = map[string]any{"env": "default"}
+
+		env, err := getToolEnvironment(cfg, tcr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		url, _ := getSelectURL(context.Background(), env, tcr, "api", "v1", "query")
+		if url != "http://default.com/api/v1/query" {
+			t.Errorf("Expected default URL, got %q", url)
+		}
+	})
+
+	t.Run("Route to demo environment", func(t *testing.T) {
+		tcr := mcp.CallToolRequest{}
+		tcr.Params.Arguments = map[string]any{"env": "demo"}
+
+		env, err := getToolEnvironment(cfg, tcr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		url, _ := getSelectURL(context.Background(), env, tcr, "api", "v1", "query")
+		if url != "http://demo.com/api/v1/query" {
+			t.Errorf("Expected demo URL, got %q", url)
+		}
+	})
+
+	t.Run("Route to default when env is omitted", func(t *testing.T) {
+		tcr := mcp.CallToolRequest{}
+
+		env, err := getToolEnvironment(cfg, tcr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		url, _ := getSelectURL(context.Background(), env, tcr, "api", "v1", "query")
+		if url != "http://default.com/api/v1/query" {
+			t.Errorf("Expected default URL, got %q", url)
+		}
+	})
 }

@@ -32,10 +32,16 @@ func toolRuleFilenames(_ *config.Config) mcp.Tool {
 			mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
 		),
 	)
-	return mcp.NewTool(toolNameRuleFilenames, options...)
+	return mcp.NewTool(toolNameRuleFilenames, append(options, withEnvironmentParam())...)
 }
 
 func toolRuleFilenamesHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
 	deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
@@ -43,7 +49,7 @@ func toolRuleFilenamesHandler(ctx context.Context, cfg *config.Config, tcr mcp.C
 	if deploymentID == "" {
 		return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
 	}
-	ruleFilenames, err := cfg.VMC().ListDeploymentRuleFileNames(ctx, deploymentID)
+	ruleFilenames, err := env.VMC().ListDeploymentRuleFileNames(ctx, deploymentID)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list of rule filenames: %v", err)), nil
 	}

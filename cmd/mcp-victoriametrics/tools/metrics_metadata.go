@@ -75,7 +75,7 @@ func toolMetricsMetadata(c *config.Config) mcp.Tool {
 			mcp.Min(0),
 		),
 	)
-	return mcp.NewTool(toolNameMetricsMetadata, options...)
+	return mcp.NewTool(toolNameMetricsMetadata, append(options, withEnvironmentParam())...)
 }
 
 func toolMetricsMetadataHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

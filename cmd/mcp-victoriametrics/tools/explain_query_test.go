@@ -203,8 +203,9 @@ func TestGetQueryInfo(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			env, _ := cfg.Environment("")
 			// Call the function
-			info, err := getQueryInfo(context.Background(), cfg, tcr, tc.query)
+			info, err := getQueryInfo(context.Background(), cfg, tcr, env, tc.query)
 
 			// Check for errors
 			if tc.expectError {

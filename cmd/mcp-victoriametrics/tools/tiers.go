@@ -23,11 +23,17 @@ func toolTiers(_ *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	return mcp.NewTool(toolNameTiers, options...)
+	return mcp.NewTool(toolNameTiers, append(options, withEnvironmentParam())...)
 }
 
-func toolTiersHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tiers, err := cfg.VMC().ListTiers(ctx)
+func toolTiersHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	envName, _ := GetToolReqParam[string](tcr, "env", false)
+	env, err := cfg.Environment(envName)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	tiers, err := env.VMC().ListTiers(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list tiers: %v", err)), nil
 	}

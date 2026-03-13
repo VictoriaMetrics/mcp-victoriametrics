@@ -69,7 +69,7 @@ func toolSeries(c *config.Config) mcp.Tool {
 			mcp.Min(0),
 		),
 	)
-	return mcp.NewTool(toolNameSeries, options...)
+	return mcp.NewTool(toolNameSeries, append(options, withEnvironmentParam())...)
 }
 
 func toolSeriesHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

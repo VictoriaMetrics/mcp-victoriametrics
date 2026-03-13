@@ -71,7 +71,7 @@ func toolAlerts(c *config.Config) mcp.Tool {
 			mcp.DefaultNumber(0),
 		),
 	)
-	return mcp.NewTool(toolNameAlerts, options...)
+	return mcp.NewTool(toolNameAlerts, append(options, withEnvironmentParam())...)
 }
 
 func toolAlertsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {

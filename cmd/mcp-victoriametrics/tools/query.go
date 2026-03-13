@@ -76,7 +76,7 @@ func toolQuery(c *config.Config) mcp.Tool {
 			mcp.DefaultBool(false),
 		),
 	)
-	return mcp.NewTool(toolNameQuery, options...)
+	return mcp.NewTool(toolNameQuery, append(options, withEnvironmentParam())...)
 }
 
 func toolQueryHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
