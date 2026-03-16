@@ -6,8 +6,8 @@ cloud.google.com/go/compute/metadata
 github.com/RoaringBitmap/roaring/v2
 github.com/RoaringBitmap/roaring/v2/internal
 github.com/RoaringBitmap/roaring/v2/roaring64
-# github.com/VictoriaMetrics/VictoriaLogs v1.36.2-0.20251008164716-21c0fb3de84d
-## explicit; go 1.25.2
+# github.com/VictoriaMetrics/VictoriaLogs v1.36.2-0.20251008164716-21c0fb3de84d => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032
+## explicit; go 1.26.0
 github.com/VictoriaMetrics/VictoriaLogs/lib/logstorage
 github.com/VictoriaMetrics/VictoriaLogs/lib/prefixfilter
 # github.com/VictoriaMetrics/VictoriaMetrics v1.137.0
@@ -501,3 +501,4 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
+# github.com/VictoriaMetrics/VictoriaLogs => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032

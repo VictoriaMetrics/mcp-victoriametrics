@@ -13,6 +13,11 @@ builds:
       - arm64
       - arm
       - "386"
+    ignore:
+      - goos: darwin
+        goarch: '386'
+      - goos: windows
+        goarch: arm
     main: ./cmd/mcp-victoriametrics/main.go
     binary: mcp-victoriametrics
     ldflags:
@@ -44,7 +49,7 @@ changelog:
 
 dockers_v2:
   - images:
-      - "ghcr.io/victoriametrics-community/mcp-victoriametrics"
+      - "ghcr.io/victoriametrics/mcp-victoriametrics"
     tags:
       - latest
       - "{{ .Version }}"
@@ -59,7 +64,7 @@ dockers_v2:
       "org.opencontainers.image.created": "{{.Date}}"
       "org.opencontainers.image.revision": "{{.FullCommit}}"
       "org.opencontainers.image.licenses": "Apache-2.0"
-      "io.modelcontextprotocol.server.name": "io.github.VictoriaMetrics-Community/mcp-victoriametrics"
+      "io.modelcontextprotocol.server.name": "io.github.VictoriaMetrics/mcp-victoriametrics"
     annotations:
       "project": "{{.ProjectName}}"
     platforms:
