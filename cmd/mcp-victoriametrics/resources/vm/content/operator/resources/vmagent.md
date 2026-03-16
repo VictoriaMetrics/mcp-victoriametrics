@@ -17,7 +17,7 @@ tags:
 The `VMAgent` CRD declaratively defines a desired [VMAgent](https://docs.victoriametrics.com/victoriametrics/vmagent/)
 setup to run in a Kubernetes cluster.
 
-It requires access to Kubernetes API and you can create RBAC for it first, it can be found 
+It requires access to Kubernetes API and you can create RBAC for it first, it can be found
 at [`examples/vmagent_rbac.yaml`](https://github.com/VictoriaMetrics/operator/blob/master/config/examples/vmagent_rbac.yaml)
 Or you can use default rbac account, that will be created for `VMAgent` by operator automatically.
 
@@ -40,7 +40,7 @@ so user can set custom configuration while still benefiting from the Operator's 
 
 You can see the full actual specification of the `VMAgent` resource in the **[API docs -> VMAgent](https://docs.victoriametrics.com/operator/api/#vmagent)**.
 
-If you can't find necessary field in the specification of the custom resource, 
+If you can't find necessary field in the specification of the custom resource,
 see [Extra arguments section](https://docs.victoriametrics.com/operator/resources/vmagent/#extra-arguments).
 
 Also, you can check out the [examples](https://docs.victoriametrics.com/operator/resources/vmagent/#examples) section.
@@ -56,44 +56,42 @@ Also, you can check out the [examples](https://docs.victoriametrics.com/operator
 - [VMProbe](https://docs.victoriametrics.com/operator/resources/vmprobe/)
 - [VMScrapeConfig](https://docs.victoriametrics.com/operator/resources/vmscrapeconfig/)
 
-These objects tell VMAgent from which targets and how to collect metrics and 
-generate part of [VMAgent](https://docs.victoriametrics.com/victoriametrics/vmagent/) scrape configuration.
+These objects specify which targets VMAgent should scrape and how to collect metrics, and generate part of [VMAgent](https://docs.victoriametrics.com/victoriametrics/vmagent/) scrape configuration.
 
-For filtering scrape objects `VMAgent` uses selectors. 
-Selectors are defined with suffixes - `NamespaceSelector` and `Selector` for each type of scrape objects in spec of `VMAgent`:
+`VMAgent` uses selectors to filter scrape objects. Selectors are defined using the `NamespaceSelector` and `Selector` suffixes for each scrape object type in the VMAgent spec:
 
-- `serviceScrapeNamespaceSelector` and `serviceScrapeSelector` for selecting [VMServiceScrape](https://docs.victoriametrics.com/operator/resources/vmservicescrape/) objects,
-- `podScrapeNamespaceSelector` and `podScrapeSelector` for selecting [VMPodScrape](https://docs.victoriametrics.com/operator/resources/vmpodscrape/) objects,
-- `probeNamespaceSelector` and `probeSelector` for selecting [VMProbe](https://docs.victoriametrics.com/operator/resources/vmprobe/) objects,
-- `staticScrapeNamespaceSelector` and `staticScrapeSelector` for selecting [VMStaticScrape](https://docs.victoriametrics.com/operator/resources/vmstaticscrape/) objects,
-- `nodeScrapeNamespaceSelector` and `nodeScrapeSelector` for selecting [VMNodeScrape](https://docs.victoriametrics.com/operator/resources/vmnodescrape/) objects.
-- `scrapeConfigNamespaceSelector` and `scrapeConfigSelector` for selecting [VMScrapeConfig](https://docs.victoriametrics.com/operator/resources/vmscrapeconfig/) objects.
+- `serviceScrapeNamespaceSelector` and `serviceScrapeSelector` for [VMServiceScrape](https://docs.victoriametrics.com/operator/resources/vmservicescrape/) objects,
+- `podScrapeNamespaceSelector` and `podScrapeSelector` for [VMPodScrape](https://docs.victoriametrics.com/operator/resources/vmpodscrape/) objects,
+- `probeNamespaceSelector` and `probeSelector` for [VMProbe](https://docs.victoriametrics.com/operator/resources/vmprobe/) objects,
+- `staticScrapeNamespaceSelector` and `staticScrapeSelector` for [VMStaticScrape](https://docs.victoriametrics.com/operator/resources/vmstaticscrape/) objects,
+- `nodeScrapeNamespaceSelector` and `nodeScrapeSelector` for [VMNodeScrape](https://docs.victoriametrics.com/operator/resources/vmnodescrape/) objects.
+- `scrapeConfigNamespaceSelector` and `scrapeConfigSelector` for [VMScrapeConfig](https://docs.victoriametrics.com/operator/resources/vmscrapeconfig/) objects.
 
-It allows configuring objects access control across namespaces and different environments. 
-Specification of selectors you can see in [this doc](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta/).
+This enables access control configuration for objects across namespaces.
+See [this doc](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#labelselector-v1-meta/) for selector specifications.
 
-In addition to the above selectors, the filtering of objects in a cluster is affected by the field `selectAllByDefault` of `VMAgent` spec and environment variable `WATCH_NAMESPACE` for operator.
+In addition to these selectors, object filtering in a cluster can be done by the `selectAllByDefault` VMAgent spec field and the operator's `WATCH_NAMESPACE` environment variable.
 
 Following rules are applied:
 
-- If `...NamespaceSelector` and `...Selector` both undefined, then by default select nothing. With option set - `spec.selectAllByDefault: true`, select all objects of given type.
-- If `...NamespaceSelector` defined, `...Selector` undefined, then all objects are matching at namespaces for given `...NamespaceSelector`.
-- If `...NamespaceSelector` undefined, `...Selector` defined, then all objects at `VMAgent`'s namespaces are matching for given `...Selector`.
-- If `...NamespaceSelector` and `...Selector` both defined, then only objects at namespaces matched `...NamespaceSelector` for given `...Selector` are matching.
+- If both `...NamespaceSelector` and `...Selector` are undefined, no objects are selected by default. Setting `spec.selectAllByDefault: true` selects all objects of the given type.
+- If `...NamespaceSelector` is defined and `...Selector` is undefined, all objects in the namespaces matched by ...NamespaceSelector are selected.
+- If `...NamespaceSelector` is undefined and `...Selector` is defined, all objects in VMAgent’s namespaces matching ...Selector are selected.
+- If `...NamespaceSelector` and `...Selector` both are defined, then only objects in the namespaces matched by...NamespaceSelector for the given ...Selector are matching.
 
-Here's a more visual and more detailed view:
+Below is a more visual and detailed view:
 
 | `...NamespaceSelector` | `...Selector` | `selectAllByDefault` | `WATCH_NAMESPACE` | Selected objects                                                                                            |
 |------------------------|---------------|----------------------|-------------------|-------------------------------------------------------------------------------------------------------------|
 | undefined              | undefined     | false                | undefined         | nothing                                                                                                     |
 | undefined              | undefined     | **true**             | undefined         | all objects of given type (`...`) in the cluster                                                            |
 | **defined**            | undefined     | *any*                | undefined         | all objects of given type (`...`) at namespaces for given `...NamespaceSelector`                            |
-| undefined              | **defined**   | *any*                | undefined         | all objects of given type (`...`) only at `VMAgent`'s namespace are matching for given `Selector            |
+| undefined              | **defined**   | *any*                | undefined         | all objects of given type (`...`) only at `VMAgent`'s namespace are matching for given `Selector`           |
 | **defined**            | **defined**   | *any*                | undefined         | all objects of given type (`...`) only at namespaces matched `...NamespaceSelector` for given `...Selector` |
 | *any*                  | undefined     | *any*                | **defined**       | all objects of given type (`...`) only at `VMAgent`'s namespace                                             |
 | *any*                  | **defined**   | *any*                | **defined**       | all objects of given type (`...`) only at `VMAgent`'s namespace for given `...Selector`                     |
 
-More details about `WATCH_NAMESPACE` variable you can read in [this doc](https://docs.victoriametrics.com/operator/configuration/#namespaced-mode).
+For more details about the `WATCH_NAMESPACE` variable, see [this doc](https://docs.victoriametrics.com/operator/configuration/#namespaced-mode).
 
 Here are some examples of `VMAgent` configuration with selectors:
 
@@ -108,7 +106,6 @@ spec:
   selectAllByDefault: true
 
 ---
-
 # select all scrape objects in specific namespace (my-namespace)
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMAgent
@@ -116,7 +113,7 @@ metadata:
   name: select-ns
 spec:
   # ...
-  serviceScrapeNamespaceSelector: 
+  serviceScrapeNamespaceSelector:
     matchLabels:
       kubernetes.io/metadata.name: my-namespace
   podScrapeNamespaceSelector:
@@ -181,7 +178,7 @@ spec:
 
 Deduplication is automatically enabled with `replicationFactor > 1` on `VMCluster`.
 
-After enabling deduplication you can increase replicas for VMAgent. 
+After enabling deduplication you can increase replicas for VMAgent.
 
 For instance, let's create `VMAgent` with 2 replicas:
 
@@ -193,7 +190,7 @@ metadata:
 spec:
   # ...
   selectAllByDefault: true
-  vmAgentExternalLabelName: vmagent_ha
+  externalLabelName: vmagent_ha
   remoteWrite:
     - url: "http://vmsingle-example.default.svc:8428/api/v1/write"
   scrapeInterval: 30s
@@ -217,7 +214,7 @@ It uses the following formula for calculation: `requests.storage/count(remoteWri
 
 Example of configuration for `StatefulMode`:
 
-```yaml 
+```yaml
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMAgent
 metadata:
@@ -225,7 +222,7 @@ metadata:
 spec:
   # ...
   selectAllByDefault: true
-  vmAgentExternalLabelName: vmagent_ha
+  externalLabelName: vmagent_ha
   remoteWrite:
     - url: "http://vmsingle-example.default.svc:8428/api/v1/write"
   scrapeInterval: 30s
@@ -259,7 +256,7 @@ metadata:
 spec:
   # ...
   selectAllByDefault: true
-  vmAgentExternalLabelName: vmagent_ha
+  externalLabelName: vmagent_ha
   remoteWrite:
     - url: "http://vmsingle-example.default.svc:8428/api/v1/write"
   # Replication:
@@ -286,18 +283,18 @@ spec:
   # ...
 ```
 
-This configuration produces `5` deployments with `2` replicas at each. 
+This configuration produces `5` deployments with `2` replicas at each.
 Each deployment has its own shard num and scrapes only `1/5` of all targets.
 
 Also, you can use special placeholder `%SHARD_NUM%` in fields of `VMAgent` specification
-and operator will replace it with current shard num of vmagent when creating deployment or statefullset for vmagent.
+and operator will replace it with current shard num of vmagent when creating deployment or statefulset for vmagent.
 
 In the example above, the `%SHARD_NUM%` placeholder is used in the `podAntiAffinity` section,
 which recommend to scheduler that pods with the same shard num (label `shard-num` in the pod template)
-are not deployed on the same node. You can use another `topologyKey` for availability zone or region instead of nodes. 
+are not deployed on the same node. You can use another `topologyKey` for availability zone or region instead of nodes.
 
-**Note** that at the moment operator doesn't use `-promscrape.cluster.replicationFactor` parameter of `VMAgent` and 
-creates `replicaCount` of replicas for each shard (which leads greater resource consumption). 
+**Note** that at the moment operator doesn't use `-promscrape.cluster.replicationFactor` parameter of `VMAgent` and
+creates `replicaCount` of replicas for each shard (which leads greater resource consumption).
 This will be fixed in the future, more details can be seen in [this issue](https://github.com/VictoriaMetrics/operator/issues/604).
 
 Also see [this example](https://github.com/VictoriaMetrics/operator/blob/master/config/examples/vmagent_stateful_with_sharding.yaml).
@@ -379,7 +376,7 @@ spec:
 ## Relabeling
 
 `VMAgent` supports global [service discovery relabeling](https://docs.victoriametrics.com/victoriametrics/relabeling/#service-discovery-relabeling), global remote write relabeling for all remoteWrite targets and relabeling per remoteWrite target.
-See [these](https://docs.victoriametrics.com/vmagent/#life-of-a-sample) docs for details about stages of relabeling in vmagent.
+See [these](https://docs.victoriametrics.com/victoriametrics/vmagent/#life-of-a-sample) docs for details about stages of relabeling in vmagent.
 
 Note in some cases, you don't need relabeling, `key=value` label pairs can be added to the all scrapped metrics with `spec.externalLabels` for `VMAgent`:
 
@@ -394,7 +391,7 @@ spec:
     clusterid: some_cluster
 ```
 
-`VMAgent` CR supports relabeling with [custom configMap](https://docs.victoriametrics.com/operator/resources/vmagent/#relabeling-config-in-configmap) 
+`VMAgent` CR supports relabeling with [custom configMap](https://docs.victoriametrics.com/operator/resources/vmagent/#relabeling-config-in-configmap)
 or [inline defined at CRD](https://docs.victoriametrics.com/operator/resources/vmagent/#inline-relabeling-config).
 
 ### Relabeling config in Configmap
@@ -427,7 +424,7 @@ data:
 
 Second, add `relabelConfig` to `VMagent` spec for global relabeling for all remoteWrite targets with name of `Configmap` - `vmagent-relabel` and key `remote-write-relabel.yaml`.
 
-For relabeling per remoteWrite target, add `urlRelabelConfig` name of `Configmap` - `vmagent-relabel` 
+For relabeling per remoteWrite target, add `urlRelabelConfig` name of `Configmap` - `vmagent-relabel`
 and key `target-1-relabel.yaml` to one of remoteWrite target for relabeling only for this target:
 
 ```yaml
@@ -661,7 +658,7 @@ spec:
     # ...
 ```
 
-If these parameters are not specified, then, 
+If these parameters are not specified, then,
 by default all `VMAgent` pods have resource requests and limits from the default values of the following [operator parameters](https://docs.victoriametrics.com/operator/configuration/):
 
 - `VM_VMAGENTDEFAULT_RESOURCE_LIMIT_MEM` - default memory limit for `VMAgent` pods,
@@ -671,7 +668,7 @@ by default all `VMAgent` pods have resource requests and limits from the default
 
 These default parameters will be used if:
 
-- `VM_VMAGENTDEFAULT_USEDEFAULTRESOURCES` is set to `true` (default value), 
+- `VM_VMAGENTDEFAULT_USEDEFAULTRESOURCES` is set to `true` (default value),
 - `VMAgent` CR doesn't have `resources` field in `spec` section.
 
 Field `resources` in vmagent spec have higher priority than operator parameters.
@@ -718,7 +715,7 @@ spec:
     kafka.consumer.topic.format: influx
     kafka.consumer.topic: metrics-by-telegraf
     kafka.consumer.topic.groupID: some-id
-    
+
   # ...other fields...
 ```
 
@@ -743,7 +740,7 @@ spec:
   # more details about kafka integration you can read on https://docs.victoriametrics.com/victoriametrics/vmagent/#kafka-integration
   remoteWrite:
     # sasl with username and password
-    - url: kafka://broker-1:9092/?topic=prom-rw-1&security.protocol=SASL_SSL&sasl.mechanisms=PLAIN 
+    - url: kafka://broker-1:9092/?topic=prom-rw-1&security.protocol=SASL_SSL&sasl.mechanisms=PLAIN
       # it requires to create kubernetes secret `kafka-basic-auth` with keys `username` and `password` in the same namespace
       basicAuth:
         username:
@@ -785,7 +782,7 @@ spec:
   scrapeTimeout: 10s
   externalLabels:
     cluster: my-cluster
-  vmAgentExternalLabelName: example
+  externalLabelName: example
   remoteWrite:
     - url: "http://vmsingle-example.default.svc:8428/api/v1/write"
   inlineRelabelConfig:

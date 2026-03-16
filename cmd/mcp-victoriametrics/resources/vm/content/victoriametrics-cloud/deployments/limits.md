@@ -1,10 +1,10 @@
 ---
-weight: 3
+weight: 4
 title: "Limits"
 menu:
   docs:
     parent: "deployments"
-    weight: 3
+    weight: 4
     name: "Limits"
 tags:
   - metrics
@@ -12,7 +12,12 @@ tags:
   - enterprise
 ---
 
-Apart from the capacities per tier described in the [corresponding page](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/tiers-and-types/),
+> [!WARNING]
+> Hard limits described in this section only apply to the [VictoriaMetrics Capacity Tiers](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/victoriametrics-tiers/).
+> In [VictoriaLogs Capacity Tiers](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/victorialogs-tiers/)
+> only Access Token limits are enforced at the moment.
+
+Apart from the capacities per tier described in the [corresponding page](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/victoriametrics-tiers/),
 VictoriaMetrics Cloud also enforces hard limits in order to ensure operations. Users can expect
 receiving alerts when these thresholds are surpassed, and new metrics eventually being rejected.
 The majority of these limits are available under the `Monitor` tab of the
@@ -36,18 +41,58 @@ For reference:
 
 > [!WARNING]
 > As stated above, limits are created to avoid critical issues. Please read the recommended usage per Capacity
-> in the [Capacity Tiers page]((https://docs.victoriametrics.com/victoriametrics-cloud/deployments/tiers-and-types/))
+> in the [Capacity Tiers page](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/victoriametrics-tiers/)
 > to understand optimal loads.
 
 The following list is created to help users understand how limits are defined per tier:
 
 | **Parameter**                             | **Maximum Value**                 | **Description**                                                                                                                                                                                                                                 |
 |-------------------------------------------|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Ingestion Rate**  | 200% of the [Capacity Tier]((https://docs.victoriametrics.com/victoriametrics-cloud/deployments/tiers-and-types/)) Ingestion Rate. | Number of [time series](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#time-series) samples ingested per second. |
+| **Ingestion Rate**  | 200% of the [Capacity Tier](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/victoriametrics-tiers/) Ingestion Rate. | Number of [time series](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#time-series) samples ingested per second. |
 | **Number of Access Tokens**  | Depends on the Capacity Tier. Higher tiers allow more tokens. | Maximum number of [access tokens](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/access-tokens/) that can be created per deployment. Contact [support](https://console.victoriametrics.cloud/contact_support) to request higher limits. |
 | **Access Token max concurrent requests**         | Typically `<= 600`, and depends on the tier. Use cases with a high number are recommended to use VictoriaMetrics [Cluster version](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/single-or-cluster/). | Maximum concurrent requests per [access token](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/access-tokens/). It is recommended to create separate tokens for different users and environments. This can be adjusted via [support](mailto:support-cloud@victoriametrics.com). |
 | **Concurrent inserts and search requests**  | Depends on each Capacity Tier and increases upon the assigned CPU.  Use cases with a high number are recommended to use VictoriaMetrics [Cluster version](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/single-or-cluster/). | The maximum number of Read and Write concurrent requests. |
 | **Maximum unique time series**  | Depends on each Capacity Tier and increases upon the assigned Memory. |  Maximum number of time series returned from [/api/v1/series](https://docs.victoriametrics.com/victoriametrics/url-examples/#apiv1series). |
+
+### Limits in Number of Access Tokens
+
+Each deployment has a limit on the number of Access tokens that can be created, based on the tier:
+
+<div style="display: flex; gap: 2em;">
+<div>
+
+**VictoriaMetrics deployments:**
+
+| Tier (Active Time Series) | Access token limit |
+|---------------------------|-------------------|
+| 500k                      | 10                |
+| 1M                        | 20                |
+| 2M                        | 30                |
+| 3M                        | 40                |
+| 4M                        | 50                |
+| 5M                        | 60                |
+| 7M                        | 70                |
+| 10M                       | 80                |
+| 12M                       | 90                |
+| 15M                       | 100               |
+
+</div>
+<div>
+
+**VictoriaLogs deployments:**
+
+| Tier (CPUs) | Access token limit |
+|-------------|-------------------|
+| 1           | 20                |
+| 2           | 40                |
+| 3           | 60                |
+| 4           | 80                |
+| 5           | 100               |
+
+</div>
+</div>
+
+If you need to increase the Access token limit for your deployment, please contact [support](mailto:support-cloud@victoriametrics.com) with your request.
 
 ## Exceeding Limits
 

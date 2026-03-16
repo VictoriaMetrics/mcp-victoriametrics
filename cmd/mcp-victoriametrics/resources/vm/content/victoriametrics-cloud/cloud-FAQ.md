@@ -55,6 +55,12 @@ VictoriaMetrics Cloud deployments run in isolated environments, so scaling can b
 
 Should you need a different region, contact us at support-cloud@victoriametrics.com.
 
+## Are there any other considerations to take into account when selecting a region?
+At the moment, VictoriaMetrics Cloud does not support AWS PrivateLink cross-region connectivity.
+In order to send data via AWS PrivateLink, deploying VictoriaMetrics Cloud instances in the same
+region as your workloads is required. You may also [contact support](https://docs.victoriametrics.com/victoriametrics-cloud/support/#how-to-reach-support)
+if this is an impediment for you.
+
 ## What SLAs does VictoriaMetrics Cloud offer for availability and performance?
 SLA are available on our web site: https://victoriametrics.com/legal/cloud/terms-of-service/#service-levels
 
@@ -78,7 +84,7 @@ Apart from that, there are other mechanisms:
 Also, in case of problems, support is always available to help you at support-cloud@victoriametrics.com.
 
 ## What are the pricing models for VictoriaMetrics Cloud (subscription, usage-based, etc.)?
-VictoriaMetrics Cloud pricing is based in tiers. Tiers are configured based on a handful of parameters. See [Tier Parameters](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/tiers-and-types/) for more information.
+VictoriaMetrics Cloud pricing is based in tiers. Tiers are configured based on a handful of parameters. See the [Deployments](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/) section for more information.
 
 Detailed and updated tier pricing can be checked in the console when [creating deployments](https://cloud.victoriametrics.com/deployments/create).
 

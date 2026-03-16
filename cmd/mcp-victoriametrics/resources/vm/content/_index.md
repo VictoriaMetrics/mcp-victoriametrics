@@ -16,10 +16,10 @@ sections:
         links:
           - label: "Quick start"
             url: "/victoriametrics/quick-start/"
-          - label: "Best practices"
-            url: "/victoriametrics/bestpractices/"
           - label: "Integrations"
             url: "/victoriametrics/integrations/"
+          - label: "Playground"
+            url: "https://play.victoriametrics.com/select/0/vmui/?#/?g0.expr=vm_app_version"
           - label: "See all"
             url: "/victoriametrics/"
         upcoming: false
@@ -32,6 +32,8 @@ sections:
             url: "/victorialogs/quickstart/"
           - label: "Key concepts"
             url: "/victorialogs/keyconcepts/"
+          - label: "Playground"
+            url: "https://play-vmlogs.victoriametrics.com/"
           - label: "See all"
             url: "/victorialogs/"
         upcoming: false
@@ -44,6 +46,8 @@ sections:
             url: "/victoriatraces/#quick-start"
           - label: "Key concepts"
             url: "/victoriatraces/keyconcepts/"
+          - label: "Playground"
+            url: "https://play-vtraces.victoriametrics.com/"
           - label: "See all"
             url: "/victoriatraces/"
         upcoming: false
@@ -56,6 +60,8 @@ sections:
         links:
           - label: "Enterprise components"
             url: "/victoriametrics/enterprise/"
+          - label: "Playground"
+            url: "https://play.victoriametrics.com/select/0/vmui/?#/?g0.expr=vm_app_version"
           - label: "Contact Us"
             url: "https://victoriametrics.com/contact-us/"
         upcoming: false
@@ -80,6 +86,8 @@ sections:
             url: "/anomaly-detection/quickstart/"
           - label: "Components"
             url: "/anomaly-detection/components/"
+          - label: "Playground"
+            url: "https://play-vmanomaly.victoriametrics.com/"
           - label: "See all"
             url: "/anomaly-detection/"
         upcoming: false
@@ -100,6 +108,21 @@ resources:
     icon: "helm"
     text: "This repository provides all our helm charts for VictoriaMetrics and VictoriaLogs."
     url: "/helm/"
+
+  - title: "Grafana playground"
+    icon: "grafana"
+    text: "Play with real VictoriaMetrics, VictoriaLogs and VictoriaTraces installations integrated with Grafana via plugins."
+    url: "https://play-grafana.victoriametrics.com/"
+    
+  - title: "SQL to LogsQL converter"
+    icon: "vl-sql-converter"
+    text: "Query VictoriaLogs using SQL using a lightweight UI and REST API."
+    url: "https://play-sql.victoriametrics.com/"
+
+  - title: "VictoriaMetrics MCP"
+    icon: "vm-mcp"
+    text: "Implementation of Model Context Protocol (MCP) server for VictoriaMetrics."
+    url: "https://github.com/VictoriaMetrics-Community/mcp-victoriametrics"
 ---
 
 {{< ds-homepage >}}
@@ -290,7 +313,7 @@ Moved to [victoriametrics/](https://docs.victoriametrics.com/victoriametrics/#ho
 
 ###### Sending data via OpenTelemetry
 
-Moved to [victoriametrics/](https://docs.victoriametrics.com/victoriametrics/#sending-data-via-opentelemetry).
+Moved to [victoriametrics/integrations/opentelemetry/](https://docs.victoriametrics.com/victoriametrics/integrations/opentelemetry/).
 
 ###### JSON line format
 

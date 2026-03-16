@@ -16,7 +16,7 @@ tags:
 
 VictoriaMetrics Cloud provides different levels of user access based on role definitions.
 Roles determine the information that users can access and edit inside VictoriaMetrics Cloud in
-different `Categories`, such as Deployments, Billing or Notifications, for example. The full list of roles
+different `Categories`, such as Deployments, Billing or Notifications, for example. The full list of role
 definitions can be found in the [table](https://docs.victoriametrics.com/victoriametrics-cloud/account-management/roles-and-permissions/#roles-and-permissions) below.
 
 Organization Administrators can assign and change other users roles both during the user creation procedure or afterwards. See the [User Management](https://docs.victoriametrics.com/victoriametrics-cloud/account-management/user-management/)

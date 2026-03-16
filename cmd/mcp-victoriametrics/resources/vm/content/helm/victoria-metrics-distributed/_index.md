@@ -16,7 +16,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.26.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-distributed%2Fchangelog%2F%230260)
+![Version](https://img.shields.io/badge/0.32.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-distributed%2Fchangelog%2F%230320)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-distributed)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -55,26 +55,27 @@ For write:
 1. extra-vmagent(optional): scrapes external targets and all the components installed by this chart, sends data to global write entrypoint.
 2. vmauth-global-write: global write entrypoint, proxies requests to one of the zone `vmagent` with `least_loaded` policy.
 3. vmagent(per-zone): remote writes data to availability zones that enabled `.Values.availabilityZones[*].write.allow`, and [buffer data on disk](https://docs.victoriametrics.com/victoriametrics/vmagent/#calculating-disk-space-for-persistence-queue) when zone is unavailable to ingest.
-4. vmauth-write-balancer(per-zone): proxies requests to vminsert instances inside it's zone with `least_loaded` policy.
-5. vmcluster(per-zone): processes write requests and stores data.
+4. vmcluster(per-zone): processes write requests and stores data.
 
 For read:
 1. vmcluster(per-zone): processes query requests and returns results.
-2. vmauth-read-balancer(per-zone): proxies requests to vmselect instances inside it's zone with `least_loaded` policy.
-3. vmauth-read-proxy(per-zone): uses all the `vmauth-read-balancer` as servers if zone has `.Values.availabilityZones[*].read.allow` enabled, always prefer "local" `vmauth-read-balancer` to reduce cross-zone traffic with `first_available` policy.
-4. vmauth-global-read: global query entrypoint, proxies requests to one of the zone `vmauth-read-proxy` with `first_available` policy.
-5. grafana(optional): uses `vmauth-global-read` as default datasource.
+2. vmauth-read-proxy(per-zone): proxies query requests to zones with `.Values.availabilityZones[*].read.allow` enabled, preferring the "local" zone to reduce cross-zone traffic using the `first_available` policy.
+3. vmauth-global-read: global query entrypoint, proxies requests to one of the zone `vmauth-read-proxy` with `first_available` policy.
+4. grafana(optional): uses `vmauth-global-read` as default datasource.
 
 >Note:
 As the topology shown above, this chart doesn't include components like vmalert, alertmanager, etc by default.
 You can install them using dependency [victoria-metrics-k8s-stack](https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-k8s-stack) or having separate release.
+
+>Note:
+The default topology tolerates zone outages by deploying components in every availability zone and enabling minimum-downtime during outages. If not required, some components(including vmauth-global-write, vmagent(per-zone), vmauth-read-proxy(per-zone)) are optional and can be disabled based on your use case, please refer to [Parameters](#parameters) section for details.
 
 ### Why use `victoria-metrics-distributed` chart?
 
 One of the best practice of running production kubernetes cluster is running with [multiple availability zones](https://kubernetes.io/docs/setup/best-practices/multiple-zones/). And apart from kubernetes control plane components, we also want to spread our application pods on multiple zones, to continue serving even if zone outage happens.
 
 VictoriaMetrics supports [data replication](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#replication-and-data-safety) natively which can guarantees data availability when part of the vmstorage instances failed. But it doesn't works well if vmstorage instances are spread on multiple availability zones, since data replication could be stored on single availability zone, which will be lost when zone outage happens.
-To avoid this, vmcluster must be installed on multiple availability zones, each containing a 100% copy of data. As long as one zone is available, both global write and read entrypoints should work without interruption.
+To avoid this, database (such as vmcluster or vmsingle) must be deployed across multiple zones, with each zone containing a full copy of the data. As long as one zone remains available, both global write and read entrypoints should operate without interruption.
 
 ### How to write data?
 
@@ -93,7 +94,7 @@ You can also pick other proxies like kubernetes service which supports [Topology
 If availability zone `zone-eu-1` is experiencing an outage, `vmauth-global-write` and `vmauth-global-read` will work without interruption:
 1. `vmauth-global-write` stops proxying write requests to `zone-eu-1` automatically;
 2. `vmauth-global-read` and `vmauth-read-proxy` stops proxying read requests to `zone-eu-1` automatically;
-3. `vmagent` on `zone-us-1` fails to send data to `zone-eu-1.vmauth-write-balancer`, starts to buffer data on disk(unless `-remoteWrite.disableOnDiskQueue` is specified, which is not recommended for this topology);
+3. `vmagent` on `zone-us-1` fails to send data to `zone-eu-1`, starts to buffer data on disk(unless `-remoteWrite.disableOnDiskQueue` is specified, which is not recommended for this topology);
 To keep data completeness for all the availability zones, make sure you have enough disk space on vmagent for buffer, see [this doc](https://docs.victoriametrics.com/victoriametrics/vmagent/#calculating-disk-space-for-persistence-queue) for size recommendation.
 
 And to avoid getting incomplete responses from `zone-eu-1` which gets recovered from outage, check vmagent on `zone-us-1` to see if persistent queue has been drained. If not, remove `zone-eu-1` from serving query by setting `.Values.availabilityZones.{zone-eu-1}.read.allow=false` and change it back after confirm all data are restored.
@@ -140,6 +141,253 @@ Example command using vmagent:
 ```bash
 /path/to/vmagent -remoteWrite.url=http://vmauth-vmauth-global-write-$ReleaseName-vm-distributed:8427/prometheus/api/v1/write -remoteWrite.basicAuth.username=tenant-1088 -remoteWrite.basicAuth.password=secret
 ```
+
+## Migration to k8s-stack chart
+
+Starting with [v0.73.0](https://docs.victoriametrics.com/helm/victoria-metrics-k8s-stack/changelog/#id-0730), the k8s-stack chart supports [VMDistributed CR](https://docs.victoriametrics.com/operator/resources/vmdistributed/), an evolution of the distributed chart. It provides an automatic upgrade procedure that sequentially rolls out new changes to each zone.
+
+### Limitations
+
+- VMDistributed CR currently doesn't support VMSingle as a backend.
+- VMDistributed CR's VMAgents do not support relabelling, scraping, or stream aggregation. It needs to happen on a level above, before writing them in separate zones
+- VMDistributed CR creates a single global VMAuth for both read and write operations, whereas the distributed chart uses separate balancers for read and write traffic. It's advised to let the operator create a new VMAuth, switch both read and write traffic to the new balancer, and then delete the old VMAuth instances.
+- VMDistributed CR has no proxy VMAuth, the existing one should be removed manually after migration.
+
+### Preparation
+
+Migration to the k8s-stack chart requires converting all necessary distributed chart properties to their corresponding VMDistributed CR properties.
+Please migrate only custom properties, do not migrate [chart defaults](https://github.com/VictoriaMetrics/helm-charts/blob/master/charts/victoria-metrics-distributed/values.yaml):
+
+- remove `.Values.zoneTpl.write` and `.Values.availabilityZones[*].write` sections
+- remove `.Values.zoneTpl.read` and `.Values.availabilityZones[*].read` sections
+- remove `.Values.zoneTpl.vmsingle` and `.Values.availabilityZones[*].vmsingle` sections
+- remove all `.Values.zoneTpl.vmagent.spec.*` and `.Values.availabilityZones[*].vmagent.spec.*` properties not listed [here](https://docs.victoriametrics.com/operator/api/#vmdistributedzoneagentspec).
+- remove `.Values.zoneTpl.*.allow` and `.Values.availabilityZones[*].*.allow` properties
+- remove `.Values.zoneTpl.*.enabled` and `.Values.availabilityZones.*.enabled` properties
+- move `.Values.availabilityZones` to `.Values.vmdistributed.zones`
+- move `.Values.zoneTpl` to `.Values.vmdistributed.zoneCommon`
+- replace `{{ (.zone).name }}` with `%ZONE%` placeholder
+- `.Values.*.common` sections are not supported by the distributed chart. Move properties to each component where they are required.
+- If `.Values.extra.vmagent.enabled` is `true`, move `.Values.extra.vmagent.spec` properties to `.Values.vmagent.spec`
+- by default k8s-stack chart configures vmsingle as a storage, to switch it to vmdistributed set `.Values.vmsingle.enabled: false` and `.Values.vmdistributed.enabled: true`
+- If no `.Values.*.nodeSelector` is set, the current setup uses the default node selector `{topology.kubernetes.io/zone: '{{ (.zone).name }}'}`, added by distributed chart templates to vmagent and vmcluster. Add this nodeSelector to the distributed chart values.
+
+Example:
+
+Given the distributed chart configuration:
+
+```
+zoneTpl:
+  common:
+    spec:
+      affinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+         - weight: 1
+           preference:
+             matchExpressions:
+             - key: topology.kubernetes.io/zone
+               operator: In
+               values:
+               - us-central1-b
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+  write:
+    allow: true
+  read:
+    allow: true
+    vmauth:
+      enabled: true
+      name: "vmauth-read-proxy-{{ (.zone).name }}"
+      spec:
+        unauthorizedUserAccessSpec:
+          url_map:
+            - load_balancing_policy: first_available
+              retry_status_codes: [500, 502, 503]
+  vmagent:
+    enabled: true
+    name: "vmagent-{{ (.zone).name }}"
+    annotations: {}
+    spec:
+      ingestOnlyMode: true
+  vmcluster:
+    enabled: true
+    name: "vmcluster-{{ (.zone).name }}"
+    spec:
+      retentionPeriod: "14"
+      replicationFactor: 2
+      requestsLoadBalancer:
+        enabled: true
+        spec:
+          replicaCount: 2
+      vmstorage:
+        replicaCount: 2
+        storageDataPath: "/vm-data"
+      vmselect:
+        replicaCount: 2
+      vminsert:
+        replicaCount: 2
+availabilityZones:
+  - name: zone-eu-1
+    write:
+      allow: false
+  - name: zone-us-1
+    write:
+      allow: false
+extra:
+  vmagent:
+    enabled: true
+    name: test-vmagent
+    spec:
+      selectAllByDefault: true
+```
+
+should be converted to a given below k8s-stack chart configuration:
+
+```
+vmsingle:
+  enabled: false
+vmagent:
+  enabled: true
+vmdistributed:
+  enabled: true
+  spec:
+    zoneCommon:
+      vmagent:
+        name: "vmagent-%ZONE%"
+        spec:
+          nodeSelector:
+            topology.kubernetes.io/zone: '%ZONE%'
+          affinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                - key: topology.kubernetes.io/zone
+                  operator: In
+                  values:
+                  - us-central1-b
+          topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: ScheduleAnyway
+      vmcluster:
+        name: "vmcluster-%ZONE%"
+        spec:
+          retentionPeriod: "14"
+          replicationFactor: 2
+          requestsLoadBalancer:
+            enabled: true
+            spec:
+              replicaCount: 2
+              nodeSelector:
+                topology.kubernetes.io/zone: '%ZONE%'
+              affinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 1
+                  preference:
+                    matchExpressions:
+                    - key: topology.kubernetes.io/zone
+                      operator: In
+                      values:
+                      - us-central1-b
+            topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+          vmstorage:
+            replicaCount: 2
+            storageDataPath: "/vm-data"
+            nodeSelector:
+              topology.kubernetes.io/zone: '%ZONE%'
+            affinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 1
+                preference:
+                  matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                    - us-central1-b
+            topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+          vmselect:
+            replicaCount: 2
+            nodeSelector:
+              topology.kubernetes.io/zone: '%ZONE%'
+            affinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 1
+                preference:
+                  matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                    - us-central1-b
+            topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+          vminsert:
+            replicaCount: 2
+            nodeSelector:
+              topology.kubernetes.io/zone: '%ZONE%'
+            affinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 1
+                preference:
+                  matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                    - us-central1-b
+            topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+    zones:
+    - name: zone-eu-1
+    - name: zone-us-1
+```
+
+With a given configuration, VMDistributed CR will import existing VMAgent and VMCluster resources and create a new global VMAuth for read and write traffic.
+Next steps depend on the tool used for chart management.
+
+### Helm
+
+When using plain Helm for chart management, follow these steps to migrate from the distributed chart to k8s-stack:
+
+1. Remove Helm release secrets
+
+```
+kubectl -n <release-namespace> delete secrets -l name=<release-name>,owner=helm
+```
+
+where:
+- `<release-namespace>` is the namespace where the chart was installed
+- `<release-name>` is the name of the Helm release
+
+2. Install k8s-stack chart
+
+```
+helm install <release-name> vm/victoria-metrics-k8s-stack --namespace <release-namespace> --values <custom-chart-values-file>
+```
+
+where:
+- `<release-namespace>` is a namespace of a new release, should be the same as namespace of removed release
+- `<release-name>` name of Helm release, use same release if it's possible, it allows to reuse resources installed by distributed chart
+- `<custom-chart-values-file>` is the path to the chart values file containing converted values from the [preparation step](#preparation)
+
+### ArgoCD
+
+When using ArgoCD for chart management, follow these steps to migrate from the distributed chart to k8s-stack:
+
+1. Perform a non-cascading deletion of the ArgoCD Application for the distributed chart.
+
+2. Create a new application for k8s-stack using values from the [preparation step](http://#preparation).
 
 ## How to install
 
@@ -320,20 +568,6 @@ Remove application with command.
 ```console
 helm uninstall vmd -n NAMESPACE
 ```
-
-## Documentation of Helm Chart
-
-Install ``helm-docs`` following the instructions on this [tutorial](https://docs.victoriametrics.com/helm/requirements/).
-
-Generate docs with ``helm-docs`` command.
-
-```bash
-cd charts/victoria-metrics-distributed
-
-helm-docs
-```
-
-The markdown generation is entirely go template driven. The tool parses metadata from charts and generates a number of sub-templates that can be referenced in a template file (by default ``README.md.gotmpl``). If no template file is provided, the tool has a default internal template that will generate a reasonably formatted README.
 
 ## Parameters
 

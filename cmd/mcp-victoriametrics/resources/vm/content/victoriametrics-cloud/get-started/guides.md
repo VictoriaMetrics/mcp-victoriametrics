@@ -12,7 +12,9 @@ tags:
   - guide
 aliases:
   - /victoriametrics-cloud/quickstart/best-practices.html
+  - /victoriametrics-cloud/quickstart/best-practices/
   - /managed-victoriametrics/quickstart/best-practices.html
+  - /managed-victoriametrics/quickstart/best-practices/
 ---
 
 Here you can find some guides and best practices:
@@ -23,3 +25,5 @@ Here you can find some guides and best practices:
 * [Setup Notifications](https://docs.victoriametrics.com/victoriametrics-cloud/setup-notifications/)
 * [User Management](https://docs.victoriametrics.com/victoriametrics-cloud/account-management/user-management/)
 * [How to write and read data](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/access-tokens/)
+* [LogsQL documentation](https://docs.victoriametrics.com/victorialogs/logsql/)
+* [Alerting with logs](https://docs.victoriametrics.com/victorialogs/vmalert/)

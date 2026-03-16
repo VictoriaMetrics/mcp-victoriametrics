@@ -24,7 +24,11 @@ In this section you will find everything you need to start using [VictoriaMetric
 <details>
 <summary>Learn more about VictoriaMetrics Cloud</summary>
 
+* [VictoriaMetrics Cloud blogs](https://victoriametrics.com/blog/tags/cloud/)
 * [VictoriaMetrics Cloud announcement](https://victoriametrics.com/blog/introduction-to-managed-monitoring/)
 * [Pricing comparison for Managed Prometheus](https://victoriametrics.com/blog/managed-prometheus-pricing/)
 * [Monitoring Proxmox VE via VictoriaMetrics Cloud and vmagent](https://victoriametrics.com/blog/proxmox-monitoring-with-dbaas/)
+* [VictoriaLogs Practical Ingestion Guide for Message, Time and Streams](https://victoriametrics.com/blog/victorialogs-concepts-message-time-stream/)
+* [VictoriaLogs Basics: What You Need to Know, with Examples & Visuals](https://victoriametrics.com/blog/victorialogs-architecture-basics/)
+
 </details>

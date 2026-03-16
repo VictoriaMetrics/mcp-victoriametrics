@@ -1,6 +1,116 @@
 ## Next release
 
-- TODO
+- bump node-exporter dependency chart to version 4.52.0
+- bump kube-state-metrics dependency chart to version 7.2.0
+- added vmdistributed support as alternative to vmsingle and vmcluster
+
+## 0.72.4
+
+**Release date:** 05 Mar 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.137.0](https://img.shields.io/badge/v1.137.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11370)
+
+- updates operator to [v0.68.2](https://github.com/VictoriaMetrics/operator/releases/tag/v0.68.2) version
+
+## 0.72.3
+
+**Release date:** 04 Mar 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.137.0](https://img.shields.io/badge/v1.137.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11370)
+
+- bump version of VM components to [v1.137.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.137.0)
+- allow overwrite default VMAgent's `spec.remoteWrite.url`. See [#2733](https://github.com/VictoriaMetrics/helm-charts/issues/2723).
+
+## 0.72.2
+
+**Release date:** 25 Feb 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.136.0](https://img.shields.io/badge/v1.136.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11360)
+
+- fixed template for vmagent remoteWrite configuration
+
+## 0.72.1
+
+**Release date:** 24 Feb 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.136.0](https://img.shields.io/badge/v1.136.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11360)
+
+- fixed alertmanager template
+
+## 0.72.0
+
+**Release date:** 24 Feb 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.136.0](https://img.shields.io/badge/v1.136.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11360)
+
+- updates operator to [v0.68.0](https://github.com/VictoriaMetrics/operator/releases/tag/v0.68.0) version
+- bump grafana dependency chart to version 11.1.8
+- removed .Values.defaultDatasources.*.perReplica options
+- fixed potential `templates` section collision in alertmanager config
+- updated dashboards and rules
+
+## 0.71.1
+
+**Release date:** 17 Feb 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.136.0](https://img.shields.io/badge/v1.136.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11360)
+
+- fixed invalid alertmanager port in notifiers configuration secret
+
+## 0.71.0
+
+**Release date:** 16 Feb 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.136.0](https://img.shields.io/badge/v1.136.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11360)
+
+- bump version of VM components to [v1.136.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.136.0)
+- support extra labels for default scrape configurations. See [#2688](https://github.com/VictoriaMetrics/helm-charts/issues/2688).
+
+## 0.70.0
+
+**Release date:** 03 Feb 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.135.0](https://img.shields.io/badge/v1.135.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11350)
+
+- bump version of VM components to [v1.135.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.135.0)
+- bump grafana dependency chart to version 10.7.0
+
+## 0.69.0
+
+**Release date:** 24 Jan 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.134.0](https://img.shields.io/badge/v1.134.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11340)
+
+- bump grafana dependency chart to version 10.5.1
+- bump kube-state-metrics dependency chart to version 7.1.0
+- bump node-exporter dependency chart to version 4.51.0
+- updates operator to [v0.67.0](https://github.com/VictoriaMetrics/operator/releases/tag/v0.67.0) version
+
+## 0.68.0
+
+**Release date:** 19 Jan 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.134.0](https://img.shields.io/badge/v1.134.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11340)
+
+- bump version of VM components to [v1.134.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.134.0)
+
+## 0.67.0
+
+**Release date:** 05 Jan 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.133.0](https://img.shields.io/badge/v1.133.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11330)
+
+- bump common chart version 0.0.45 -> 0.0.46
+- bump version of VM components to [v1.133.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.133.0)
+
+## 0.66.1
+
+**Release date:** 23 Dec 2025
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.132.0](https://img.shields.io/badge/v1.132.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11320)
+
+- added `.Values.defaultRules.groups.<groupName>.recording` and `.Values.defaultRules.groups.<groupName>.alerting` to allow overriding all recording and alerting rules within group. See [#2616](https://github.com/VictoriaMetrics/helm-charts/issues/2616).
+- sync dashboards
 
 ## 0.66.0
 
@@ -1293,7 +1403,6 @@ Please follow this doc https://docs.victoriametrics.com/helm/victoria-metrics-k8
 ![AppVersion: v1.102.1](https://img.shields.io/badge/v1.102.1-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11021)
 ![Helm: v3.14](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0)
 
-- TODO
 
 ## 0.25.4
 
@@ -1544,7 +1653,6 @@ Please follow this doc https://docs.victoriametrics.com/helm/victoria-metrics-k8
 ![AppVersion: v1.100.1](https://img.shields.io/static/v1?label=AppVersion&message=v1.100.1&color=success&logo=)
 ![Helm: v3](https://img.shields.io/static/v1?label=Helm&message=v3&color=informational&logo=helm)
 
-- TODO
 
 - bump version of VM operator to [0.43.0](https://github.com/VictoriaMetrics/operator/releases/tag/v0.43.0)
 - updates CRDs definitions.

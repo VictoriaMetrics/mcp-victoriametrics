@@ -17,7 +17,7 @@ tags:
   - enterprise
 ---
 
-![Version](https://img.shields.io/badge/0.19.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-gateway%2Fchangelog%2F%230190)
+![Version](https://img.shields.io/badge/0.24.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-gateway%2Fchangelog%2F%230240)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-gateway)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -199,20 +199,6 @@ Remove application with command.
 ```console
 helm uninstall vmg -n NAMESPACE
 ```
-
-## Documentation of Helm Chart
-
-Install ``helm-docs`` following the instructions on this [tutorial](https://docs.victoriametrics.com/helm/requirements/).
-
-Generate docs with ``helm-docs`` command.
-
-```bash
-cd charts/victoria-metrics-gateway
-
-helm-docs
-```
-
-The markdown generation is entirely go template driven. The tool parses metadata from charts and generates a number of sub-templates that can be referenced in a template file (by default ``README.md.gotmpl``). If no template file is provided, the tool has a default internal template that will generate a reasonably formatted README.
 
 ## Parameters
 
@@ -504,9 +490,30 @@ Change the values according to the need of the environment in ``victoria-metrics
     <tr id="poddisruptionbudget">
       <td><a href="#poddisruptionbudget"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podDisruptionBudget</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>See <code>kubectl explain poddisruptionbudget.spec</code> for more. Check <a href="https://kubernetes.io/docs/tasks/run-application/configure-pdb/" target="_blank">here</a> for details</p>
+</td>
+    </tr>
+    <tr id="poddisruptionbudget-maxunavailable">
+      <td><a href="#poddisruptionbudget-maxunavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podDisruptionBudget.maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>max number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="poddisruptionbudget-minavailable">
+      <td><a href="#poddisruptionbudget-minavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podDisruptionBudget.minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>min number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="poddisruptionbudget-unhealthypodevictionpolicy">
+      <td><a href="#poddisruptionbudget-unhealthypodevictionpolicy"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podDisruptionBudget.unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>Defines criteria when unhealthy pods should be considered for eviction</p>
 </td>
     </tr>
     <tr id="podlabels">

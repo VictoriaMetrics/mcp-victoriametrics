@@ -20,6 +20,8 @@ Congratulations! You are just a few clicks away from running your favorite monit
 without needing to worry about its maintenance, proper configuration, access protection,
 software updates or backups. We take care of that so you can focus on what matters.
 
+![Logs overview](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quick_start_logs_overview.webp "Exploring logs in VictoriaMetrics Cloud")
+
 The process is very simple: once you are done with [registration](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#registration), you'll be all set to
 [create a deployment](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#creating-deployments) and [start writing and reading data](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#start-writing-and-reading-data)
 right away.
@@ -43,9 +45,10 @@ If you need assistance or have any questions, don't hesitate to contact our supp
 
 Creating VictoriaMetrics Cloud deployments is straightforward. Simply navigate
 to the [Deployments](https://console.victoriametrics.cloud/deployments?utm_source=website&utm_campaign=docs_quickstart) page,
-click on `Create`, pick a [Capacity Tier](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/tiers-and-types),
-and the instance will be up & running in a few seconds.
+click on `Create`, pick a [Capacity Tier](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/#capacity-tiers),
+and your VictoriaMetrics or VictoriaLogs instance will be up & running in a few seconds.
 
+> [!TIP] Quick Start!
 > To create your first deployment, click on `Start using VictoriaMetrics Cloud`.
 
 ### Customize your deployment
@@ -54,32 +57,40 @@ When creating a deployment, the following options are available:
 
 | **Option**           | **Description**                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 |------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| <nobr>**`Deployment type`**</nobr>    | Allows you to choose between [VictoriaMetrics](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/) and [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/) deployments.                                                                                                                                                                                                                                                                                                                                                                                     |
 | <nobr>**`Deployment name`**</nobr>    | A unique name for your deployment that will help you identify it.                                                                                                                                                                                                                                                                                                                                                                                     |
 | **`Single-node`**        | For affordable, performant deployments.                                                                                                                                                                                                                                                                                                                                                                                                               |
 | **`Cluster`**            | For highly available and multi-tenant deployments at scale.                                                                                                                                                                                                                                                                                                                                                                                           |
 | **`Region`**             | The cloud provider region where your deployment runs. For optimal performance and reduced traffic costs, select a region close to your application.                                                                                                                                                                                                                                                                                                   |
-| **`Capacity Tier`**      | VictoriaMetrics Cloud offers a predefined set of instance sizes (or [tiers](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/tiers-and-types/#tier-selection-parameters)) that cover most use cases. In this way, we can keep fixed pricing without surprises. Read [this guide](https://docs.victoriametrics.com/guides/understand-your-setup-size/) to understand your setup size. Keep in mind that deployments may be [modified](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#modifying-an-existing-deployment)! |
-| **`Retention`**          | The time, in months or days, you want to keep your metrics. Once set, VictoriaMetrics Cloud recommends storage size based on it. See this [note](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#about-storage) for more information.                                                                                                                                                                                                                                                                |
+| **`Capacity Tier`**      | VictoriaMetrics Cloud offers a predefined set of instance sizes (or [tiers](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/#capacity-tiers)) that cover most use cases. In this way, we can keep fixed pricing without surprises. Read [this guide](https://docs.victoriametrics.com/guides/understand-your-setup-size/) to understand your setup size. Keep in mind that deployments may be [modified](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#modifying-an-existing-deployment)! |
+| **`Retention`**          | The time, in months or days, you want to keep your data. Once set, VictoriaMetrics Cloud recommends an estimated storage size for metrics instances. See this [note](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#about-storage) for more information.                                                                                                                                                                                                                                                                |
 | **`Storage`**          | Disk size for data storage. You always can expand disk size later. See this [note](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#about-storage) for more information.                                                                                                                                                                                                                                                                                                                              |
 | **`Deduplication`** | Deduplication handles redundant data in high-availability (HA) setups to retain only one sample per interval. For best results, set deduplication to match the collect metrics interval. If you have multiple intervals, set it to the shortest one.                                                                                                                                                                                                  |
 | <nobr>**`Maintenance Window`**</nobr> | We use this value as the preferred window for us to perform maintenance operations, such as upgrades, when needed.                                                                                                                                                                                                                                                                                                                                    |
 
-![Selecting a Capacity Tier](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/create_deployment_form_down.webp "Selecting a Tier")
+<br>
+
+![Selecting a Capacity Tier](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/create.webp "Selecting a Capacity Tier")
 <figcaption style="text-align: center; font-style: italic;">Selecting a tier</figcaption>
+
+<br>
 
 After selecting your desired configuration, you are set to `Create` your deployment. Once created, it will remain for a few seconds in `Provisioning` status while spinning-up.
 You'll also be notified via email once your deployment is ready to use.
 
-{{% collapse name="Expand to learn more about retention and storage considerations" %}}
+{{% collapse name="Expand to learn more about retention and storage considerations for VictoriaMetrics instances" %}}
 
-### About storage
+> Feel free to adjust your deployment based on these recommendations.
+### About storage in VictoriaMetrics instances
 * **Data point sizes** are approximated to 0.8 bytes, based on our own experience managing VictoriaMetrics Cloud. This magnitude is increases with **cardinality**. For high cardinality data, more storage is expected.
 * **Long time retention**: for 6 months or more retention times, we recommend to start with a smaller storage size and increase it over time.
 * **Storage size can be increased**, however, you cannot reduce it due to AWS limitations.
 * **Enterprise features** like [downsampling](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#downsampling) and [retention filters](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#retention-filters) may dramatically help to optimize disk space.
 * The **formula** we use for calculating the recommended storage can be found [here](https://docs.victoriametrics.com/guides/understand-your-setup-size/#retention-perioddisk-space).
 
-> Feel free to adjust your deployment based on these recommendations.
+
+>[!Warning]
+> VictoriaLogs instances does not provide storage capacity recommendations at the moment.
 
 {{% /collapse %}}
 
@@ -137,13 +148,16 @@ remote_write:
 ## Modifying an existing deployment
 
 Remember that you can always add, remove or modify existing deployments by changing their configuration on the
-deployment's page. It is important to know that downgrade for clusters is currently not available.
+deployment's page.
+
+>[!Warning]
+> It is important to know that downgrade for clusters is currently not available.
 
 Additional configuration options may be found under `Advanced Settings`  where the following additional parameters can be set:
 
-* [`Deduplication`](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#deduplication) defines interval when deployment leaves a single raw sample with the biggest timestamp per each discrete interval;
-* `Maintenance Window` when deployment should start an upgrade process if needed;
-* `Settings` to define VictoriaMetrics deployment flags, depending on your deployment type: [Cluster](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#list-of-command-line-flags) or [Single-node](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#list-of-command-line-flags).
+* [`Deduplication`](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#deduplication) defines the interval when a deployment leaves a single raw sample with the biggest timestamp per each discrete interval;
+* `Maintenance Window` when a deployment should start scheduled upgrade processes;
+* `Settings` to define deployment flags, depending on your deployment type: [VictoriaMetrics Cluster](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#list-of-command-line-flags), [VictoriaMetrics Single-node](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#list-of-command-line-flags) or [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/#list-of-command-line-flags).
 
 > These updates require a deployment restart and may result in a short downtime for **single-node** deployments.
 

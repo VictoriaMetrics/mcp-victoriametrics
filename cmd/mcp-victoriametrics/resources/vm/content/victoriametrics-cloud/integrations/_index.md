@@ -10,5 +10,6 @@ menu:
 aliases:
   - /victoriametrics-cloud/integrations.html
   - /managed-victoriametrics/integrations.html
+  - /managed-victoriametrics/integrations/
 ---
 {{% content "README.md" %}}
