@@ -259,6 +259,43 @@ claude mcp add victoriametrics -- /path/to/mcp-victoriametrics \
 
 See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/tutorials#set-up-model-context-protocol-mcp) for more info.
 
+### Codex
+
+Codex CLI and the IDE extension use the same MCP configuration file: `~/.codex/config.toml`
+(or `.codex/config.toml` in a trusted project).
+
+Run the command:
+
+```sh
+codex mcp add victoriametrics \
+  --env VM_INSTANCE_ENTRYPOINT=<YOUR_VM_INSTANCE> \
+  --env VM_INSTANCE_TYPE=<YOUR_VM_INSTANCE_TYPE> \
+  --env VM_INSTANCE_BEARER_TOKEN=<YOUR_VM_BEARER_TOKEN> \
+  --env VM_INSTANCE_HEADERS="<HEADER>=<HEADER_VALUE>,<HEADER>=<HEADER_VALUE>" \
+  -- /path/to/mcp-victoriametrics
+```
+
+Or add the following to your Codex `~/.codex/config.toml` file:
+
+```toml
+[mcp_servers.victoriametrics]
+command = "/path/to/mcp-victoriametrics"
+
+[mcp_servers.victoriametrics.env]
+VM_INSTANCE_ENTRYPOINT = "<YOUR_VM_INSTANCE>"
+VM_INSTANCE_TYPE = "<YOUR_VM_INSTANCE_TYPE>"
+VM_INSTANCE_BEARER_TOKEN = "<YOUR_VM_BEARER_TOKEN>"
+VM_INSTANCE_HEADERS = "<HEADER>=<HEADER_VALUE>,<HEADER>=<HEADER_VALUE>"
+```
+
+If you run the server in Streamable HTTP mode, you can register it with:
+
+```sh
+codex mcp add victoriametrics --url http://localhost:8080/mcp
+```
+
+See [Codex MCP docs](https://developers.openai.com/codex/mcp) for more info.
+
 ### Visual Studio Code
 
 Add this to your VS Code MCP config file:
