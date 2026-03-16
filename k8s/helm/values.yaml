@@ -41,6 +41,7 @@ mcp:
     tools: []
     resources: false
   heartbeatInterval: 30s
+  passthroughHeaders: []
 
 vm:
   cloudAPIKey: ""

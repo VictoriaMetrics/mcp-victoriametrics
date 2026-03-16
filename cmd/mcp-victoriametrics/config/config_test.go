@@ -16,6 +16,7 @@ func TestInitConfig(t *testing.T) {
 	originalBearerToken := os.Getenv("VM_INSTANCE_BEARER_TOKEN")
 	originalHeartbeatInterval := os.Getenv("MCP_HEARTBEAT_INTERVAL")
 	originalHeaders := os.Getenv("VM_INSTANCE_HEADERS")
+	originalPassthroughHeaders := os.Getenv("MCP_PASSTHROUGH_HEADERS")
 
 	// Restore environment variables after test
 	defer func() {
@@ -26,6 +27,7 @@ func TestInitConfig(t *testing.T) {
 		os.Setenv("VM_INSTANCE_BEARER_TOKEN", originalBearerToken)
 		os.Setenv("MCP_HEARTBEAT_INTERVAL", originalHeartbeatInterval)
 		os.Setenv("VM_INSTANCE_HEADERS", originalHeaders)
+		os.Setenv("MCP_PASSTHROUGH_HEADERS", originalPassthroughHeaders)
 	}()
 
 	// Test case 1: Valid configuration
@@ -337,6 +339,70 @@ func TestInitConfig(t *testing.T) {
 
 		if cfg.DefaultTenantID() == "" {
 			t.Errorf("Expected no default tenant ID, got: %s", cfg.DefaultTenantID())
+		}
+	})
+
+	// Test case: Passthrough headers parsing
+	t.Run("Passthrough headers parsing", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_PASSTHROUGH_HEADERS", "Authorization,X-Custom-Token,X-Request-ID")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+
+		headers := cfg.PassthroughHeaders()
+		expected := []string{"Authorization", "X-Custom-Token", "X-Request-ID"}
+
+		if len(headers) != len(expected) {
+			t.Fatalf("Expected %d passthrough headers, got %d", len(expected), len(headers))
+		}
+		for i, h := range headers {
+			if h != expected[i] {
+				t.Errorf("Expected header %q at index %d, got %q", expected[i], i, h)
+			}
+		}
+	})
+
+	// Test case: Empty passthrough headers
+	t.Run("Empty passthrough headers", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_PASSTHROUGH_HEADERS", "")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+
+		if len(cfg.PassthroughHeaders()) != 0 {
+			t.Errorf("Expected 0 passthrough headers, got %d", len(cfg.PassthroughHeaders()))
+		}
+	})
+
+	// Test case: Passthrough headers with whitespace and empty entries
+	t.Run("Passthrough headers whitespace trimming", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_PASSTHROUGH_HEADERS", " Authorization , , X-Custom-Token , ")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+
+		headers := cfg.PassthroughHeaders()
+		expected := []string{"Authorization", "X-Custom-Token"}
+
+		if len(headers) != len(expected) {
+			t.Fatalf("Expected %d passthrough headers, got %d", len(expected), len(headers))
+		}
+		for i, h := range headers {
+			if h != expected[i] {
+				t.Errorf("Expected header %q at index %d, got %q", expected[i], i, h)
+			}
 		}
 	})
 }

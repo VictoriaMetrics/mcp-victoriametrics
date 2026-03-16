@@ -63,6 +63,10 @@ spec:
             - name: VM_INSTANCE_HEADERS
               value: "{{ join "," . }}"
             {{- end }}
+            {{- with .Values.mcp.passthroughHeaders }}
+            - name: MCP_PASSTHROUGH_HEADERS
+              value: "{{ join "," . }}"
+            {{- end }}
             {{- with .Values.mcp.disable.resources }}
             - name: MCP_DISABLE_RESOURCES
               value: "{{ . }}"

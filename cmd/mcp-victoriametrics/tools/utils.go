@@ -36,6 +36,13 @@ func CreateSelectRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallTo
 		req.Header.Set(key, value)
 	}
 
+	// Apply passthrough headers from the incoming MCP request
+	for _, name := range cfg.PassthroughHeaders() {
+		if value := tcr.Header.Get(name); value != "" {
+			req.Header.Set(name, value)
+		}
+	}
+
 	return req, nil
 }
 
@@ -58,6 +65,13 @@ func CreateAdminRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallToo
 	// Add custom headers from configuration
 	for key, value := range cfg.CustomHeaders() {
 		req.Header.Set(key, value)
+	}
+
+	// Apply passthrough headers from the incoming MCP request
+	for _, name := range cfg.PassthroughHeaders() {
+		if value := tcr.Header.Get(name); value != "" {
+			req.Header.Set(name, value)
+		}
 	}
 
 	return req, nil

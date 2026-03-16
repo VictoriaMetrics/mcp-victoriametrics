@@ -17,17 +17,18 @@ const (
 )
 
 type Config struct {
-	serverMode        string
-	listenAddr        string
-	entrypoint        string
-	instanceType      string
-	bearerToken       string
-	disabledTools     map[string]bool
-	apiKey            string
-	heartbeatInterval time.Duration
-	disableResources  bool
-	customHeaders     map[string]string
-	defaultTenantID   string
+	serverMode         string
+	listenAddr         string
+	entrypoint         string
+	instanceType       string
+	bearerToken        string
+	disabledTools      map[string]bool
+	apiKey             string
+	heartbeatInterval  time.Duration
+	disableResources   bool
+	customHeaders      map[string]string
+	passthroughHeaders []string
+	defaultTenantID    string
 
 	// Logging configuration
 	logFormat string
@@ -66,6 +67,17 @@ func InitConfig() (*Config, error) {
 						customHeadersMap[key] = value
 					}
 				}
+			}
+		}
+	}
+
+	var passthroughHeaders []string
+	passthroughHeadersStr := os.Getenv("MCP_PASSTHROUGH_HEADERS")
+	if passthroughHeadersStr != "" {
+		for _, h := range strings.Split(passthroughHeadersStr, ",") {
+			h = strings.TrimSpace(h)
+			if h != "" {
+				passthroughHeaders = append(passthroughHeaders, h)
 			}
 		}
 	}
@@ -109,19 +121,20 @@ func InitConfig() (*Config, error) {
 		return nil, fmt.Errorf("MCP_LOG_LEVEL must be 'debug', 'info', 'warn' or 'error'")
 	}
 	result := &Config{
-		serverMode:        strings.ToLower(os.Getenv("MCP_SERVER_MODE")),
-		listenAddr:        os.Getenv("MCP_LISTEN_ADDR"),
-		entrypoint:        os.Getenv("VM_INSTANCE_ENTRYPOINT"),
-		instanceType:      os.Getenv("VM_INSTANCE_TYPE"),
-		bearerToken:       os.Getenv("VM_INSTANCE_BEARER_TOKEN"),
-		disabledTools:     disabledToolsMap,
-		apiKey:            os.Getenv("VMC_API_KEY"),
-		heartbeatInterval: heartbeatInterval,
-		disableResources:  disableResources,
-		customHeaders:     customHeadersMap,
-		logFormat:         logFormat,
-		logLevel:          logLevel,
-		defaultTenantID:   "0",
+		serverMode:         strings.ToLower(os.Getenv("MCP_SERVER_MODE")),
+		listenAddr:         os.Getenv("MCP_LISTEN_ADDR"),
+		entrypoint:         os.Getenv("VM_INSTANCE_ENTRYPOINT"),
+		instanceType:       os.Getenv("VM_INSTANCE_TYPE"),
+		bearerToken:        os.Getenv("VM_INSTANCE_BEARER_TOKEN"),
+		disabledTools:      disabledToolsMap,
+		apiKey:             os.Getenv("VMC_API_KEY"),
+		heartbeatInterval:  heartbeatInterval,
+		disableResources:   disableResources,
+		customHeaders:      customHeadersMap,
+		passthroughHeaders: passthroughHeaders,
+		logFormat:          logFormat,
+		logLevel:           logLevel,
+		defaultTenantID:    "0",
 	}
 	// Left for backward compatibility
 	if result.listenAddr == "" {
@@ -233,6 +246,10 @@ func (c *Config) HeartbeatInterval() time.Duration {
 
 func (c *Config) CustomHeaders() map[string]string {
 	return c.customHeaders
+}
+
+func (c *Config) PassthroughHeaders() []string {
+	return c.passthroughHeaders
 }
 
 func (c *Config) LogFormat() string {
