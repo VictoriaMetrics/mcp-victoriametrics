@@ -51,9 +51,6 @@ func RegisterToolAccessTokens(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(toolNameAccessTokens) {
 		return
 	}
-	if !c.HasCloudInstances() {
-		return
-	}
 	s.AddTool(toolAccessTokens(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return toolAccessTokensHandler(ctx, c, request)
 	})

@@ -125,13 +125,15 @@ Try not to second guess information - if you don't know something or lack inform
 	}
 
 	// Registering cloud-specific tools
-	tools.RegisterToolTiers(s, c)
-	tools.RegisterToolRegions(s, c)
-	tools.RegisterToolRuleFile(s, c)
-	tools.RegisterToolDeployments(s, c)
-	tools.RegisterToolAccessTokens(s, c)
-	tools.RegisterToolRuleFilenames(s, c)
-	tools.RegisterToolCloudProviders(s, c)
+	if c.HasCloudInstances() {
+		tools.RegisterToolTiers(s, c)
+		tools.RegisterToolRegions(s, c)
+		tools.RegisterToolRuleFile(s, c)
+		tools.RegisterToolDeployments(s, c)
+		tools.RegisterToolAccessTokens(s, c)
+		tools.RegisterToolRuleFilenames(s, c)
+		tools.RegisterToolCloudProviders(s, c)
+	}
 
 	// Registering prompts
 	prompts.RegisterPromptUnusedMetrics(s, c)

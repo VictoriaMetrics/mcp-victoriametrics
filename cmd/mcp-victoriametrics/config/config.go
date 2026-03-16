@@ -429,21 +429,6 @@ func (c *Config) HasOnlyCloudInstances() bool {
 	return true
 }
 
-func (c *Config) defaultTarget() *Instance {
-	instance, _ := c.ResolveInstance("")
-	return instance
-}
-
-func (c *Config) IsCluster() bool {
-	instance := c.defaultTarget()
-	return instance != nil && instance.IsCluster()
-}
-
-func (c *Config) IsSingle() bool {
-	instance := c.defaultTarget()
-	return instance != nil && instance.IsSingle()
-}
-
 func (c *Config) IsStdio() bool {
 	return c.serverMode == "stdio"
 }
@@ -456,37 +441,8 @@ func (c *Config) ServerMode() string {
 	return c.serverMode
 }
 
-func (c *Config) IsCloud() bool {
-	instance := c.defaultTarget()
-	return instance != nil && instance.IsCloud()
-}
-
-func (c *Config) VMC() *vmcloud.VMCloudAPIClient {
-	instance := c.defaultTarget()
-	if instance == nil {
-		return nil
-	}
-	return instance.VMC()
-}
-
 func (c *Config) ListenAddr() string {
 	return c.listenAddr
-}
-
-func (c *Config) BearerToken() string {
-	instance := c.defaultTarget()
-	if instance == nil {
-		return ""
-	}
-	return instance.BearerToken()
-}
-
-func (c *Config) EntryPointURL() *url.URL {
-	instance := c.defaultTarget()
-	if instance == nil {
-		return nil
-	}
-	return instance.EntryPointURL()
 }
 
 func (c *Config) IsToolDisabled(toolName string) bool {
@@ -505,26 +461,10 @@ func (c *Config) HeartbeatInterval() time.Duration {
 	return c.heartbeatInterval
 }
 
-func (c *Config) CustomHeaders() map[string]string {
-	instance := c.defaultTarget()
-	if instance == nil {
-		return nil
-	}
-	return instance.CustomHeaders()
-}
-
 func (c *Config) LogFormat() string {
 	return c.logFormat
 }
 
 func (c *Config) LogLevel() string {
 	return c.logLevel
-}
-
-func (c *Config) DefaultTenantID() string {
-	instance := c.defaultTarget()
-	if instance == nil {
-		return "0"
-	}
-	return instance.DefaultTenantID()
 }

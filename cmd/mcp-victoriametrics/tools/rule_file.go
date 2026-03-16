@@ -67,9 +67,6 @@ func RegisterToolRuleFile(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(toolNameRuleFile) {
 		return
 	}
-	if !c.HasCloudInstances() {
-		return
-	}
 	s.AddTool(toolRuleFile(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return toolRuleFileHandler(ctx, c, request)
 	})

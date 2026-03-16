@@ -17,30 +17,30 @@ func TestInitConfigLegacyInstance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InitConfig() error = %v", err)
 	}
+	instance, err := cfg.ResolveInstance("")
+	if err != nil {
+		t.Fatalf("ResolveInstance(default) error = %v", err)
+	}
 	if cfg.DefaultInstanceName() != "default" {
 		t.Fatalf("DefaultInstanceName() = %q", cfg.DefaultInstanceName())
 	}
-	if !cfg.IsCluster() {
+	if !instance.IsCluster() {
 		t.Fatal("expected default instance to be cluster")
 	}
-	if cfg.BearerToken() != "secret" {
-		t.Fatalf("BearerToken() = %q", cfg.BearerToken())
+	if instance.BearerToken() != "secret" {
+		t.Fatalf("BearerToken() = %q", instance.BearerToken())
 	}
-	if got := cfg.EntryPointURL().String(); got != "http://example.com" {
+	if got := instance.EntryPointURL().String(); got != "http://example.com" {
 		t.Fatalf("EntryPointURL() = %q", got)
 	}
-	if got := cfg.DefaultTenantID(); got != "100:200" {
+	if got := instance.DefaultTenantID(); got != "100:200" {
 		t.Fatalf("DefaultTenantID() = %q", got)
 	}
-	if got := cfg.CustomHeaders()["A"]; got != "1" {
+	if got := instance.CustomHeaders()["A"]; got != "1" {
 		t.Fatalf("CustomHeaders()[A] = %q", got)
 	}
 	if cfg.HeartbeatInterval() != 45*time.Second {
 		t.Fatalf("HeartbeatInterval() = %v", cfg.HeartbeatInterval())
-	}
-	instance, err := cfg.ResolveInstance("")
-	if err != nil {
-		t.Fatalf("ResolveInstance(default) error = %v", err)
 	}
 	if instance.Name() != "default" {
 		t.Fatalf("ResolveInstance(default).Name() = %q", instance.Name())
@@ -54,7 +54,11 @@ func TestInitConfigLegacyCloud(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InitConfig() error = %v", err)
 	}
-	if !cfg.IsCloud() {
+	instance, err := cfg.ResolveInstance("")
+	if err != nil {
+		t.Fatalf("ResolveInstance(default) error = %v", err)
+	}
+	if !instance.IsCloud() {
 		t.Fatal("expected default instance to be cloud")
 	}
 	if !cfg.HasCloudInstances() {
