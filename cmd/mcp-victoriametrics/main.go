@@ -88,9 +88,6 @@ Try not to second guess information - if you don't know something or lack inform
 	`),
 	)
 
-	// Registering resources
-	resources.RegisterDocsResources(s, c)
-
 	// Registering common tools
 	tools.RegisterToolQuery(s, c)
 	tools.RegisterToolFlags(s, c)
@@ -115,6 +112,11 @@ Try not to second guess information - if you don't know something or lack inform
 	tools.RegisterToolMetricRelabelDebug(s, c)
 	tools.RegisterToolRetentionFiltersDebug(s, c)
 	tools.RegisterToolDownsamplingFiltersDebug(s, c)
+
+	// Registering resources (only if documentation tool is not disabled)
+	if !c.IsToolDisabled(tools.ToolNameDocumentation) {
+		resources.RegisterDocsResources(s, c)
+	}
 
 	// Registering cloud-specific tools
 	tools.RegisterToolTiers(s, c)

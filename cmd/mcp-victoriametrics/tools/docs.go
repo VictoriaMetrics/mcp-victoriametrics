@@ -11,11 +11,11 @@ import (
 	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/resources"
 )
 
-const toolNameDocumentation = "documentation"
+const ToolNameDocumentation = "documentation"
 const defaultDocSearchLimit = 30
 
 var (
-	toolDocumentation = mcp.NewTool(toolNameDocumentation,
+	toolDocumentation = mcp.NewTool(ToolNameDocumentation,
 		mcp.WithDescription("Search documentation resources for the given search query, returning the URIs of the resources that match the search criteria sorted by relevance. This tool can help to get context for any VictoriaMetrics related question."),
 		mcp.WithToolAnnotation(mcp.ToolAnnotation{
 			Title:           "Search documentation resources",
@@ -69,7 +69,7 @@ func toolDocumentationHandler(_ context.Context, tcr mcp.CallToolRequest) (*mcp.
 }
 
 func RegisterToolDocumentation(s *server.MCPServer, c *config.Config) {
-	if c.IsToolDisabled(toolNameDocumentation) {
+	if c.IsToolDisabled(ToolNameDocumentation) {
 		return
 	}
 	s.AddTool(toolDocumentation, toolDocumentationHandler)
