@@ -13,7 +13,7 @@ import (
 
 const toolNameAccessTokens = "access_tokens"
 
-func toolAccessTokens(_ *config.Config) mcp.Tool {
+func toolAccessTokens(c *config.Config) mcp.Tool {
 	options := []mcp.ToolOption{
 		mcp.WithDescription("List of deployment access tokens in VictoriaMetrics Cloud"),
 		mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -23,27 +23,27 @@ func toolAccessTokens(_ *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
+	options = append(options, maybeWithEnvironmentParam(c)...)
 	options = append(
 		options,
-		mcp.WithString("deployment_id",
-			mcp.Required(),
-			mcp.Title("Deployment ID"),
-			mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
-			mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
-		),
+		maybeWithDeploymentIDParam(c)...,
 	)
 	return mcp.NewTool(toolNameAccessTokens, options...)
 }
 
 func toolAccessTokensHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	instance, err := getCloudToolInstance(cfg, tcr)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
 	}
 	if deploymentID == "" {
-		return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
+		return mcp.NewToolResultError(fmt.Sprintf("deployment_id parameter is required for cloud env %q", instance.Name())), nil
 	}
-	accessTokens, err := cfg.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
+	accessTokens, err := instance.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list access_tokens: %v", err)), nil
 	}
@@ -58,7 +58,7 @@ func RegisterToolAccessTokens(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(toolNameAccessTokens) {
 		return
 	}
-	if !c.IsCloud() {
+	if !c.HasCloudInstances() {
 		return
 	}
 	s.AddTool(toolAccessTokens(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

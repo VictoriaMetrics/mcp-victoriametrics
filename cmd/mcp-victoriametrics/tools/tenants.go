@@ -21,17 +21,8 @@ func toolTenants(c *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	if c.IsCloud() {
-		options = append(
-			options,
-			mcp.WithString("deployment_id",
-				mcp.Required(),
-				mcp.Title("Deployment ID"),
-				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
-				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
-			),
-		)
-	}
+	options = append(options, maybeWithEnvironmentParam(c)...)
+	options = append(options, maybeWithDeploymentIDParam(c)...)
 	return mcp.NewTool(toolNameTenants, options...)
 }
 
@@ -47,7 +38,7 @@ func RegisterToolTenants(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(toolNameTenants) {
 		return
 	}
-	if !c.IsCluster() && !c.IsCloud() {
+	if !c.HasClusterInstances() {
 		return
 	}
 	s.AddTool(toolTenants(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

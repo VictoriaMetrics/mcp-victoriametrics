@@ -14,27 +14,67 @@ import (
 
 const (
 	toolsDisabledByDefault = "export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules"
+	defaultInstanceName    = "default"
 )
+
+type Instance struct {
+	name            string
+	entrypoint      string
+	instanceType    string
+	bearerToken     string
+	customHeaders   map[string]string
+	defaultTenantID string
+	entryPointURL   *url.URL
+	vmc             *vmcloud.VMCloudAPIClient
+}
+
+func (i *Instance) Name() string {
+	return i.name
+}
+
+func (i *Instance) IsCluster() bool {
+	return i.instanceType == "cluster"
+}
+
+func (i *Instance) IsSingle() bool {
+	return i.instanceType == "single"
+}
+
+func (i *Instance) IsCloud() bool {
+	return i.vmc != nil
+}
+
+func (i *Instance) VMC() *vmcloud.VMCloudAPIClient {
+	return i.vmc
+}
+
+func (i *Instance) BearerToken() string {
+	return i.bearerToken
+}
+
+func (i *Instance) EntryPointURL() *url.URL {
+	return i.entryPointURL
+}
+
+func (i *Instance) CustomHeaders() map[string]string {
+	return i.customHeaders
+}
+
+func (i *Instance) DefaultTenantID() string {
+	return i.defaultTenantID
+}
 
 type Config struct {
 	serverMode        string
 	listenAddr        string
-	entrypoint        string
-	instanceType      string
-	bearerToken       string
 	disabledTools     map[string]bool
-	apiKey            string
 	heartbeatInterval time.Duration
 	disableResources  bool
-	customHeaders     map[string]string
-	defaultTenantID   string
-
-	// Logging configuration
-	logFormat string
-	logLevel  string
-
-	entryPointURL *url.URL
-	vmc           *vmcloud.VMCloudAPIClient
+	logFormat         string
+	logLevel          string
+	instances         map[string]*Instance
+	instanceOrder     []string
+	defaultInstance   string
 }
 
 func InitConfig() (*Config, error) {
@@ -42,38 +82,10 @@ func InitConfig() (*Config, error) {
 	if disabledTools == "" && !isDisabledToolsSet {
 		disabledTools = toolsDisabledByDefault
 	}
-	disabledToolsMap := make(map[string]bool)
-	if disabledTools != "" {
-		for _, tool := range strings.Split(disabledTools, ",") {
-			tool = strings.Trim(tool, " ,")
-			if tool != "" {
-				disabledToolsMap[tool] = true
-			}
-		}
-	}
-
-	customHeaders := os.Getenv("VM_INSTANCE_HEADERS")
-	customHeadersMap := make(map[string]string)
-	if customHeaders != "" {
-		for _, header := range strings.Split(customHeaders, ",") {
-			header = strings.TrimSpace(header)
-			if header != "" {
-				parts := strings.SplitN(header, "=", 2)
-				if len(parts) == 2 {
-					key := strings.TrimSpace(parts[0])
-					value := strings.TrimSpace(parts[1])
-					if key != "" && value != "" {
-						customHeadersMap[key] = value
-					}
-				}
-			}
-		}
-	}
 
 	heartbeatInterval := 30 * time.Second
-	heartbeatIntervalStr := os.Getenv("MCP_HEARTBEAT_INTERVAL")
-	if heartbeatIntervalStr != "" {
-		interval, err := time.ParseDuration(heartbeatIntervalStr)
+	if value := os.Getenv("MCP_HEARTBEAT_INTERVAL"); value != "" {
+		interval, err := time.ParseDuration(value)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse MCP_HEARTBEAT_INTERVAL: %w", err)
 		}
@@ -84,13 +96,12 @@ func InitConfig() (*Config, error) {
 	}
 
 	disableResources := false
-	disableResourcesStr := os.Getenv("MCP_DISABLE_RESOURCES")
-	if disableResourcesStr != "" {
-		var err error
-		disableResources, err = strconv.ParseBool(disableResourcesStr)
+	if value := os.Getenv("MCP_DISABLE_RESOURCES"); value != "" {
+		parsed, err := strconv.ParseBool(value)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse MCP_DISABLE_RESOURCES: %w", err)
 		}
+		disableResources = parsed
 	}
 
 	logFormat := strings.ToLower(os.Getenv("MCP_LOG_FORMAT"))
@@ -108,79 +119,329 @@ func InitConfig() (*Config, error) {
 	if logLevel != "debug" && logLevel != "info" && logLevel != "warn" && logLevel != "error" {
 		return nil, fmt.Errorf("MCP_LOG_LEVEL must be 'debug', 'info', 'warn' or 'error'")
 	}
-	result := &Config{
-		serverMode:        strings.ToLower(os.Getenv("MCP_SERVER_MODE")),
-		listenAddr:        os.Getenv("MCP_LISTEN_ADDR"),
-		entrypoint:        os.Getenv("VM_INSTANCE_ENTRYPOINT"),
-		instanceType:      os.Getenv("VM_INSTANCE_TYPE"),
-		bearerToken:       os.Getenv("VM_INSTANCE_BEARER_TOKEN"),
-		disabledTools:     disabledToolsMap,
-		apiKey:            os.Getenv("VMC_API_KEY"),
-		heartbeatInterval: heartbeatInterval,
-		disableResources:  disableResources,
-		customHeaders:     customHeadersMap,
-		logFormat:         logFormat,
-		logLevel:          logLevel,
-		defaultTenantID:   "0",
+
+	serverMode := strings.ToLower(os.Getenv("MCP_SERVER_MODE"))
+	if serverMode == "" {
+		serverMode = "stdio"
 	}
-	// Left for backward compatibility
-	if result.listenAddr == "" {
-		result.listenAddr = os.Getenv("MCP_SSE_ADDR")
-	}
-	if result.entrypoint == "" && result.apiKey == "" {
-		return nil, fmt.Errorf("VM_INSTANCE_ENTRYPOINT or VMC_API_KEY is not set")
-	}
-	if result.entrypoint != "" && result.apiKey != "" {
-		return nil, fmt.Errorf("VM_INSTANCE_ENTRYPOINT and VMC_API_KEY cannot be set at the same time")
-	}
-	if result.entrypoint != "" && result.instanceType == "" {
-		return nil, fmt.Errorf("VM_INSTANCE_TYPE is not set")
-	}
-	if result.entrypoint != "" && result.instanceType != "cluster" && result.instanceType != "single" {
-		return nil, fmt.Errorf("VM_INSTANCE_TYPE must be 'single' or 'cluster'")
-	}
-	if result.serverMode != "" && result.serverMode != "stdio" && result.serverMode != "sse" && result.serverMode != "http" {
+	if serverMode != "stdio" && serverMode != "sse" && serverMode != "http" {
 		return nil, fmt.Errorf("MCP_SERVER_MODE must be 'stdio', 'sse' or 'http'")
 	}
-	if result.serverMode == "" {
-		result.serverMode = "stdio"
+
+	listenAddr := os.Getenv("MCP_LISTEN_ADDR")
+	if listenAddr == "" {
+		listenAddr = os.Getenv("MCP_SSE_ADDR")
 	}
-	if result.listenAddr == "" {
-		result.listenAddr = "localhost:8080"
+	if listenAddr == "" {
+		listenAddr = "localhost:8080"
+	}
+
+	instances, order, defaultInstance, err := initInstances()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Config{
+		serverMode:        serverMode,
+		listenAddr:        listenAddr,
+		disabledTools:     parseDisabledTools(disabledTools),
+		heartbeatInterval: heartbeatInterval,
+		disableResources:  disableResources,
+		logFormat:         logFormat,
+		logLevel:          logLevel,
+		instances:         instances,
+		instanceOrder:     order,
+		defaultInstance:   defaultInstance,
+	}, nil
+}
+
+func initInstances() (map[string]*Instance, []string, string, error) {
+	if value := os.Getenv("VM_ENVIRONMENTS"); value != "" {
+		if err := validateLegacyVarsUnused(); err != nil {
+			return nil, nil, "", err
+		}
+
+		names, err := parseInstanceNames(value)
+		if err != nil {
+			return nil, nil, "", err
+		}
+
+		defaultName := strings.TrimSpace(strings.ToLower(os.Getenv("VM_DEFAULT_ENVIRONMENT")))
+		if defaultName == "" {
+			defaultName = names[0]
+		}
+		if !contains(names, defaultName) {
+			return nil, nil, "", fmt.Errorf("VM_DEFAULT_ENVIRONMENT %q is not listed in VM_ENVIRONMENTS", defaultName)
+		}
+
+		instances := make(map[string]*Instance, len(names))
+		for _, name := range names {
+			prefix := instancePrefix(name)
+			instance, err := newInstance(
+				name,
+				os.Getenv(prefix+"ENTRYPOINT"),
+				os.Getenv(prefix+"TYPE"),
+				os.Getenv(prefix+"BEARER_TOKEN"),
+				parseHeaders(os.Getenv(prefix+"HEADERS")),
+				os.Getenv(prefix+"DEFAULT_TENANT_ID"),
+				os.Getenv("VMC_"+strings.ToUpper(name)+"_API_KEY"),
+			)
+			if err != nil {
+				return nil, nil, "", err
+			}
+			instances[name] = instance
+		}
+		return instances, names, defaultName, nil
+	}
+
+	instance, err := newInstance(
+		defaultInstanceName,
+		os.Getenv("VM_INSTANCE_ENTRYPOINT"),
+		os.Getenv("VM_INSTANCE_TYPE"),
+		os.Getenv("VM_INSTANCE_BEARER_TOKEN"),
+		parseHeaders(os.Getenv("VM_INSTANCE_HEADERS")),
+		os.Getenv("VM_DEFAULT_TENANT_ID"),
+		os.Getenv("VMC_API_KEY"),
+	)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	return map[string]*Instance{defaultInstanceName: instance}, []string{defaultInstanceName}, defaultInstanceName, nil
+}
+
+func newInstance(name, entrypoint, instanceType, bearerToken string, headers map[string]string, defaultTenantID, apiKey string) (*Instance, error) {
+	if entrypoint == "" && apiKey == "" {
+		if name == defaultInstanceName {
+			return nil, fmt.Errorf("VM_INSTANCE_ENTRYPOINT or VMC_API_KEY is not set")
+		}
+		return nil, fmt.Errorf("%sENTRYPOINT or VMC_%s_API_KEY is not set", instancePrefix(name), strings.ToUpper(name))
+	}
+	if entrypoint != "" && apiKey != "" {
+		return nil, fmt.Errorf("env %q: ENTRYPOINT and API_KEY cannot be set at the same time", name)
+	}
+	if entrypoint != "" && instanceType == "" {
+		if name == defaultInstanceName {
+			return nil, fmt.Errorf("VM_INSTANCE_TYPE is not set")
+		}
+		return nil, fmt.Errorf("env %q: TYPE is not set", name)
+	}
+	if entrypoint != "" && instanceType != "single" && instanceType != "cluster" {
+		if name == defaultInstanceName {
+			return nil, fmt.Errorf("VM_INSTANCE_TYPE must be 'single' or 'cluster'")
+		}
+		return nil, fmt.Errorf("env %q: TYPE must be 'single' or 'cluster'", name)
+	}
+
+	resolvedTenantID := "0"
+	if defaultTenantID != "" {
+		tenantID, err := auth.NewToken(strings.ToLower(defaultTenantID))
+		if err != nil {
+			if name == defaultInstanceName {
+				return nil, fmt.Errorf("failed to parse VM_DEFAULT_TENANT_ID %q: %w", defaultTenantID, err)
+			}
+			return nil, fmt.Errorf("env %q: failed to parse DEFAULT_TENANT_ID %q: %w", name, defaultTenantID, err)
+		}
+		resolvedTenantID = tenantID.String()
+	}
+
+	instance := &Instance{
+		name:            name,
+		entrypoint:      entrypoint,
+		instanceType:    instanceType,
+		bearerToken:     bearerToken,
+		customHeaders:   headers,
+		defaultTenantID: resolvedTenantID,
 	}
 
 	var err error
-	if result.apiKey == "" {
-		result.entryPointURL, err = url.Parse(result.entrypoint)
+	if apiKey != "" {
+		instance.vmc, err = vmcloud.New(apiKey)
 		if err != nil {
+			if name == defaultInstanceName {
+				return nil, fmt.Errorf("failed to create VMCloud API client: %w", err)
+			}
+			return nil, fmt.Errorf("env %q: failed to create VMCloud API client: %w", name, err)
+		}
+		return instance, nil
+	}
+
+	instance.entryPointURL, err = url.Parse(entrypoint)
+	if err != nil {
+		if name == defaultInstanceName {
 			return nil, fmt.Errorf("failed to parse URL from VM_INSTANCE_ENTRYPOINT: %w", err)
 		}
+		return nil, fmt.Errorf("env %q: failed to parse URL from ENTRYPOINT: %w", name, err)
 	}
-	if result.apiKey != "" {
-		result.vmc, err = vmcloud.New(result.apiKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create VMCloud API client: %w", err)
+	return instance, nil
+}
+
+func parseDisabledTools(value string) map[string]bool {
+	disabled := make(map[string]bool)
+	if value == "" {
+		return disabled
+	}
+	for _, tool := range strings.Split(value, ",") {
+		tool = strings.Trim(tool, " ,")
+		if tool != "" {
+			disabled[tool] = true
 		}
 	}
+	return disabled
+}
 
-	defaultTenantID := strings.ToLower(os.Getenv("VM_DEFAULT_TENANT_ID"))
-	if defaultTenantID != "" {
-		tenantID, err := auth.NewToken(defaultTenantID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse VM_DEFAULT_TENANT_ID %q: %w", defaultTenantID, err)
-		}
-		result.defaultTenantID = tenantID.String()
+func parseHeaders(value string) map[string]string {
+	headers := make(map[string]string)
+	if value == "" {
+		return headers
 	}
+	for _, header := range strings.Split(value, ",") {
+		header = strings.TrimSpace(header)
+		parts := strings.SplitN(header, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		headerValue := strings.TrimSpace(parts[1])
+		if key != "" && headerValue != "" {
+			headers[key] = headerValue
+		}
+	}
+	return headers
+}
 
-	return result, nil
+func validateLegacyVarsUnused() error {
+	for _, envVar := range []string{
+		"VM_INSTANCE_ENTRYPOINT",
+		"VM_INSTANCE_TYPE",
+		"VM_INSTANCE_BEARER_TOKEN",
+		"VM_INSTANCE_HEADERS",
+		"VM_DEFAULT_TENANT_ID",
+		"VMC_API_KEY",
+	} {
+		if os.Getenv(envVar) != "" {
+			return fmt.Errorf("%s cannot be combined with VM_ENVIRONMENTS", envVar)
+		}
+	}
+	return nil
+}
+
+func parseInstanceNames(value string) ([]string, error) {
+	seen := make(map[string]struct{})
+	names := make([]string, 0)
+	for _, raw := range strings.Split(value, ",") {
+		name := strings.TrimSpace(strings.ToLower(raw))
+		if name == "" {
+			continue
+		}
+		if !isValidInstanceName(name) {
+			return nil, fmt.Errorf("VM_ENVIRONMENTS contains invalid env name %q; use lowercase letters, numbers, and underscores only", raw)
+		}
+		if _, ok := seen[name]; ok {
+			return nil, fmt.Errorf("VM_ENVIRONMENTS contains duplicate env name %q", name)
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+	if len(names) == 0 {
+		return nil, fmt.Errorf("VM_ENVIRONMENTS is set but does not contain any env names")
+	}
+	return names, nil
+}
+
+func isValidInstanceName(value string) bool {
+	for _, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func instancePrefix(name string) string {
+	return "VM_INSTANCE_" + strings.ToUpper(name) + "_"
+}
+
+func contains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Config) ResolveInstance(name string) (*Instance, error) {
+	if len(c.instances) == 0 {
+		return nil, fmt.Errorf("no VictoriaMetrics instances configured")
+	}
+	name = strings.TrimSpace(strings.ToLower(name))
+	if name == "" {
+		name = c.defaultInstance
+	}
+	instance, ok := c.instances[name]
+	if !ok {
+		return nil, fmt.Errorf("unknown env %q; available envs: %s", name, strings.Join(c.instanceOrder, ", "))
+	}
+	return instance, nil
+}
+
+func (c *Config) DefaultInstanceName() string {
+	return c.defaultInstance
+}
+
+func (c *Config) InstanceNames() []string {
+	return append([]string(nil), c.instanceOrder...)
+}
+
+func (c *Config) HasMultipleInstances() bool {
+	return len(c.instanceOrder) > 1
+}
+
+func (c *Config) HasCloudInstances() bool {
+	for _, name := range c.instanceOrder {
+		if c.instances[name].IsCloud() {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Config) HasClusterInstances() bool {
+	for _, name := range c.instanceOrder {
+		instance := c.instances[name]
+		if instance.IsCluster() || instance.IsCloud() {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Config) HasOnlyCloudInstances() bool {
+	if len(c.instanceOrder) == 0 {
+		return false
+	}
+	for _, name := range c.instanceOrder {
+		if !c.instances[name].IsCloud() {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *Config) defaultTarget() *Instance {
+	instance, _ := c.ResolveInstance("")
+	return instance
 }
 
 func (c *Config) IsCluster() bool {
-	return c.instanceType == "cluster"
+	instance := c.defaultTarget()
+	return instance != nil && instance.IsCluster()
 }
 
 func (c *Config) IsSingle() bool {
-	return c.instanceType == "single"
+	instance := c.defaultTarget()
+	return instance != nil && instance.IsSingle()
 }
 
 func (c *Config) IsStdio() bool {
@@ -196,11 +457,16 @@ func (c *Config) ServerMode() string {
 }
 
 func (c *Config) IsCloud() bool {
-	return c.vmc != nil
+	instance := c.defaultTarget()
+	return instance != nil && instance.IsCloud()
 }
 
 func (c *Config) VMC() *vmcloud.VMCloudAPIClient {
-	return c.vmc
+	instance := c.defaultTarget()
+	if instance == nil {
+		return nil
+	}
+	return instance.VMC()
 }
 
 func (c *Config) ListenAddr() string {
@@ -208,11 +474,19 @@ func (c *Config) ListenAddr() string {
 }
 
 func (c *Config) BearerToken() string {
-	return c.bearerToken
+	instance := c.defaultTarget()
+	if instance == nil {
+		return ""
+	}
+	return instance.BearerToken()
 }
 
 func (c *Config) EntryPointURL() *url.URL {
-	return c.entryPointURL
+	instance := c.defaultTarget()
+	if instance == nil {
+		return nil
+	}
+	return instance.EntryPointURL()
 }
 
 func (c *Config) IsToolDisabled(toolName string) bool {
@@ -232,7 +506,11 @@ func (c *Config) HeartbeatInterval() time.Duration {
 }
 
 func (c *Config) CustomHeaders() map[string]string {
-	return c.customHeaders
+	instance := c.defaultTarget()
+	if instance == nil {
+		return nil
+	}
+	return instance.CustomHeaders()
 }
 
 func (c *Config) LogFormat() string {
@@ -244,5 +522,9 @@ func (c *Config) LogLevel() string {
 }
 
 func (c *Config) DefaultTenantID() string {
-	return c.defaultTenantID
+	instance := c.defaultTarget()
+	if instance == nil {
+		return "0"
+	}
+	return instance.DefaultTenantID()
 }

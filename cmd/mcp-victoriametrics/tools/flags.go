@@ -24,30 +24,25 @@ func toolFlags(c *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	if c.IsCloud() {
-		options = append(
-			options,
-			mcp.WithString("deployment_id",
-				mcp.Required(),
-				mcp.Title("Deployment ID"),
-				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
-				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
-			),
-		)
-	}
+	options = append(options, maybeWithEnvironmentParam(c)...)
+	options = append(options, maybeWithDeploymentIDParam(c)...)
 	return mcp.NewTool(toolNameFlags, options...)
 }
 
 func toolFlagsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if cfg.IsCloud() {
+	instance, err := getToolInstance(cfg, tcr)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if instance.IsCloud() {
 		deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
 		}
 		if deploymentID == "" {
-			return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
+			return mcp.NewToolResultError(fmt.Sprintf("deployment_id parameter is required for cloud env %q", instance.Name())), nil
 		}
-		dd, err := cfg.VMC().GetDeploymentDetails(ctx, deploymentID)
+		dd, err := instance.VMC().GetDeploymentDetails(ctx, deploymentID)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment details: %v", err)), nil
 		}

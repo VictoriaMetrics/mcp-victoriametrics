@@ -13,7 +13,7 @@ import (
 
 const toolNameDeployments = "deployments"
 
-func toolDeployments(_ *config.Config) mcp.Tool {
+func toolDeployments(c *config.Config) mcp.Tool {
 	options := []mcp.ToolOption{
 		mcp.WithDescription("List of deployments in VictoriaMetrics Cloud"),
 		mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -23,11 +23,16 @@ func toolDeployments(_ *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
+	options = append(options, maybeWithEnvironmentParam(c)...)
 	return mcp.NewTool(toolNameDeployments, options...)
 }
 
-func toolDeploymentsHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	deployments, err := cfg.VMC().ListDeployments(ctx)
+func toolDeploymentsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	instance, err := getCloudToolInstance(cfg, tcr)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	deployments, err := instance.VMC().ListDeployments(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list deployments: %v", err)), nil
 	}
@@ -42,7 +47,7 @@ func RegisterToolDeployments(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(toolNameDeployments) {
 		return
 	}
-	if !c.IsCloud() {
+	if !c.HasCloudInstances() {
 		return
 	}
 	s.AddTool(toolDeployments(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

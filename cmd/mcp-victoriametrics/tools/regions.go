@@ -13,7 +13,7 @@ import (
 
 const toolNameRegions = "regions"
 
-func toolRegions(_ *config.Config) mcp.Tool {
+func toolRegions(c *config.Config) mcp.Tool {
 	options := []mcp.ToolOption{
 		mcp.WithDescription("List of regions in VictoriaMetrics Cloud"),
 		mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -23,11 +23,16 @@ func toolRegions(_ *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
+	options = append(options, maybeWithEnvironmentParam(c)...)
 	return mcp.NewTool(toolNameRegions, options...)
 }
 
-func toolRegionsHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	regions, err := cfg.VMC().ListRegions(ctx)
+func toolRegionsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	instance, err := getCloudToolInstance(cfg, tcr)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	regions, err := instance.VMC().ListRegions(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list regions: %v", err)), nil
 	}
@@ -42,7 +47,7 @@ func RegisterToolRegions(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(toolNameRegions) {
 		return
 	}
-	if !c.IsCloud() {
+	if !c.HasCloudInstances() {
 		return
 	}
 	s.AddTool(toolRegions(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -30,28 +30,9 @@ This tool returns TSDB stats from "/api/v1/status/tsdb" endpoint of VictoriaMetr
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	if c.IsCloud() {
-		options = append(
-			options,
-			mcp.WithString("deployment_id",
-				mcp.Required(),
-				mcp.Title("Deployment ID"),
-				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
-				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
-			),
-		)
-	}
-	if c.IsCluster() || c.IsCloud() {
-		options = append(
-			options,
-			mcp.WithString("tenant",
-				mcp.Title("Tenant name"),
-				mcp.Description("Name of the tenant for which the TSDB stats will be displayed"),
-				mcp.DefaultString("0"),
-				mcp.Pattern(`^([0-9]+)(:[0-9]+)?$`),
-			),
-		)
-	}
+	options = append(options, maybeWithEnvironmentParam(c)...)
+	options = append(options, maybeWithDeploymentIDParam(c)...)
+	options = append(options, maybeWithTenantParam(c)...)
 	options = append(
 		options,
 		mcp.WithNumber("topN",

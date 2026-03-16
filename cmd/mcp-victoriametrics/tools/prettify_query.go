@@ -23,27 +23,9 @@ func toolPrettifyQuery(c *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	if c.IsCloud() {
-		options = append(
-			options,
-			mcp.WithString("deployment_id",
-				mcp.Title("Deployment ID"),
-				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
-				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
-			),
-		)
-	}
-	if c.IsCluster() || c.IsCloud() {
-		options = append(
-			options,
-			mcp.WithString("tenant",
-				mcp.Title("Tenant name"),
-				mcp.Description("Name of the tenant for which the data will be displayed"),
-				mcp.DefaultString("0"),
-				mcp.Pattern(`^([0-9]+)(:[0-9]+)?$`),
-			),
-		)
-	}
+	options = append(options, maybeWithEnvironmentParam(c)...)
+	options = append(options, maybeWithDeploymentIDParam(c)...)
+	options = append(options, maybeWithTenantParam(c)...)
 	options = append(
 		options,
 		mcp.WithString("query",
@@ -72,14 +54,6 @@ func toolPrettifyQueryHandler(ctx context.Context, cfg *config.Config, tcr mcp.C
 			return mcp.NewToolResultError(fmt.Sprintf("failed to marshal result: %v", err)), nil
 		}
 		return mcp.NewToolResultText(string(data)), nil
-	} else if cfg.IsCloud() {
-		deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", false)
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
-		}
-		if deploymentID == "" {
-			return mcp.NewToolResultErrorFromErr("failed to prettify query: ", err), nil
-		}
 	}
 
 	req, err := CreateSelectRequest(ctx, cfg, tcr, "prettify-query")

@@ -13,7 +13,7 @@ import (
 
 const toolNameTiers = "tiers"
 
-func toolTiers(_ *config.Config) mcp.Tool {
+func toolTiers(c *config.Config) mcp.Tool {
 	options := []mcp.ToolOption{
 		mcp.WithDescription("List of tiers in VictoriaMetrics Cloud"),
 		mcp.WithToolAnnotation(mcp.ToolAnnotation{
@@ -23,11 +23,16 @@ func toolTiers(_ *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
+	options = append(options, maybeWithEnvironmentParam(c)...)
 	return mcp.NewTool(toolNameTiers, options...)
 }
 
-func toolTiersHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tiers, err := cfg.VMC().ListTiers(ctx)
+func toolTiersHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	instance, err := getCloudToolInstance(cfg, tcr)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	tiers, err := instance.VMC().ListTiers(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list tiers: %v", err)), nil
 	}
@@ -42,7 +47,7 @@ func RegisterToolTiers(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(toolNameTiers) {
 		return
 	}
-	if !c.IsCloud() {
+	if !c.HasCloudInstances() {
 		return
 	}
 	s.AddTool(toolTiers(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
