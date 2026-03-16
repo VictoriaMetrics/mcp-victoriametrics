@@ -36,9 +36,9 @@ func CreateSelectRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallTo
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bearer token: %v", err)
 	}
-	if bearerToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
-	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
+
+	// Add custom headers from configuration
 	for key, value := range instance.CustomHeaders() {
 		req.Header.Set(key, value)
 	}
@@ -66,9 +66,9 @@ func CreateAdminRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallToo
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bearer token: %v", err)
 	}
-	if bearerToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
-	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
+
+	// Add custom headers from configuration
 	for key, value := range instance.CustomHeaders() {
 		req.Header.Set(key, value)
 	}
@@ -125,10 +125,11 @@ func getBearerToken(ctx context.Context, instance *config.Instance, tcr mcp.Call
 	key := cloudCacheKey(instance, deploymentID)
 	cloudAccessTokenCacheMutex.RLock()
 	result, ok := cloudAccessTokenCache[key]
-	cloudAccessTokenCacheMutex.RUnlock()
 	if ok {
+		cloudAccessTokenCacheMutex.RUnlock()
 		return result, nil
 	}
+	cloudAccessTokenCacheMutex.RUnlock()
 
 	at, err := instance.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
 	if err != nil {
@@ -138,8 +139,11 @@ func getBearerToken(ctx context.Context, instance *config.Instance, tcr mcp.Call
 		return "", fmt.Errorf("no access tokens found for deployment %s", deploymentID)
 	}
 	for _, t := range at {
-		if t.Type == vmcloud.AccessModeWrite || t.TenantID != "" {
-			continue
+		if t.Type == vmcloud.AccessModeWrite {
+			continue // Skip write only tokens
+		}
+		if t.TenantID != "" {
+			continue // Skip tokens with specific tenant ID
 		}
 		token, err := instance.VMC().RevealDeploymentAccessToken(ctx, deploymentID, t.ID)
 		if err != nil {
@@ -148,9 +152,10 @@ func getBearerToken(ctx context.Context, instance *config.Instance, tcr mcp.Call
 		cloudAccessTokenCacheMutex.Lock()
 		cloudAccessTokenCache[key] = token.Secret
 		cloudAccessTokenCacheMutex.Unlock()
-		return token.Secret, nil
+		result = token.Secret
+		return result, nil
 	}
-	return "", fmt.Errorf("no read access tokens found for deployment %s", deploymentID)
+	return result, fmt.Errorf("no read access tokens found for deployment %s", deploymentID)
 }
 
 func getRootURL(ctx context.Context, instance *config.Instance, tcr mcp.CallToolRequest, path ...string) (string, error) {
@@ -164,6 +169,7 @@ func getRootURL(ctx context.Context, instance *config.Instance, tcr mcp.CallTool
 		if err != nil {
 			return "", fmt.Errorf("failed to get cloud deployment info: %v", err)
 		}
+
 		entrypointURL, err = url.Parse(info.accessEndpoint)
 		if err != nil {
 			return "", fmt.Errorf("failed to parse deployment entry point URL: %v", err)
@@ -173,10 +179,14 @@ func getRootURL(ctx context.Context, instance *config.Instance, tcr mcp.CallTool
 }
 
 func getSelectURL(ctx context.Context, instance *config.Instance, tcr mcp.CallToolRequest, path ...string) (string, error) {
+	var err error
+	deploymentID := ""
 	entrypointURL := instance.EntryPointURL()
 	isSingle := instance.IsSingle()
+
+	// Cloud mode
 	if instance.IsCloud() {
-		deploymentID, err := requireCloudDeploymentID(instance, tcr)
+		deploymentID, err = requireCloudDeploymentID(instance, tcr)
 		if err != nil {
 			return "", err
 		}
@@ -184,17 +194,19 @@ func getSelectURL(ctx context.Context, instance *config.Instance, tcr mcp.CallTo
 		if err != nil {
 			return "", fmt.Errorf("failed to get cloud deployment info: %v", err)
 		}
-		var errParse error
-		entrypointURL, errParse = url.Parse(info.accessEndpoint)
-		if errParse != nil {
-			return "", fmt.Errorf("failed to parse deployment entry point URL: %v", errParse)
+		entrypointURL, err = url.Parse(info.accessEndpoint)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse deployment entry point URL: %v", err)
 		}
 		isSingle = info.deploymentType == vmcloud.DeploymentTypeSingleNode
 	}
+
+	// Single node
 	if isSingle {
 		return entrypointURL.JoinPath(path...).String(), nil
 	}
 
+	// Cluster mode
 	tenant, err := GetToolReqParam[string](tcr, "tenant", false)
 	if err != nil {
 		return "", fmt.Errorf("failed to get tenant parameter: %v", err)

@@ -32,9 +32,12 @@ func toolRuleFilenamesHandler(ctx context.Context, cfg *config.Config, tcr mcp.C
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	deploymentID, err := requireCloudDeploymentID(instance, tcr)
+	deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
 	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
+	}
+	if deploymentID == "" {
+		return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
 	}
 	ruleFilenames, err := instance.VMC().ListDeploymentRuleFileNames(ctx, deploymentID)
 	if err != nil {
