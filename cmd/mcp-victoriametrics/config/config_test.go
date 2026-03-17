@@ -127,6 +127,38 @@ func TestInitConfigMultiInstance(t *testing.T) {
 	}
 }
 
+func TestInitConfigServerModeAndListenDefaults(t *testing.T) {
+	t.Run("defaults to stdio and default listen addr", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "single")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("InitConfig() error = %v", err)
+		}
+		if !cfg.IsStdio() {
+			t.Fatal("expected default server mode to be stdio")
+		}
+		if got := cfg.ListenAddr(); got != "localhost:8080" {
+			t.Fatalf("ListenAddr() = %q", got)
+		}
+	})
+
+	t.Run("uses MCP_SSE_ADDR as listen fallback", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "single")
+		t.Setenv("MCP_SSE_ADDR", "127.0.0.1:18080")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("InitConfig() error = %v", err)
+		}
+		if got := cfg.ListenAddr(); got != "127.0.0.1:18080" {
+			t.Fatalf("ListenAddr() = %q", got)
+		}
+	})
+}
+
 func TestInitConfigValidationErrors(t *testing.T) {
 	t.Run("missing config", func(t *testing.T) {
 		if _, err := InitConfig(); err == nil {
@@ -148,6 +180,30 @@ func TestInitConfigValidationErrors(t *testing.T) {
 		t.Setenv("VM_INSTANCE_DEMO_TYPE", "single")
 		if _, err := InitConfig(); err == nil {
 			t.Fatal("expected invalid env name error")
+		}
+	})
+
+	t.Run("invalid server mode", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "single")
+		t.Setenv("MCP_SERVER_MODE", "invalid")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected invalid server mode error")
+		}
+	})
+
+	t.Run("missing legacy instance type", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected missing legacy instance type error")
+		}
+	})
+
+	t.Run("invalid legacy instance type", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "invalid")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected invalid legacy instance type error")
 		}
 	})
 
