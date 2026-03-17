@@ -66,7 +66,7 @@ func (b *BSI) GetExistenceBitmap() *Bitmap {
 // ValueExists tests whether the value exists.
 func (b *BSI) ValueExists(columnID uint64) bool {
 
-	return b.eBM.Contains(uint64(columnID))
+	return b.eBM.Contains(columnID)
 }
 
 // GetCardinality returns a count of unique column IDs for which a value has been set.
@@ -748,7 +748,7 @@ func transpose(e *task, batch []uint64, resultsChan chan *Bitmap, wg *sync.WaitG
 		results.RunOptimize()
 	}
 	for _, cID := range batch {
-		if value, ok := e.bsi.GetValue(uint64(cID)); ok {
+		if value, ok := e.bsi.GetValue(cID); ok {
 			results.Add(uint64(value))
 		}
 	}
@@ -812,6 +812,30 @@ func (b *BSI) ParOr(parallelism int, bsis ...*BSI) {
 	x := []*Bitmap{&b.eBM}
 	x = append(x, ebms...)
 	b.eBM = *ParOr(parallelism, x...)
+}
+
+// FromBitmaps initializes the BSI from a pre-built slice of bitmaps.
+// bms[0] is the existence bitmap (eBM); bms[1:] are the bit planes in
+// least-to-most-significant order (bit position 0 first), matching the
+// layout used by MarshalBinary/UnmarshalBinary.
+//
+// The caller transfers ownership of the slice and all bitmaps within it;
+// the BSI aliases the slice directly without copying. The caller must not
+// modify the slice or any of its elements after this call.
+//
+// The no-copy design is intentional. The primary use case is deserialization
+// pipelines where the existence bitmap is not stored on disk but reconstructed
+// by ORing the bit planes, and all bitmaps are freshly allocated from the
+// stream. Copying at that point would be wasteful. The caller's slice goes out
+// of scope immediately after the call, so aliasing is safe.
+//
+// Panics if len(bms) < 1.
+func (b *BSI) FromBitmaps(bms []Bitmap) {
+	if len(bms) < 1 {
+		panic("FromBitmaps: bms must have at least one element (the existence bitmap)")
+	}
+	b.eBM = bms[0]
+	b.bA = bms[1:]
 }
 
 // UnmarshalBinary de-serialize a BSI.  The value at bitData[0] is the EBM.  Other indices are in least to most
@@ -957,7 +981,7 @@ func batchEqual(e *task, batch []uint64, resultsChan chan *Bitmap,
 
 	for i := 0; i < len(batch); i++ {
 		cID := batch[i]
-		if value, ok := e.bsi.GetBigValue(uint64(cID)); ok {
+		if value, ok := e.bsi.GetBigValue(cID); ok {
 			if _, yes := e.values[string(value.Bytes())]; yes {
 				results.Add(cID)
 			}
@@ -971,23 +995,43 @@ func ClearBits(foundSet, target *Bitmap) {
 	target.AndNot(foundSet)
 }
 
-// ClearValues removes the values found in foundSet
+// ClearValues removes from the BSI all values whose column IDs are in
+// foundSet, modifying the BSI in place.
+//
+// The implementation is intentionally serial. A previous goroutine-per-bit-plane
+// approach was slower in practice: goroutine creation overhead dominated for
+// typical BSI sizes, and the cost compounds when ClearValues is called in a
+// tight loop (e.g. once per term across an entire index during a deletion pass).
 func (b *BSI) ClearValues(foundSet *Bitmap) {
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		b.eBM.AndNot(foundSet)
-	}()
-	for i := 0; i < b.BitCount(); i++ {
-		wg.Add(1)
-		go func(j int) {
-			defer wg.Done()
-			b.bA[j].AndNot(foundSet)
-		}(i)
+	b.eBM.AndNot(foundSet)
+	for i := range b.bA {
+		b.bA[i].AndNot(foundSet)
 	}
-	wg.Wait()
+}
+
+// Retain removes from the BSI all values whose column IDs are not in retain,
+// modifying the BSI in place. It returns the number of column IDs dropped.
+//
+// This is the in-place equivalent of NewBSIRetainSet. Prefer it when no copy
+// is needed, such as when the BSI will be immediately re-serialized — it
+// avoids the allocation of a new BSI and all its bit planes.
+//
+// The bit planes (bA) are only updated when the existence bitmap actually
+// shrinks. This is safe because BSI consistency guarantees that bA contains no
+// set bits for column IDs absent from eBM; if eBM is unchanged after the
+// intersection then retain covers all existing column IDs and bA needs no
+// update.
+func (b *BSI) Retain(retain *Bitmap) (dropped uint64) {
+	preCard := b.eBM.GetCardinality()
+	b.eBM.And(retain)
+	dropped = preCard - b.eBM.GetCardinality()
+	if dropped == 0 {
+		return
+	}
+	for i := range b.bA {
+		b.bA[i].And(retain)
+	}
+	return
 }
 
 // NewBSIRetainSet - Construct a new BSI from a clone of existing BSI, retain only values contained in foundSet
@@ -1066,7 +1110,7 @@ func transposeWithCounts(input *BSI, filterSet *Bitmap, batch []uint64, resultsC
 		results.RunOptimize()
 	}
 	for _, cID := range batch {
-		if value, ok := input.GetValue(uint64(cID)); ok {
+		if value, ok := input.GetValue(cID); ok {
 			if !filterSet.Contains(uint64(value)) {
 				continue
 			}

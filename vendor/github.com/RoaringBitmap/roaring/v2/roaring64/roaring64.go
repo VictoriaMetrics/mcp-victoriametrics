@@ -73,7 +73,7 @@ func (rb *Bitmap) WriteTo(stream io.Writer) (int64, error) {
 			return n, err
 		}
 		written, err := c.WriteTo(stream)
-		n += int64(written)
+		n += written
 		if err != nil {
 			return n, err
 		}
@@ -119,7 +119,7 @@ func (rb *Bitmap) FromUnsafeBytes(data []byte) (p int64, err error) {
 		n, err := rb.highlowcontainer.containers[i].ReadFrom(stream)
 
 		if n == 0 || err != nil {
-			return int64(n), fmt.Errorf("Could not deserialize bitmap for key #%d: %s", i, err)
+			return n, fmt.Errorf("Could not deserialize bitmap for key #%d: %s", i, err)
 		}
 	}
 
@@ -167,9 +167,9 @@ func (rb *Bitmap) ReadFrom(stream io.Reader) (p int64, err error) {
 		n, err := rb.highlowcontainer.containers[i].ReadFrom(stream)
 
 		if n == 0 || err != nil {
-			return int64(n), fmt.Errorf("Could not deserialize bitmap for key #%d: %s", i, err)
+			return n, fmt.Errorf("Could not deserialize bitmap for key #%d: %s", i, err)
 		}
-		p += int64(n)
+		p += n
 	}
 	return p, nil
 }
@@ -249,7 +249,7 @@ func (rb *Bitmap) String() string {
 	counter := 0
 	if i.HasNext() {
 		counter = counter + 1
-		buffer.WriteString(strconv.FormatUint(uint64(i.Next()), 10))
+		buffer.WriteString(strconv.FormatUint(i.Next(), 10))
 	}
 	for i.HasNext() {
 		buffer.WriteString(",")
@@ -259,7 +259,7 @@ func (rb *Bitmap) String() string {
 			buffer.WriteString("...")
 			break
 		}
-		buffer.WriteString(strconv.FormatUint(uint64(i.Next()), 10))
+		buffer.WriteString(strconv.FormatUint(i.Next(), 10))
 	}
 	buffer.WriteString("}")
 	return buffer.String()
