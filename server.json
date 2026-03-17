@@ -57,6 +57,13 @@
           "isRequired": false,
           "format": "boolean",
           "isSecret": false
+        },
+        {
+          "name": "MCP_PASSTHROUGH_HEADERS",
+          "description": "HTTP header names to forward from incoming MCP requests to VictoriaMetrics (comma-separated list). Overrides VM_INSTANCE_HEADERS on collision.",
+          "isRequired": false,
+          "format": "boolean",
+          "isSecret": false
         }
       ]
     }
