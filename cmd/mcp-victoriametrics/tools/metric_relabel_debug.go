@@ -23,17 +23,7 @@ The tool use "/metric-relabel-debug" endpoint of the VictoriaMetrics API. `),
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	if c.IsCloud() {
-		options = append(
-			options,
-			mcp.WithString("deployment_id",
-				mcp.Required(),
-				mcp.Title("Deployment ID"),
-				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
-				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
-			),
-		)
-	}
+	options = withTargetingOptions(options, c, true, false)
 	options = append(
 		options,
 		mcp.WithString("relabel_configs",

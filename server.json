@@ -18,28 +18,84 @@
       "environmentVariables": [
         {
           "name": "VM_INSTANCE_ENTRYPOINT",
-          "description": "URL to VictoriaMetrics instance (it should be root URL of vmsingle or vmselect), for example http://localhost:8428 or https://play.victoriametrics.com",
-          "isRequired": true,
+          "description": "URL to VictoriaMetrics instance (it should be root URL of vmsingle or vmselect). Use this only when VM_ENVIRONMENTS is not set.",
+          "isRequired": false,
           "format": "string",
           "isSecret": false
         },
         {
           "name": "VM_INSTANCE_TYPE",
-          "description": "Type of VictoriaMetrics instance (single / cluster)",
-          "isRequired": true,
+          "description": "Type of VictoriaMetrics instance (single / cluster). Use this only when VM_ENVIRONMENTS is not set.",
+          "isRequired": false,
           "format": "string",
           "isSecret": false
         },
         {
           "name": "VM_INSTANCE_BEARER_TOKEN",
           "description": "Authentication token for VictoriaMetrics API",
-          "isRequired": true,
+          "isRequired": false,
           "format": "string",
           "isSecret": true
         },
         {
           "name": "VMC_API_KEY",
-          "description": "Optional: API key from VictoriaMetrics Cloud Console (if you have deployment in VictoriaMetrics Cloud)",
+          "description": "API key from VictoriaMetrics Cloud Console. Use this only when VM_ENVIRONMENTS is not set.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "VM_ENVIRONMENTS",
+          "description": "Comma-separated list of environment names exposed by this MCP server, for example demo,prod",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VM_DEFAULT_ENVIRONMENT",
+          "description": "Default environment used when a tool call omits env",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VM_INSTANCE_<ENV>_ENTRYPOINT",
+          "description": "Per-environment VictoriaMetrics entrypoint. Required for self-hosted environments.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VM_INSTANCE_<ENV>_TYPE",
+          "description": "Per-environment VictoriaMetrics instance type (single / cluster). Required with VM_INSTANCE_<ENV>_ENTRYPOINT.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VM_INSTANCE_<ENV>_BEARER_TOKEN",
+          "description": "Per-environment bearer token for VictoriaMetrics API",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "VM_INSTANCE_<ENV>_HEADERS",
+          "description": "Per-environment custom headers as comma-separated key=value pairs",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VM_INSTANCE_<ENV>_DEFAULT_TENANT_ID",
+          "description": "Per-environment default tenant ID",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VMC_<ENV>_API_KEY",
+          "description": "Per-environment VictoriaMetrics Cloud API key",
           "isRequired": false,
           "format": "string",
           "isSecret": true

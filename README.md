@@ -149,6 +149,40 @@ You can use two options to connect to your VictoriaMetrics instance:
 - Using `VM_INSTANCE_ENTRYPOINT` + `VM_INSTANCE_TYPE` + `VM_INSTANCE_BEARER_TOKEN` (optional) environment variables to connect to any single-node or cluster instance of VictoriaMetrics.
 - Using `VMC_API_KEY` environment variable to work with your [VictoriaMetrics Cloud](https://victoriametrics.com/products/cloud/) instances.
 
+### Multiple Environments
+
+You can also expose multiple preconfigured VictoriaMetrics environments from a single MCP server.
+
+```bash
+export VM_ENVIRONMENTS="demo,prod"
+export VM_DEFAULT_ENVIRONMENT="demo"
+
+export VM_INSTANCE_DEMO_ENTRYPOINT="http://demo.victoriametrics.local"
+export VM_INSTANCE_DEMO_TYPE="single"
+
+export VM_INSTANCE_PROD_ENTRYPOINT="http://prod.victoriametrics.local"
+export VM_INSTANCE_PROD_TYPE="cluster"
+export VM_INSTANCE_PROD_DEFAULT_TENANT_ID="42"
+```
+
+Environment names may contain lowercase letters, numbers, and underscores.
+
+For cloud environments, use `VMC_<ENV>_API_KEY` instead of `VM_INSTANCE_<ENV>_ENTRYPOINT`.
+
+When multiple environments are configured, API tools accept an optional `env` argument:
+
+```json
+{
+  "name": "query",
+  "arguments": {
+    "env": "prod",
+    "query": "up"
+  }
+}
+```
+
+If `env` is omitted, the default environment is used.
+
 ### Modes
 
 MCP Server supports the following modes of operation (transports):

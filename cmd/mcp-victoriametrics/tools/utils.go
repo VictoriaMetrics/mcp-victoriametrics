@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -16,7 +17,12 @@ import (
 )
 
 func CreateSelectRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, path ...string) (*http.Request, error) {
-	selectURL, err := getSelectURL(ctx, cfg, tcr, path...)
+	instance, err := getToolInstance(cfg, tcr)
+	if err != nil {
+		return nil, err
+	}
+
+	selectURL, err := getSelectURL(ctx, instance, tcr, path...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get select URL: %v", err)
 	}
@@ -25,14 +31,15 @@ func CreateSelectRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallTo
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
-	bearerToken, err := getBearerToken(ctx, cfg, tcr)
+
+	bearerToken, err := getBearerToken(ctx, instance, tcr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bearer token: %v", err)
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
 
 	// Add custom headers from configuration
-	for key, value := range cfg.CustomHeaders() {
+	for key, value := range instance.CustomHeaders() {
 		req.Header.Set(key, value)
 	}
 
@@ -40,23 +47,29 @@ func CreateSelectRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallTo
 }
 
 func CreateAdminRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, path ...string) (*http.Request, error) {
-	selectURL, err := getRootURL(ctx, cfg, tcr, path...)
+	instance, err := getToolInstance(cfg, tcr)
+	if err != nil {
+		return nil, err
+	}
+
+	rootURL, err := getRootURL(ctx, instance, tcr, path...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get select URL: %v", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, selectURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rootURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
-	bearerToken, err := getBearerToken(ctx, cfg, tcr)
+
+	bearerToken, err := getBearerToken(ctx, instance, tcr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bearer token: %v", err)
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
 
 	// Add custom headers from configuration
-	for key, value := range cfg.CustomHeaders() {
+	for key, value := range instance.CustomHeaders() {
 		req.Header.Set(key, value)
 	}
 
@@ -75,56 +88,50 @@ var (
 	cloudDeploymentInfoCache      = make(map[string]cloudDeploymentInfo)
 )
 
-func getCloudDeploymentInfo(ctx context.Context, cfg *config.Config, deploymentID string) (cloudDeploymentInfo, error) {
+func getCloudDeploymentInfo(ctx context.Context, instance *config.Instance, deploymentID string) (cloudDeploymentInfo, error) {
+	key := cloudCacheKey(instance, deploymentID)
 	cloudDeploymentInfoCacheMutex.RLock()
-	info, ok := cloudDeploymentInfoCache[deploymentID]
+	info, ok := cloudDeploymentInfoCache[key]
 	cloudDeploymentInfoCacheMutex.RUnlock()
 	if ok && info.accessEndpoint != "" && info.deploymentType != "" {
 		return info, nil
 	}
 
-	dd, err := cfg.VMC().GetDeploymentDetails(ctx, deploymentID)
+	dd, err := instance.VMC().GetDeploymentDetails(ctx, deploymentID)
 	if err != nil {
 		return cloudDeploymentInfo{}, fmt.Errorf("failed to get deployment details: %v", err)
 	}
-
 	if dd.Type != vmcloud.DeploymentTypeSingleNode && dd.Type != vmcloud.DeploymentTypeCluster {
 		return cloudDeploymentInfo{}, fmt.Errorf("unsupported deployment type %s for deployment %s", dd.Type, deploymentID)
 	}
 
-	info = cloudDeploymentInfo{
-		accessEndpoint: dd.AccessEndpoint,
-		deploymentType: dd.Type,
-	}
-
+	info = cloudDeploymentInfo{accessEndpoint: dd.AccessEndpoint, deploymentType: dd.Type}
 	cloudDeploymentInfoCacheMutex.Lock()
-	cloudDeploymentInfoCache[deploymentID] = info
+	cloudDeploymentInfoCache[key] = info
 	cloudDeploymentInfoCacheMutex.Unlock()
-
 	return info, nil
 }
 
-func getBearerToken(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (string, error) {
-	if !cfg.IsCloud() {
-		return cfg.BearerToken(), nil
+func getBearerToken(ctx context.Context, instance *config.Instance, tcr mcp.CallToolRequest) (string, error) {
+	if !instance.IsCloud() {
+		return instance.BearerToken(), nil
 	}
 
-	deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
+	deploymentID, err := requireCloudDeploymentID(instance, tcr)
 	if err != nil {
-		return "", fmt.Errorf("failed to get deployment_id parameter: %v", err)
+		return "", err
 	}
-	if deploymentID == "" {
-		return "", fmt.Errorf("deployment_id parameter is required for cloud mode")
-	}
+
+	key := cloudCacheKey(instance, deploymentID)
 	cloudAccessTokenCacheMutex.RLock()
-	result, ok := cloudAccessTokenCache[deploymentID]
+	result, ok := cloudAccessTokenCache[key]
 	if ok {
 		cloudAccessTokenCacheMutex.RUnlock()
 		return result, nil
 	}
 	cloudAccessTokenCacheMutex.RUnlock()
 
-	at, err := cfg.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
+	at, err := instance.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
 	if err != nil {
 		return "", fmt.Errorf("failed to list deployment access tokens: %v", err)
 	}
@@ -138,12 +145,12 @@ func getBearerToken(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReq
 		if t.TenantID != "" {
 			continue // Skip tokens with specific tenant ID
 		}
-		token, err := cfg.VMC().RevealDeploymentAccessToken(ctx, deploymentID, t.ID)
+		token, err := instance.VMC().RevealDeploymentAccessToken(ctx, deploymentID, t.ID)
 		if err != nil {
 			return "", fmt.Errorf("failed to reveal access token for deployment %s: %v", deploymentID, err)
 		}
 		cloudAccessTokenCacheMutex.Lock()
-		cloudAccessTokenCache[deploymentID] = token.Secret
+		cloudAccessTokenCache[key] = token.Secret
 		cloudAccessTokenCacheMutex.Unlock()
 		result = token.Secret
 		return result, nil
@@ -151,20 +158,18 @@ func getBearerToken(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReq
 	return result, fmt.Errorf("no read access tokens found for deployment %s", deploymentID)
 }
 
-func getRootURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, path ...string) (string, error) {
-	entrypointURL := cfg.EntryPointURL()
-	if cfg.IsCloud() {
-		deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", cfg.IsCloud())
+func getRootURL(ctx context.Context, instance *config.Instance, tcr mcp.CallToolRequest, path ...string) (string, error) {
+	entrypointURL := instance.EntryPointURL()
+	if instance.IsCloud() {
+		deploymentID, err := requireCloudDeploymentID(instance, tcr)
 		if err != nil {
-			return "", fmt.Errorf("failed to get deployment_id parameter: %v", err)
+			return "", err
 		}
-		if deploymentID == "" {
-			return "", fmt.Errorf("deployment_id parameter is required for cloud mode")
-		}
-		info, err := getCloudDeploymentInfo(ctx, cfg, deploymentID)
+		info, err := getCloudDeploymentInfo(ctx, instance, deploymentID)
 		if err != nil {
 			return "", fmt.Errorf("failed to get cloud deployment info: %v", err)
 		}
+
 		entrypointURL, err = url.Parse(info.accessEndpoint)
 		if err != nil {
 			return "", fmt.Errorf("failed to parse deployment entry point URL: %v", err)
@@ -173,22 +178,19 @@ func getRootURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest
 	return entrypointURL.JoinPath(path...).String(), nil
 }
 
-func getSelectURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, path ...string) (string, error) {
+func getSelectURL(ctx context.Context, instance *config.Instance, tcr mcp.CallToolRequest, path ...string) (string, error) {
 	var err error
 	deploymentID := ""
-	entrypointURL := cfg.EntryPointURL()
-	isSingle := cfg.IsSingle()
+	entrypointURL := instance.EntryPointURL()
+	isSingle := instance.IsSingle()
 
 	// Cloud mode
-	if cfg.IsCloud() {
-		deploymentID, err = GetToolReqParam[string](tcr, "deployment_id", cfg.IsCloud())
+	if instance.IsCloud() {
+		deploymentID, err = requireCloudDeploymentID(instance, tcr)
 		if err != nil {
-			return "", fmt.Errorf("failed to get deployment_id parameter: %v", err)
+			return "", err
 		}
-		if deploymentID == "" {
-			return "", fmt.Errorf("deployment_id parameter is required for cloud mode")
-		}
-		info, err := getCloudDeploymentInfo(ctx, cfg, deploymentID)
+		info, err := getCloudDeploymentInfo(ctx, instance, deploymentID)
 		if err != nil {
 			return "", fmt.Errorf("failed to get cloud deployment info: %v", err)
 		}
@@ -205,12 +207,15 @@ func getSelectURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReque
 	}
 
 	// Cluster mode
-	tenant, err := GetToolReqParam[string](tcr, "tenant", false)
+	tenant, present, err := getTrimmedStringParam(tcr, "tenant")
 	if err != nil {
 		return "", fmt.Errorf("failed to get tenant parameter: %v", err)
 	}
+	if present && tenant == "" {
+		return "", fmt.Errorf("tenant parameter must not be empty")
+	}
 	if tenant == "" {
-		tenant = cfg.DefaultTenantID()
+		tenant = instance.DefaultTenantID()
 	}
 	args := []string{"select", tenant, "prometheus"}
 	return entrypointURL.JoinPath(append(args, path...)...).String(), nil
@@ -254,6 +259,148 @@ func GetToolReqParam[T ToolReqParamType](tcr mcp.CallToolRequest, param string, 
 		return value, fmt.Errorf("%s param is required", param)
 	}
 	return value, nil
+}
+
+func getToolInstance(cfg *config.Config, tcr mcp.CallToolRequest) (*config.Instance, error) {
+	env, err := GetToolReqParam[string](tcr, "env", false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get env parameter: %v", err)
+	}
+	instance, err := cfg.ResolveInstance(strings.TrimSpace(env))
+	if err != nil {
+		return nil, err
+	}
+	return instance, nil
+}
+
+func getClusterAdminToolInstance(cfg *config.Config, tcr mcp.CallToolRequest) (*config.Instance, error) {
+	instance, err := getToolInstance(cfg, tcr)
+	if err != nil {
+		return nil, err
+	}
+	if !instance.IsCluster() && !instance.IsCloud() {
+		return nil, fmt.Errorf("env %q does not support admin tenant operations", instance.Name())
+	}
+	return instance, nil
+}
+
+func getCloudToolInstance(cfg *config.Config, tcr mcp.CallToolRequest) (*config.Instance, error) {
+	instance, err := getToolInstance(cfg, tcr)
+	if err != nil {
+		return nil, err
+	}
+	if !instance.IsCloud() {
+		return nil, fmt.Errorf("env %q is not a VictoriaMetrics Cloud env", instance.Name())
+	}
+	return instance, nil
+}
+
+func cloudCacheKey(instance *config.Instance, deploymentID string) string {
+	return instance.Name() + ":" + deploymentID
+}
+
+func requireCloudDeploymentID(instance *config.Instance, tcr mcp.CallToolRequest) (string, error) {
+	deploymentID, present, err := getTrimmedStringParam(tcr, "deployment_id")
+	if err != nil {
+		return "", fmt.Errorf("failed to get deployment_id parameter: %v", err)
+	}
+	if !present || deploymentID == "" {
+		return "", fmt.Errorf("deployment_id parameter is required for cloud env %q", instance.Name())
+	}
+	return deploymentID, nil
+}
+
+func withTargetingOptions(options []mcp.ToolOption, c *config.Config, includeDeploymentID, includeTenant bool) []mcp.ToolOption {
+	return withTargetingOptionsFor(options, c, includeDeploymentID, includeTenant, defaultCloudToolRequiresEnv(c, includeDeploymentID))
+}
+
+func withCloudToolTargetingOptions(options []mcp.ToolOption, c *config.Config, includeDeploymentID bool) []mcp.ToolOption {
+	options = withTargetingOptionsFor(options, c, false, false, cloudToolRequiresEnv(c))
+	if includeDeploymentID {
+		options = appendDeploymentIDOption(options, true)
+	}
+	return options
+}
+
+func withClusterAdminTargetingOptions(options []mcp.ToolOption, c *config.Config, includeDeploymentID bool) []mcp.ToolOption {
+	return withTargetingOptionsFor(options, c, includeDeploymentID, false, clusterToolRequiresEnv(c))
+}
+
+func withTargetingOptionsFor(options []mcp.ToolOption, c *config.Config, includeDeploymentID, includeTenant, requireEnv bool) []mcp.ToolOption {
+	if c.HasMultipleInstances() {
+		envDescription := "Optional environment to target. If omitted, the default environment is used."
+		if requireEnv {
+			envDescription = "Environment to target. This is required for the current server configuration."
+		}
+		envOptions := []mcp.PropertyOption{
+			mcp.Title("Environment"),
+			mcp.Description(envDescription),
+			mcp.Pattern(`^[a-z0-9_]+$`),
+		}
+		if requireEnv {
+			envOptions = append(envOptions, mcp.Required())
+		}
+		options = append(options, mcp.WithString("env", envOptions...))
+	}
+	if includeDeploymentID && c.HasCloudInstances() {
+		options = appendDeploymentIDOption(options, c.HasOnlyCloudInstances())
+	}
+	if includeTenant && c.HasClusterInstances() {
+		options = append(options, mcp.WithString("tenant",
+			mcp.Title("Tenant name"),
+			mcp.Description("Tenant name for cluster or cloud environments. If omitted, the selected env default is used."),
+			mcp.Pattern(`^([0-9]+)(:[0-9]+)?$`),
+		))
+	}
+	return options
+}
+
+func appendDeploymentIDOption(options []mcp.ToolOption, required bool) []mcp.ToolOption {
+	propertyOptions := []mcp.PropertyOption{
+		mcp.Title("Deployment ID"),
+		mcp.Description("Deployment ID in VictoriaMetrics Cloud. Required when the selected env is a cloud env."),
+		mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
+	}
+	if required {
+		propertyOptions = append(propertyOptions, mcp.Required())
+	}
+	return append(options, mcp.WithString("deployment_id", propertyOptions...))
+}
+
+func defaultCloudToolRequiresEnv(c *config.Config, includeDeploymentID bool) bool {
+	if !includeDeploymentID || !c.HasMultipleInstances() || c.HasOnlyCloudInstances() {
+		return false
+	}
+	instance, err := c.ResolveInstance("")
+	return err == nil && instance.IsCloud()
+}
+
+func cloudToolRequiresEnv(c *config.Config) bool {
+	if !c.HasMultipleInstances() {
+		return false
+	}
+	instance, err := c.ResolveInstance("")
+	return err != nil || !instance.IsCloud()
+}
+
+func clusterToolRequiresEnv(c *config.Config) bool {
+	if !c.HasMultipleInstances() {
+		return false
+	}
+	instance, err := c.ResolveInstance("")
+	return err != nil || !instance.IsCluster()
+}
+
+func getTrimmedStringParam(tcr mcp.CallToolRequest, param string) (string, bool, error) {
+	matchArg, ok := tcr.GetArguments()[param]
+	if !ok {
+		return "", false, nil
+	}
+	value, ok := matchArg.(string)
+	if !ok {
+		return "", true, fmt.Errorf("%s has wrong type: %T", param, matchArg)
+	}
+	return strings.TrimSpace(value), true, nil
 }
 
 func ptr[T any](v T) *T {

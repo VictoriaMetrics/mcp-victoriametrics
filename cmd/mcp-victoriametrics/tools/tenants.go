@@ -21,21 +21,14 @@ func toolTenants(c *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	if c.IsCloud() {
-		options = append(
-			options,
-			mcp.WithString("deployment_id",
-				mcp.Required(),
-				mcp.Title("Deployment ID"),
-				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
-				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
-			),
-		)
-	}
+	options = withClusterAdminTargetingOptions(options, c, true)
 	return mcp.NewTool(toolNameTenants, options...)
 }
 
 func toolTenantsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if _, err := getClusterAdminToolInstance(cfg, tcr); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	req, err := CreateAdminRequest(ctx, cfg, tcr, "admin", "tenants")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create request: %v", err)), nil
@@ -47,7 +40,7 @@ func RegisterToolTenants(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(toolNameTenants) {
 		return
 	}
-	if !c.IsCluster() && !c.IsCloud() {
+	if !c.HasClusterInstances() {
 		return
 	}
 	s.AddTool(toolTenants(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

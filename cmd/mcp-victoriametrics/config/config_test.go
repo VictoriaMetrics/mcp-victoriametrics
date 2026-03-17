@@ -1,342 +1,248 @@
 package config
 
 import (
-	"net/url"
-	"os"
 	"testing"
 	"time"
 )
 
-func TestInitConfig(t *testing.T) {
-	// Save original environment variables
-	originalEntrypoint := os.Getenv("VM_INSTANCE_ENTRYPOINT")
-	originalInstanceType := os.Getenv("VM_INSTANCE_TYPE")
-	originalServerMode := os.Getenv("MCP_SERVER_MODE")
-	originalSSEAddr := os.Getenv("MCP_SSE_ADDR")
-	originalBearerToken := os.Getenv("VM_INSTANCE_BEARER_TOKEN")
-	originalHeartbeatInterval := os.Getenv("MCP_HEARTBEAT_INTERVAL")
-	originalHeaders := os.Getenv("VM_INSTANCE_HEADERS")
+func TestInitConfigLegacyInstance(t *testing.T) {
+	t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+	t.Setenv("VM_INSTANCE_TYPE", "cluster")
+	t.Setenv("VM_INSTANCE_BEARER_TOKEN", "secret")
+	t.Setenv("VM_INSTANCE_HEADERS", "A=1,B=2")
+	t.Setenv("VM_DEFAULT_TENANT_ID", "100:200")
+	t.Setenv("MCP_HEARTBEAT_INTERVAL", "45s")
 
-	// Restore environment variables after test
-	defer func() {
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", originalEntrypoint)
-		os.Setenv("VM_INSTANCE_TYPE", originalInstanceType)
-		os.Setenv("MCP_SERVER_MODE", originalServerMode)
-		os.Setenv("MCP_SSE_ADDR", originalSSEAddr)
-		os.Setenv("VM_INSTANCE_BEARER_TOKEN", originalBearerToken)
-		os.Setenv("MCP_HEARTBEAT_INTERVAL", originalHeartbeatInterval)
-		os.Setenv("VM_INSTANCE_HEADERS", originalHeaders)
-	}()
+	cfg, err := InitConfig()
+	if err != nil {
+		t.Fatalf("InitConfig() error = %v", err)
+	}
+	instance, err := cfg.ResolveInstance("")
+	if err != nil {
+		t.Fatalf("ResolveInstance(default) error = %v", err)
+	}
+	if cfg.DefaultInstanceName() != "default" {
+		t.Fatalf("DefaultInstanceName() = %q", cfg.DefaultInstanceName())
+	}
+	if !instance.IsCluster() {
+		t.Fatal("expected default instance to be cluster")
+	}
+	if instance.BearerToken() != "secret" {
+		t.Fatalf("BearerToken() = %q", instance.BearerToken())
+	}
+	if got := instance.EntryPointURL().String(); got != "http://example.com" {
+		t.Fatalf("EntryPointURL() = %q", got)
+	}
+	if got := instance.DefaultTenantID(); got != "100:200" {
+		t.Fatalf("DefaultTenantID() = %q", got)
+	}
+	if got := instance.CustomHeaders()["A"]; got != "1" {
+		t.Fatalf("CustomHeaders()[A] = %q", got)
+	}
+	if cfg.HeartbeatInterval() != 45*time.Second {
+		t.Fatalf("HeartbeatInterval() = %v", cfg.HeartbeatInterval())
+	}
+	if instance.Name() != "default" {
+		t.Fatalf("ResolveInstance(default).Name() = %q", instance.Name())
+	}
+}
 
-	// Test case 1: Valid configuration
-	t.Run("Valid configuration", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "single")
-		os.Setenv("MCP_SERVER_MODE", "stdio")
-		os.Setenv("MCP_SSE_ADDR", "localhost:8080")
-		os.Setenv("VM_INSTANCE_BEARER_TOKEN", "test-token")
+func TestInitConfigLegacyCloud(t *testing.T) {
+	t.Setenv("VMC_API_KEY", "test-api-key")
 
-		// Initialize config
+	cfg, err := InitConfig()
+	if err != nil {
+		t.Fatalf("InitConfig() error = %v", err)
+	}
+	instance, err := cfg.ResolveInstance("")
+	if err != nil {
+		t.Fatalf("ResolveInstance(default) error = %v", err)
+	}
+	if !instance.IsCloud() {
+		t.Fatal("expected default instance to be cloud")
+	}
+	if !cfg.HasCloudInstances() {
+		t.Fatal("expected HasCloudInstances() to be true")
+	}
+	if !cfg.HasOnlyCloudInstances() {
+		t.Fatal("expected HasOnlyCloudInstances() to be true")
+	}
+}
+
+func TestInitConfigMultiInstance(t *testing.T) {
+	t.Setenv("VM_ENVIRONMENTS", "demo,prod_cloud")
+	t.Setenv("VM_DEFAULT_ENVIRONMENT", "prod_cloud")
+	t.Setenv("VM_INSTANCE_DEMO_ENTRYPOINT", "http://demo.example.com")
+	t.Setenv("VM_INSTANCE_DEMO_TYPE", "single")
+	t.Setenv("VM_INSTANCE_DEMO_HEADERS", "X-Test=yes")
+	t.Setenv("VM_INSTANCE_PROD_CLOUD_DEFAULT_TENANT_ID", "7")
+	t.Setenv("VMC_PROD_CLOUD_API_KEY", "test-api-key")
+
+	cfg, err := InitConfig()
+	if err != nil {
+		t.Fatalf("InitConfig() error = %v", err)
+	}
+	if !cfg.HasMultipleInstances() {
+		t.Fatal("expected multiple instances")
+	}
+	if got := cfg.DefaultInstanceName(); got != "prod_cloud" {
+		t.Fatalf("DefaultInstanceName() = %q", got)
+	}
+	if got := cfg.InstanceNames(); len(got) != 2 || got[0] != "demo" || got[1] != "prod_cloud" {
+		t.Fatalf("InstanceNames() = %#v", got)
+	}
+	if !cfg.HasCloudInstances() {
+		t.Fatal("expected HasCloudInstances() to be true")
+	}
+	if !cfg.HasClusterInstances() {
+		t.Fatal("expected HasClusterInstances() to be true when cloud env exists")
+	}
+
+	demo, err := cfg.ResolveInstance("demo")
+	if err != nil {
+		t.Fatalf("ResolveInstance(demo) error = %v", err)
+	}
+	if demo.IsCloud() {
+		t.Fatal("demo should not be cloud")
+	}
+	if got := demo.EntryPointURL().String(); got != "http://demo.example.com" {
+		t.Fatalf("demo EntryPointURL() = %q", got)
+	}
+	if got := demo.CustomHeaders()["X-Test"]; got != "yes" {
+		t.Fatalf("demo CustomHeaders()[X-Test] = %q", got)
+	}
+
+	prod, err := cfg.ResolveInstance("prod_cloud")
+	if err != nil {
+		t.Fatalf("ResolveInstance(prod_cloud) error = %v", err)
+	}
+	if !prod.IsCloud() {
+		t.Fatal("prod_cloud should be cloud")
+	}
+	if got := prod.DefaultTenantID(); got != "7" {
+		t.Fatalf("prod_cloud DefaultTenantID() = %q", got)
+	}
+	if _, err := cfg.ResolveInstance(""); err != nil {
+		t.Fatalf("ResolveInstance(default) error = %v", err)
+	}
+}
+
+func TestInitConfigServerModeAndListenDefaults(t *testing.T) {
+	t.Run("defaults to stdio and default listen addr", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "single")
+
 		cfg, err := InitConfig()
-
-		// Check for errors
 		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
-		}
-
-		// Check config values
-		if cfg.BearerToken() != "test-token" {
-			t.Errorf("Expected bearer token 'test-token', got: %s", cfg.BearerToken())
-		}
-		if !cfg.IsSingle() {
-			t.Error("Expected IsSingle() to be true")
-		}
-		if cfg.IsCluster() {
-			t.Error("Expected IsCluster() to be false")
+			t.Fatalf("InitConfig() error = %v", err)
 		}
 		if !cfg.IsStdio() {
-			t.Error("Expected IsStdio() to be true")
+			t.Fatal("expected default server mode to be stdio")
 		}
-		if cfg.IsSSE() {
-			t.Error("Expected IsSSE() to be false")
-		}
-		if cfg.ListenAddr() != "localhost:8080" {
-			t.Errorf("Expected SSE address 'localhost:8080', got: %s", cfg.ListenAddr())
-		}
-		expectedURL, _ := url.Parse("http://example.com")
-		if cfg.EntryPointURL().String() != expectedURL.String() {
-			t.Errorf("Expected entrypoint URL 'http://example.com', got: %s", cfg.EntryPointURL().String())
-		}
-		if !cfg.IsSingle() {
-			t.Error("Expected IsSingle() to be true")
-		}
-		if cfg.IsCluster() {
-			t.Error("Expected IsCluster() to be false")
+		if got := cfg.ListenAddr(); got != "localhost:8080" {
+			t.Fatalf("ListenAddr() = %q", got)
 		}
 	})
 
-	// Test case 2: Missing entrypoint
-	t.Run("Missing entrypoint", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "")
-		os.Setenv("VM_INSTANCE_TYPE", "single")
+	t.Run("uses MCP_SSE_ADDR as listen fallback", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "single")
+		t.Setenv("MCP_SSE_ADDR", "127.0.0.1:18080")
 
-		// Initialize config
-		_, err := InitConfig()
-
-		// Check for errors
-		if err == nil {
-			t.Fatal("Expected error for missing entrypoint, got nil")
-		}
-	})
-
-	// Test case 3: Missing instance type
-	t.Run("Missing instance type", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "")
-
-		// Initialize config
-		_, err := InitConfig()
-
-		// Check for errors
-		if err == nil {
-			t.Fatal("Expected error for missing instance type, got nil")
-		}
-	})
-
-	// Test case 4: Invalid instance type
-	t.Run("Invalid instance type", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "invalid")
-
-		// Initialize config
-		_, err := InitConfig()
-
-		// Check for errors
-		if err == nil {
-			t.Fatal("Expected error for invalid instance type, got nil")
-		}
-	})
-
-	// Test case 5: Invalid server mode
-	t.Run("Invalid server mode", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "single")
-		os.Setenv("MCP_SERVER_MODE", "invalid")
-
-		// Initialize config
-		_, err := InitConfig()
-
-		// Check for errors
-		if err == nil {
-			t.Fatal("Expected error for invalid server mode, got nil")
-		}
-	})
-
-	// Test case 6: Default values
-	t.Run("Default values", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "single")
-		os.Setenv("MCP_SERVER_MODE", "")
-		os.Setenv("MCP_SSE_ADDR", "")
-
-		// Initialize config
-		cfg, err := InitConfig()
-
-		// Check for errors
-		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
-		}
-
-		// Check default values
-		if !cfg.IsStdio() {
-			t.Error("Expected default server mode to be stdio")
-		}
-		if cfg.ListenAddr() != "localhost:8080" {
-			t.Errorf("Expected default SSE address 'localhost:8080', got: %s", cfg.ListenAddr())
-		}
-		if !cfg.IsSingle() {
-			t.Error("Expected IsSingle() to be true")
-		}
-		if cfg.IsCluster() {
-			t.Error("Expected IsCluster() to be false")
-		}
-	})
-
-	// Test case 7: Cluster
-	t.Run("Missing entrypoint", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "cluster")
-
-		// Initialize config
 		cfg, err := InitConfig()
 		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
+			t.Fatalf("InitConfig() error = %v", err)
 		}
-
-		// Check values
-		if cfg.IsSingle() {
-			t.Error("Expected IsSingle() to be true")
-		}
-		if !cfg.IsCluster() {
-			t.Error("Expected IsCluster() to be false")
+		if got := cfg.ListenAddr(); got != "127.0.0.1:18080" {
+			t.Fatalf("ListenAddr() = %q", got)
 		}
 	})
-	// Test case 8: Heartbeat interval
-	t.Run("Correct heartbeat interval", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "single")
-		os.Setenv("MCP_HEARTBEAT_INTERVAL", "30s")
-		// Initialize config
+}
+
+func TestInitConfigValidationErrors(t *testing.T) {
+	t.Run("missing config", func(t *testing.T) {
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected error for missing VM config")
+		}
+	})
+
+	t.Run("mixed legacy and multi", func(t *testing.T) {
+		t.Setenv("VM_ENVIRONMENTS", "demo")
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected error when mixing legacy and multi config")
+		}
+	})
+
+	t.Run("invalid env name", func(t *testing.T) {
+		t.Setenv("VM_ENVIRONMENTS", "demo,prod-east")
+		t.Setenv("VM_INSTANCE_DEMO_ENTRYPOINT", "http://demo.example.com")
+		t.Setenv("VM_INSTANCE_DEMO_TYPE", "single")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected invalid env name error")
+		}
+	})
+
+	t.Run("invalid server mode", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "single")
+		t.Setenv("MCP_SERVER_MODE", "invalid")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected invalid server mode error")
+		}
+	})
+
+	t.Run("missing legacy instance type", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected missing legacy instance type error")
+		}
+	})
+
+	t.Run("invalid legacy instance type", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "invalid")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected invalid legacy instance type error")
+		}
+	})
+
+	t.Run("unknown default env", func(t *testing.T) {
+		t.Setenv("VM_ENVIRONMENTS", "demo")
+		t.Setenv("VM_DEFAULT_ENVIRONMENT", "prod")
+		t.Setenv("VM_INSTANCE_DEMO_ENTRYPOINT", "http://demo.example.com")
+		t.Setenv("VM_INSTANCE_DEMO_TYPE", "single")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected unknown default env error")
+		}
+	})
+
+	t.Run("missing per env type", func(t *testing.T) {
+		t.Setenv("VM_ENVIRONMENTS", "demo")
+		t.Setenv("VM_INSTANCE_DEMO_ENTRYPOINT", "http://demo.example.com")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected missing per-env type error")
+		}
+	})
+
+	t.Run("unknown resolved env", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "single")
 		cfg, err := InitConfig()
 		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
+			t.Fatalf("InitConfig() error = %v", err)
 		}
-		// Check values
-		if cfg.HeartbeatInterval() != 30*time.Second {
-			t.Errorf("Expected heartbeat interval to be 30 seconds, got: %d", cfg.HeartbeatInterval())
-		}
-	})
-	// Test case 9: Invalid heartbeat interval
-	t.Run("Incorrect heartbeat interval", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "single")
-		os.Setenv("MCP_HEARTBEAT_INTERVAL", "123")
-		// Initialize config
-		_, err := InitConfig()
-		if err != nil && err.Error() != "failed to parse MCP_HEARTBEAT_INTERVAL: time: missing unit in duration \"123\"" {
-			t.Errorf("Expected error 'invalid heartbeat interval: 123', got: %v", err)
-		}
-
-		os.Setenv("MCP_HEARTBEAT_INTERVAL", originalHeartbeatInterval)
-	})
-
-	// Test case 10: Custom headers parsing
-	t.Run("Custom headers parsing", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_HEADERS", "CF-Access-Client-Id=test-client-id,CF-Access-Client-Secret=test-client-secret,Custom-Header=test-value")
-
-		// Initialize config
-		cfg, err := InitConfig()
-
-		// Check for errors
-		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
-		}
-
-		// Check custom headers
-		headers := cfg.CustomHeaders()
-		expectedHeaders := map[string]string{
-			"CF-Access-Client-Id":     "test-client-id",
-			"CF-Access-Client-Secret": "test-client-secret",
-			"Custom-Header":           "test-value",
-		}
-
-		if len(headers) != len(expectedHeaders) {
-			t.Errorf("Expected %d headers, got %d", len(expectedHeaders), len(headers))
-		}
-
-		for key, expectedValue := range expectedHeaders {
-			if actualValue, exists := headers[key]; !exists {
-				t.Errorf("Expected header %s to exist", key)
-			} else if actualValue != expectedValue {
-				t.Errorf("Expected header %s to have value %s, got %s", key, expectedValue, actualValue)
-			}
+		if _, err := cfg.ResolveInstance("missing"); err == nil {
+			t.Fatal("expected unknown env resolution error")
 		}
 	})
 
-	// Test case 11: Empty custom headers
-	t.Run("Empty custom headers", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_HEADERS", "")
-
-		// Initialize config
-		cfg, err := InitConfig()
-
-		// Check for errors
-		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
-		}
-
-		// Check custom headers
-		headers := cfg.CustomHeaders()
-		if len(headers) != 0 {
-			t.Errorf("Expected 0 headers, got %d", len(headers))
-		}
-	})
-
-	// Test case 12: Invalid header format (should be ignored)
-	t.Run("Invalid header format", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_HEADERS", "invalid-header,valid-header=value,another-invalid")
-
-		// Initialize config
-		cfg, err := InitConfig()
-
-		// Check for errors
-		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
-		}
-
-		// Check custom headers (only valid ones should be parsed)
-		headers := cfg.CustomHeaders()
-		expectedHeaders := map[string]string{
-			"valid-header": "value",
-		}
-
-		if len(headers) != len(expectedHeaders) {
-			t.Errorf("Expected %d headers, got %d", len(expectedHeaders), len(headers))
-		}
-
-		for key, expectedValue := range expectedHeaders {
-			if actualValue, exists := headers[key]; !exists {
-				t.Errorf("Expected header %s to exist", key)
-			} else if actualValue != expectedValue {
-				t.Errorf("Expected header %s to have value %s, got %s", key, expectedValue, actualValue)
-			}
-		}
-	})
-
-	t.Run("Default tenant ID in cluster mode", func(t *testing.T) {
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "cluster")
-		os.Setenv("VM_DEFAULT_TENANT_ID", "100:200")
-
-		cfg, err := InitConfig()
-
-		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
-		}
-
-		if cfg.DefaultTenantID() != "100:200" {
-			t.Errorf("Expected default tenant ID '100:200', got: %s", cfg.DefaultTenantID())
-		}
-	})
-
-	t.Run("Empty default tenant ID (used default 0)", func(t *testing.T) {
-		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
-		os.Setenv("VM_INSTANCE_TYPE", "cluster")
-		os.Setenv("VM_DEFAULT_TENANT_ID", "")
-
-		cfg, err := InitConfig()
-
-		if err != nil {
-			t.Fatalf("Expected no error, got: %v", err)
-		}
-
-		if cfg.DefaultTenantID() == "" {
-			t.Errorf("Expected no default tenant ID, got: %s", cfg.DefaultTenantID())
+	t.Run("invalid heartbeat interval", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "single")
+		t.Setenv("MCP_HEARTBEAT_INTERVAL", "123")
+		if _, err := InitConfig(); err == nil {
+			t.Fatal("expected heartbeat interval error")
 		}
 	})
 }
