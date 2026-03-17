@@ -23,7 +23,7 @@ func toolRuleFile(c *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	options = withTargetingOptions(options, c, true, false)
+	options = withCloudToolTargetingOptions(options, c, true)
 	options = append(
 		options,
 		mcp.WithString("filename",

@@ -28,7 +28,7 @@ func newCloudListTool(name, description, title string, c *config.Config) mcp.Too
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	options = withTargetingOptions(options, c, false, false)
+	options = withCloudToolTargetingOptions(options, c, false)
 	return mcp.NewTool(name, options...)
 }
 

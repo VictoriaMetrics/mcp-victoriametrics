@@ -23,7 +23,7 @@ func toolAccessTokens(c *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	options = withTargetingOptions(options, c, true, false)
+	options = withCloudToolTargetingOptions(options, c, true)
 	return mcp.NewTool(toolNameAccessTokens, options...)
 }
 

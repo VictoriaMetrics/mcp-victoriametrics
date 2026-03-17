@@ -151,3 +151,171 @@ func TestCloudCacheKeyIncludesEnv(t *testing.T) {
 		t.Fatal("expected cloud cache keys to differ by env")
 	}
 }
+
+func TestMixedEnvCloudOnlyToolsRequireExplicitTargeting(t *testing.T) {
+	t.Setenv("VM_ENVIRONMENTS", "default,cloud")
+	t.Setenv("VM_DEFAULT_ENVIRONMENT", "default")
+	t.Setenv("VM_INSTANCE_DEFAULT_ENTRYPOINT", "http://default.example.com")
+	t.Setenv("VM_INSTANCE_DEFAULT_TYPE", "single")
+	t.Setenv("VMC_CLOUD_API_KEY", "test-api-key")
+
+	cfg, err := config.InitConfig()
+	if err != nil {
+		t.Fatalf("InitConfig() error = %v", err)
+	}
+
+	t.Run("cloud providers requires env", func(t *testing.T) {
+		tool := newCloudListTool(toolNameCloudProviders, "List of cloud providers in VictoriaMetrics Cloud", "List of cloud providers", cfg)
+		if !toolHasRequiredProperty(tool, "env") {
+			t.Fatal("cloud-only tool should require env when default env is not cloud")
+		}
+	})
+
+	t.Run("access tokens requires deployment id", func(t *testing.T) {
+		tool := toolAccessTokens(cfg)
+		if !toolHasRequiredProperty(tool, "deployment_id") {
+			t.Fatal("cloud-only tool should require deployment_id even on mixed servers")
+		}
+		if !toolHasRequiredProperty(tool, "env") {
+			t.Fatal("cloud-only tool should require env when default env is not cloud")
+		}
+	})
+
+	t.Run("rule filenames requires deployment id", func(t *testing.T) {
+		tool := toolRuleFilenames(cfg)
+		if !toolHasRequiredProperty(tool, "deployment_id") {
+			t.Fatal("cloud-only tool should require deployment_id even on mixed servers")
+		}
+		if !toolHasRequiredProperty(tool, "env") {
+			t.Fatal("cloud-only tool should require env when default env is not cloud")
+		}
+	})
+}
+
+func TestMixedDefaultCloudGenericToolsRequireExplicitEnv(t *testing.T) {
+	t.Setenv("VM_ENVIRONMENTS", "cloud,local")
+	t.Setenv("VM_DEFAULT_ENVIRONMENT", "cloud")
+	t.Setenv("VMC_CLOUD_API_KEY", "test-api-key")
+	t.Setenv("VM_INSTANCE_LOCAL_ENTRYPOINT", "http://local.example.com")
+	t.Setenv("VM_INSTANCE_LOCAL_TYPE", "cluster")
+
+	cfg, err := config.InitConfig()
+	if err != nil {
+		t.Fatalf("InitConfig() error = %v", err)
+	}
+
+	for name, tool := range map[string]mcp.Tool{
+		"query":   toolQuery(cfg),
+		"flags":   toolFlags(cfg),
+		"tenants": toolTenants(cfg),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if !toolHasRequiredProperty(tool, "env") {
+				t.Fatal("env should be required when default env is cloud on a mixed server")
+			}
+			envSchema := toolPropertySchema(tool, "env")
+			if envSchema["description"] == "Optional environment to target. If omitted, the default environment is used." {
+				t.Fatal("required env should not be described as optional")
+			}
+		})
+	}
+}
+
+func TestMixedEnvTenantSchemaDoesNotAdvertiseGlobalDefault(t *testing.T) {
+	t.Setenv("VM_ENVIRONMENTS", "demo,prod")
+	t.Setenv("VM_DEFAULT_ENVIRONMENT", "demo")
+	t.Setenv("VM_INSTANCE_DEMO_ENTRYPOINT", "http://demo.example.com")
+	t.Setenv("VM_INSTANCE_DEMO_TYPE", "cluster")
+	t.Setenv("VM_INSTANCE_DEMO_DEFAULT_TENANT_ID", "42")
+	t.Setenv("VM_INSTANCE_PROD_ENTRYPOINT", "http://prod.example.com")
+	t.Setenv("VM_INSTANCE_PROD_TYPE", "cluster")
+	t.Setenv("VM_INSTANCE_PROD_DEFAULT_TENANT_ID", "7")
+
+	cfg, err := config.InitConfig()
+	if err != nil {
+		t.Fatalf("InitConfig() error = %v", err)
+	}
+
+	tool := toolQuery(cfg)
+	tenantSchema := toolPropertySchema(tool, "tenant")
+	if _, ok := tenantSchema["default"]; ok {
+		t.Fatal("tenant schema should not advertise a single default when tenant fallback depends on selected env")
+	}
+}
+
+func TestTargetingParamsTrimAndRejectWhitespace(t *testing.T) {
+	t.Run("deployment id rejects whitespace and trims valid input", func(t *testing.T) {
+		t.Setenv("VMC_API_KEY", "test-api-key")
+		cfg, err := config.InitConfig()
+		if err != nil {
+			t.Fatalf("InitConfig() error = %v", err)
+		}
+		instance, err := cfg.ResolveInstance("")
+		if err != nil {
+			t.Fatalf("ResolveInstance(default) error = %v", err)
+		}
+
+		blank := mcp.CallToolRequest{}
+		blank.Params.Arguments = map[string]any{"deployment_id": "   "}
+		if _, err := requireCloudDeploymentID(instance, blank); err == nil {
+			t.Fatal("expected whitespace-only deployment_id to be rejected")
+		}
+
+		trimmed := mcp.CallToolRequest{}
+		trimmed.Params.Arguments = map[string]any{"deployment_id": "  dep-1  "}
+		value, err := requireCloudDeploymentID(instance, trimmed)
+		if err != nil {
+			t.Fatalf("requireCloudDeploymentID() error = %v", err)
+		}
+		if value != "dep-1" {
+			t.Fatalf("requireCloudDeploymentID() = %q, want %q", value, "dep-1")
+		}
+	})
+
+	t.Run("tenant rejects whitespace and trims valid input", func(t *testing.T) {
+		t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://cluster.example.com")
+		t.Setenv("VM_INSTANCE_TYPE", "cluster")
+		t.Setenv("VM_DEFAULT_TENANT_ID", "7")
+		cfg, err := config.InitConfig()
+		if err != nil {
+			t.Fatalf("InitConfig() error = %v", err)
+		}
+		instance, err := cfg.ResolveInstance("")
+		if err != nil {
+			t.Fatalf("ResolveInstance(default) error = %v", err)
+		}
+
+		blank := mcp.CallToolRequest{}
+		blank.Params.Arguments = map[string]any{"tenant": "   "}
+		if _, err := getSelectURL(context.Background(), instance, blank, "api", "v1", "query"); err == nil {
+			t.Fatal("expected whitespace-only tenant to be rejected")
+		}
+
+		trimmed := mcp.CallToolRequest{}
+		trimmed.Params.Arguments = map[string]any{"tenant": " 42 "}
+		url, err := getSelectURL(context.Background(), instance, trimmed, "api", "v1", "query")
+		if err != nil {
+			t.Fatalf("getSelectURL() error = %v", err)
+		}
+		if url != "http://cluster.example.com/select/42/prometheus/api/v1/query" {
+			t.Fatalf("getSelectURL() = %q", url)
+		}
+	})
+}
+
+func toolHasRequiredProperty(tool mcp.Tool, property string) bool {
+	for _, required := range tool.InputSchema.Required {
+		if required == property {
+			return true
+		}
+	}
+	return false
+}
+
+func toolPropertySchema(tool mcp.Tool, property string) map[string]any {
+	schema, ok := tool.InputSchema.Properties[property].(map[string]any)
+	if !ok {
+		return nil
+	}
+	return schema
+}

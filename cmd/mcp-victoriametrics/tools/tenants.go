@@ -21,11 +21,14 @@ func toolTenants(c *config.Config) mcp.Tool {
 			OpenWorldHint:   ptr(true),
 		}),
 	}
-	options = withTargetingOptions(options, c, true, false)
+	options = withClusterAdminTargetingOptions(options, c, true)
 	return mcp.NewTool(toolNameTenants, options...)
 }
 
 func toolTenantsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if _, err := getClusterAdminToolInstance(cfg, tcr); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	req, err := CreateAdminRequest(ctx, cfg, tcr, "admin", "tenants")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to create request: %v", err)), nil
