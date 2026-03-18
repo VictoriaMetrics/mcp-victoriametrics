@@ -212,6 +212,10 @@ func (c *Config) IsCloud() bool {
 	return c.vmc != nil
 }
 
+func (c *Config) IsCloudSharedInstance() bool {
+	return c.apiKey == vmcloud.DynamicAPIKey
+}
+
 func (c *Config) VMC() *vmcloud.VMCloudAPIClient {
 	return c.vmc
 }

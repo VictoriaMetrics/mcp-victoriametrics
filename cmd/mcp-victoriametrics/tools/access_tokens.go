@@ -43,6 +43,9 @@ func toolAccessTokensHandler(ctx context.Context, cfg *config.Config, tcr mcp.Ca
 	if deploymentID == "" {
 		return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
 	}
+	if cfg.IsCloudSharedInstance() {
+		ctx = withCloudAccessKey(ctx, tcr)
+	}
 	accessTokens, err := cfg.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list access_tokens: %v", err)), nil

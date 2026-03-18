@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
@@ -46,6 +47,9 @@ func toolFlagsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolR
 		}
 		if deploymentID == "" {
 			return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
+		}
+		if cfg.IsCloudSharedInstance() {
+			ctx = withCloudAccessKey(ctx, tcr)
 		}
 		dd, err := cfg.VMC().GetDeploymentDetails(ctx, deploymentID)
 		if err != nil {
