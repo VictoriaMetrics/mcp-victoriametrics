@@ -1,6 +1,7 @@
 .git
 vendor
 gocache-for-docker
+node_modules
 .idea
 .zed
 .vscode

@@ -1,6 +1,10 @@
 version: 2
 project_name: mcp-victoriametrics
 
+before:
+  hooks:
+    - make ui-build
+
 builds:
   - env:
       - CGO_ENABLED=0

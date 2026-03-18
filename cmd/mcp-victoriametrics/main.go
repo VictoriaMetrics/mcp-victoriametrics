@@ -178,6 +178,7 @@ Try not to second guess information - if you don't know something or lack inform
 		loggerOption := server.WithLogger(logger)
 		srv := server.NewStreamableHTTPServer(s, heartBeatOption, loggerOption)
 		mux.Handle("/mcp", srv)
+		mux.Handle("/", spaHandler())
 	default:
 		slog.Error("Unknown server mode", "mode", c.ServerMode())
 		os.Exit(1)

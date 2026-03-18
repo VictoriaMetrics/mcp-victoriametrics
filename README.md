@@ -24,8 +24,11 @@ This MCP server allows you to use almost all read-only APIs of VictoriaMetrics, 
 - Analyzing, tracing, prettifying and explaining your queries
 - Debugging your relabeling rules, downsampling and retention policy configurations 
 - Integration with [VictoriaMetrics Cloud](https://docs.victoriametrics.com/victoriametrics-cloud/)
+- UI with setup instrinctions and tools inspection on the root endpoint (only in Streamable HTTP mode)
  
 In addition, the MCP server contains embedded up-to-date documentation and is able to search it without online access.
+
+![image](./ui.png)
 
 More details about the exact available tools and prompts can be found in the [Usage](#usage) section.
 
@@ -54,15 +57,9 @@ Here is example of configuration for [Claude Desktop](https://claude.ai/download
 ## Requirements
 
 - [VictoriaMetrics](https://docs.victoriametrics.com/victoriametrics/) or [VictoriaMetrics Cloud](https://docs.victoriametrics.com/victoriametrics-cloud/) instance ([single-node](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/) or [cluster](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/))
-- Go 1.24 or higher (if you want to build from source)
+- Go 1.26 or higher (if you want to build from source)
 
 ## Installation
-
-### Go
-
-```bash
-go install github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics@latest
-```
 
 ### Binaries
 
@@ -197,13 +194,14 @@ export VM_INSTANCE_HEADERS="<HEADER>=<HEADER_VALUE>,<HEADER>=<HEADER_VALUE>"
 
 In SSE and HTTP modes the MCP server provides the following endpoints:
 
-| Endpoint             | Description                                                                                       |
-|----------------------|---------------------------------------------------------------------------------------------------|
-| `/sse` + `/message`  | Endpoints for messages in SSE mode (for MCP clients that support SSE)                             |
-| `/mcp`               | HTTP endpoint for streaming messages in HTTP mode (for MCP clients that support Streamable HTTP)  |
-| `/metrics`           | Metrics in Prometheus format for monitoring the MCP server                                        |
-| `/health/liveness`   | Liveness check endpoint to ensure the server is running                                           |
-| `/health/readiness`  | Readiness check endpoint to ensure the server is ready to accept requests                         |
+| Endpoint             | Description                                                                                      |
+|----------------------|--------------------------------------------------------------------------------------------------|
+| `/`                  | Landing page with setup help and tool inspection                                                 |
+| `/sse` + `/message`  | Endpoints for messages in SSE mode (for MCP clients that support SSE)                            |
+| `/mcp`               | HTTP endpoint for streaming messages in HTTP mode (for MCP clients that support Streamable HTTP) |
+| `/metrics`           | Metrics in Prometheus format for monitoring the MCP server                                       |
+| `/health/liveness`   | Liveness check endpoint to ensure the server is running                                          |
+| `/health/readiness`  | Readiness check endpoint to ensure the server is ready to accept requests                        |
 
 ## Setup in clients
 
@@ -664,7 +662,7 @@ You can use `MCP_PASSTHROUGH_HEADERS` parameter in the MCP Server together with 
 - [ ] Tools for Alertmanager APIs [#6](https://github.com/VictoriaMetrics/mcp-victoriametrics/issues/6)
 - [x] Support for [metrics metadata](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2974) in case of implementation in VictoriaMetrics
 - [ ] Support authentication
-- [ ] Add static index page with description and links to documentation
+- [x] Add static index page with description and links to documentation
 
 ## Mentions
 
