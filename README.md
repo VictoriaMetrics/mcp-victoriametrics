@@ -124,6 +124,10 @@ For building binary from source code you can use the following approach:
   # after that you can use docker image mcp-victoriametrics for running or pushing
   ```
 
+### Helm
+
+Check out [VictoriaMetrics MCP Server Helm chart](https://docs.victoriametrics.com/helm/victoria-metrics-mcp/) documentation for more details about installation using Helm.
+
 ## Configuration
 
 MCP Server for VictoriaMetrics is configured via environment variables:
