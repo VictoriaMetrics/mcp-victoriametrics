@@ -12,7 +12,7 @@ import (
 
 	vmcloud "github.com/VictoriaMetrics/victoriametrics-cloud-api-go/v1"
 
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 func CreateSelectRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest, path ...string) (*http.Request, error) {
@@ -34,6 +34,13 @@ func CreateSelectRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallTo
 	// Add custom headers from configuration
 	for key, value := range cfg.CustomHeaders() {
 		req.Header.Set(key, value)
+	}
+
+	// Apply passthrough headers from the incoming MCP request
+	for _, name := range cfg.PassthroughHeaders() {
+		if value := tcr.Header.Get(name); value != "" {
+			req.Header.Set(name, value)
+		}
 	}
 
 	return req, nil
@@ -60,6 +67,13 @@ func CreateAdminRequest(ctx context.Context, cfg *config.Config, tcr mcp.CallToo
 		req.Header.Set(key, value)
 	}
 
+	// Apply passthrough headers from the incoming MCP request
+	for _, name := range cfg.PassthroughHeaders() {
+		if value := tcr.Header.Get(name); value != "" {
+			req.Header.Set(name, value)
+		}
+	}
+
 	return req, nil
 }
 
@@ -75,9 +89,16 @@ var (
 	cloudDeploymentInfoCache      = make(map[string]cloudDeploymentInfo)
 )
 
-func getCloudDeploymentInfo(ctx context.Context, cfg *config.Config, deploymentID string) (cloudDeploymentInfo, error) {
+func getCloudDeploymentInfo(ctx context.Context, cfg *config.Config, deploymentID string, tcr mcp.CallToolRequest) (cloudDeploymentInfo, error) {
+	apiKey := ""
+	if cfg.IsCloudSharedInstance() {
+		ctx = withCloudAccessKey(ctx, tcr)
+		apiKey = tcr.Header.Get(vmcloud.AccessTokenHeader)
+	}
+	cacheKey := fmt.Sprintf("%s/%s", apiKey, deploymentID)
+
 	cloudDeploymentInfoCacheMutex.RLock()
-	info, ok := cloudDeploymentInfoCache[deploymentID]
+	info, ok := cloudDeploymentInfoCache[cacheKey]
 	cloudDeploymentInfoCacheMutex.RUnlock()
 	if ok && info.accessEndpoint != "" && info.deploymentType != "" {
 		return info, nil
@@ -98,7 +119,7 @@ func getCloudDeploymentInfo(ctx context.Context, cfg *config.Config, deploymentI
 	}
 
 	cloudDeploymentInfoCacheMutex.Lock()
-	cloudDeploymentInfoCache[deploymentID] = info
+	cloudDeploymentInfoCache[cacheKey] = info
 	cloudDeploymentInfoCacheMutex.Unlock()
 
 	return info, nil
@@ -116,8 +137,14 @@ func getBearerToken(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReq
 	if deploymentID == "" {
 		return "", fmt.Errorf("deployment_id parameter is required for cloud mode")
 	}
+	apiKey := ""
+	if cfg.IsCloudSharedInstance() {
+		ctx = withCloudAccessKey(ctx, tcr)
+		apiKey = tcr.Header.Get(vmcloud.AccessTokenHeader)
+	}
+	cacheKey := fmt.Sprintf("%s/%s", apiKey, deploymentID)
 	cloudAccessTokenCacheMutex.RLock()
-	result, ok := cloudAccessTokenCache[deploymentID]
+	result, ok := cloudAccessTokenCache[cacheKey]
 	if ok {
 		cloudAccessTokenCacheMutex.RUnlock()
 		return result, nil
@@ -143,7 +170,7 @@ func getBearerToken(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReq
 			return "", fmt.Errorf("failed to reveal access token for deployment %s: %v", deploymentID, err)
 		}
 		cloudAccessTokenCacheMutex.Lock()
-		cloudAccessTokenCache[deploymentID] = token.Secret
+		cloudAccessTokenCache[cacheKey] = token.Secret
 		cloudAccessTokenCacheMutex.Unlock()
 		result = token.Secret
 		return result, nil
@@ -161,7 +188,7 @@ func getRootURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest
 		if deploymentID == "" {
 			return "", fmt.Errorf("deployment_id parameter is required for cloud mode")
 		}
-		info, err := getCloudDeploymentInfo(ctx, cfg, deploymentID)
+		info, err := getCloudDeploymentInfo(ctx, cfg, deploymentID, tcr)
 		if err != nil {
 			return "", fmt.Errorf("failed to get cloud deployment info: %v", err)
 		}
@@ -188,7 +215,7 @@ func getSelectURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReque
 		if deploymentID == "" {
 			return "", fmt.Errorf("deployment_id parameter is required for cloud mode")
 		}
-		info, err := getCloudDeploymentInfo(ctx, cfg, deploymentID)
+		info, err := getCloudDeploymentInfo(ctx, cfg, deploymentID, tcr)
 		if err != nil {
 			return "", fmt.Errorf("failed to get cloud deployment info: %v", err)
 		}
@@ -254,6 +281,14 @@ func GetToolReqParam[T ToolReqParamType](tcr mcp.CallToolRequest, param string, 
 		return value, fmt.Errorf("%s param is required", param)
 	}
 	return value, nil
+}
+
+func withCloudAccessKey(ctx context.Context, tcr mcp.CallToolRequest) context.Context {
+	accessKey := tcr.Header.Get(vmcloud.AccessTokenHeader)
+	if accessKey != "" {
+		ctx = vmcloud.ContextWithDynamicAPIKey(ctx, accessKey)
+	}
+	return ctx
 }
 
 func ptr[T any](v T) *T {

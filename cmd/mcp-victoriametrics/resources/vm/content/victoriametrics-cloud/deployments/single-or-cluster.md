@@ -1,10 +1,10 @@
 ---
-weight: 2
+weight: 3
 title: "Single or Cluster?"
 menu:
   docs:
     parent: "deployments"
-    weight: 2
+    weight: 3
     name: "Single or Cluster?"
 tags:
   - metrics
@@ -12,9 +12,21 @@ tags:
   - enterprise
 ---
 
-VictoriaMetrics Cloud offers two different deployment types: **Single-node** (described [here](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/tiers-and-types/)) and
-**Cluster**. Both deployment types are based on the VictoriaMetrics [Open Source project](https://github.com/VictoriaMetrics/VictoriaMetrics/),
+VictoriaMetrics databases offer two different deployment types: **single-node** and **cluster**.
+
+At the moment, the following `Deployment types` are available in VictoriaMetrics Cloud:
+- `VictoriaMetrics` single-node and cluster
+- `VictoriaLogs` single-node
+- **Coming soon**: `VictoriaTraces`
+
+
+All deployments in VictoriaMetrics Cloud are based on the VictoriaMetrics [Open Source projects](https://github.com/VictoriaMetrics/VictoriaMetrics/),
 and managed by the VictoriaMetrics team.
+
+> [!TIP]
+> VictoriaLogs single-node instances support multitenancy
+
+## VictoriaMetrics single-node vs cluster versions
 
 In a nutshell, [Single-node deployments](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/)
 are useful for affordable and performant instances, while [Cluster deployments](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/)
@@ -23,7 +35,8 @@ More detailed information about the general capabilities of both tiers can be fo
 
 For simplicity, Capacity tiers based on the VictoriaMetrics Cluster version are hidden to users,
 as Single-node instances cover most use cases, and the Cluster version consumes more resources,
-which leads to a higher price.
+which leads to a higher price. In most cases, the cluster version requires tailoring specific
+topologies, by dedicating resources where needed (i.e. reading or storage paths).
 
 > [!TIP]
 > If you are considering using a VictoriaMetrics Cluster version, [contact-us](https://victoriametrics.com/contact-us/).
@@ -87,12 +100,3 @@ Both `Single-node` and `Cluster` versions are highly valued for their performanc
 and use cases in the industry. Feel free to read more about use cases and articles [here](http://docs.victoriametrics.com/victoriametrics/articles/).
 
 {{% /collapse %}}
-
-
-## Terms and definitions
-
-  - [Time series](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#time-series)
-  - [Labels](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#labels)
-  - [Active time series](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-an-active-time-series)
-  - [Churn rate](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-high-churn-rate)
-  - [Cardinality](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#cardinality)

@@ -8,6 +8,14 @@ import (
 	"net/http"
 )
 
+type apiKeyContextKeyType string
+
+const apiKeyContextKey apiKeyContextKeyType = "X-VM-Cloud-Access"
+
+func ContextWithDynamicAPIKey(ctx context.Context, apiKey string) context.Context {
+	return context.WithValue(ctx, apiKeyContextKey, apiKey)
+}
+
 func requestAPI[R any](ctx context.Context, a *VMCloudAPIClient, method string, body io.Reader, path ...string) (R, error) {
 	var result R
 	reqURL := a.parsedURL.JoinPath(path...).String()
@@ -15,18 +23,24 @@ func requestAPI[R any](ctx context.Context, a *VMCloudAPIClient, method string, 
 	if err != nil {
 		return result, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set(AccessTokenHeader, a.apiKey)
+	apiKey := a.apiKey
+	if apiKey == "" {
+		if apiKeyFromCtx, ok := ctx.Value(apiKeyContextKey).(string); ok && apiKeyFromCtx != "" {
+			apiKey = apiKeyFromCtx
+		}
+	}
+	req.Header.Set(AccessTokenHeader, apiKey)
 	resp, err := a.c.Do(req)
 	if err != nil {
 		return result, fmt.Errorf("failed to send request: %w", err)
 	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return result, fmt.Errorf("failed to read response body: %w", err)
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
 	if resp.StatusCode/100 != 2 {
 		return result, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(respBodyBytes))
 	}

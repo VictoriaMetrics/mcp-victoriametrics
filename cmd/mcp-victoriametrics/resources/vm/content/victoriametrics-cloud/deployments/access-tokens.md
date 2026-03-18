@@ -1,10 +1,10 @@
 ---
 title : "Access tokens"
-weight: 4
+weight: 5
 menu:
   docs:
     parent: "deployments"
-    weight: 4
+    weight: 5
 ---
 
 VictoriaMetrics Cloud handles data ingestion and querying in a secure way. That's why we need to
@@ -44,8 +44,10 @@ It allows to:
 - Limit the impact of overloading if limits are exceeded
 - Secure access partially in case of a leak
 
-Each Access token has a limit for concurrent requests. You may find more details about it on the [Tier Parameters and Flag Parameters Configuration](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/tiers-and-types) page.
+Each Access token has a limit for concurrent requests. You may find more details about it on the [Limits](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/limits/) page.
 You can also check current concurrent requests value for each token on the "Monitoring" tab of the deployment page in the graph "Access token concurrent requests".
+
+Each deployment has a limit on the number of Access tokens that can be created, based on the tier. You can find more details about it on the [Limits](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/limits/#limits-in-number-of-access-tokens) page.
 
 ## How to create access tokens
 
@@ -102,7 +104,7 @@ To use Access token for writing data, the following resources are needed:
 
 - [Secret value of the Access token](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/access-tokens/#working-with-access-token-secrets)
 - [Access endpoint](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/access-tokens/#access-endpoint)
-- [Required API path of Victoria Metrics deployment](https://docs.victoriametrics.com/victoriametrics/url-examples/)
+- [Required API path of VictoriaMetrics deployment](https://docs.victoriametrics.com/victoriametrics/url-examples/)
 
 You can use the following format for requests to your deployment:
 

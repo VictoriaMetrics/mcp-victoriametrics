@@ -175,16 +175,20 @@ like in [this example](https://victoriametrics.com/blog/managed-prometheus-prici
 to avoid complexity, but keeping in mind that in VictoriaMetrics Cloud, querying is included). The lowest volumes
 imply a 1.5x price difference, while this highest are 5x:
 
-<img src="/blog/new-tiers-in-victoriametrics-cloud-2025/compare_managed.webp"
+<img src="/blog/new-tiers-in-victoriametrics-cloud-2025/compare_w_ticks_managed.webp"
      style="width:80%; display:block; margin:auto;" />
 
 And the differences are even higher if we compare with another _Cloud_ Observability vendor (in
 this case, 12 months retention is picked for VictoriaMetrics Cloud, because for the highest capacity tier,
 VictoriaMetrics Cloud Single instances have a limitation coming from AWS of 16TB), where differences
-are higher than 10x:
+are ~20x:
 
-<img src="/blog/new-tiers-in-victoriametrics-cloud-2025/compare_cloud.webp"
+<img src="/blog/new-tiers-in-victoriametrics-cloud-2025/compare_w_ticks_cloud.webp"
      style="width:80%; display:block; margin:auto;" />
+
+> [!TIP] Want actual numbers?
+> You can always check and plan actual costs when creating a VictoriaMetrics Cloud deployment at
+> https://console.victoriametrics.cloud/deployments/create.
 
 ## How does this change affect to existing users?
 If you are already a VictoriaMetrics Cloud user, and you are happy with your current deployment,

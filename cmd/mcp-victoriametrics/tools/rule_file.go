@@ -8,7 +8,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 const toolNameRuleFile = "rule_file"
@@ -59,6 +59,9 @@ func toolRuleFileHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallTo
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get rules_filename parameter: %v", err)), nil
 	}
 
+	if cfg.IsCloudSharedInstance() {
+		ctx = withCloudAccessKey(ctx, tcr)
+	}
 	ruleFilenames, err := cfg.VMC().GetDeploymentRuleFileContent(ctx, deploymentID, filename)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list of rule filenames: %v", err)), nil

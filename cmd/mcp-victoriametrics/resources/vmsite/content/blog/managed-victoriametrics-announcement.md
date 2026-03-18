@@ -107,7 +107,7 @@ It ideally fits as a fast and cost-effective solution for the following use case
 * Long-term remote storage for Prometheus;
 * Global querying view (aka single pane of glass) across metrics collected from many sources.
 
-Hurry up and [try Managed VictoriaMetrics](https://cloud.victoriametrics.com/signUp)! 
+Hurry up and [try Managed VictoriaMetrics](https://console.victoriametrics.cloud/signUp)! 
 As a welcome pack, we provide **$200 credit** for newly registered accounts.
 This is enough for running a VictoriaMetrics instance with 2vCPU and 4GB of RAM for free for a month. 
 If you feel Managed VictoriaMetrics misses some features or just want to learn more about internal 

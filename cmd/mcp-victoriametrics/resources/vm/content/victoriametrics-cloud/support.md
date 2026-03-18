@@ -12,12 +12,16 @@ tags:
   - enterprise
 ---
 ## Basic Support
-All offerings include [Silver level](https://victoriametrics.com/plans-features/) of support, where we maintain the health of your deployments, perform system upgrades, and proactively contact customers if issues arise.
+All offerings include [Silver level](https://victoriametrics.com/plans-features/) of support, where
+we maintain the health of your deployments, perform system upgrades, and proactively contact customers
+if issues arise.
 
-All changes are logged and visible in the [Audit log](https://console.victoriametrics.cloud/audit ). For more details, check the [documentation](https://docs.victoriametrics.com/victoriametrics-cloud/audit-logs/)
+All changes are logged and visible in the [Audit log](https://console.victoriametrics.cloud/audit ).
+For more details, check the [documentation](https://docs.victoriametrics.com/victoriametrics-cloud/audit-logs/).
 
 ## How to Reach Support
-To contact support, use the [Contact Support](https://console.victoriametrics.cloud/contact_support) button in the Cloud UI.
+To contact support, use the [Contact Support](https://console.victoriametrics.cloud/contact_support)
+button in the VictoriaMetrics Cloud UI.
 
 We categorize support requests into three types:
 - Issues
@@ -25,19 +29,20 @@ We categorize support requests into three types:
 - General Questions
 
 ### Common reasons to reach out:
-- Troubleshoot deployment, metrics reading, or writing issues.
-- Report potential bugs in VictoriaMetrics Cloud.
-- Increase the quota (default: 5 single nodes, 2 clusters). If more is needed, submit a support ticket.
-- Request a higher-tier plan or a custom tier.
-- Provide feedback.
-- General questions about the functionality.
+- Troubleshoot issues with deployments, or writing/reading metrics and logs
+- Report potential bugs in VictoriaMetrics Cloud
+- Increase default quotas for allowed number of deployments
+- Request higher or custom tiers
+- Provide feedback
+- General questions about the functionality
 
 ## Status Page
 Check the status of VictoriaMetrics Cloud [here](https://status.victoriametrics.com/).
 
 ## Maintenance
-Maintenance of your deployments occurs during the maintenance window, which you can set in your deployment settings.
-VictoriaMetrics handles the infrastructure and deployment maintenance.
+The VictoriaMetrics Cloud team handles the infrastructure and deployment maintenance.
+Upgrades and general maintenance tasks generally occur during a maintenance window,
+which you can set in your deployment settings.
 
 For general updates, refer to the [status page](https://docs.victoriametrics.com/victoriametrics-cloud/support/#status-page).
 

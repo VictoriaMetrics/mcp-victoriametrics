@@ -16,7 +16,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.31.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-cluster%2Fchangelog%2F%230310)
+![Version](https://img.shields.io/badge/0.36.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-cluster%2Fchangelog%2F%230360)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-cluster)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -136,20 +136,6 @@ Remove application with command.
 ```console
 helm uninstall vmc -n NAMESPACE
 ```
-
-## Documentation of Helm Chart
-
-Install ``helm-docs`` following the instructions on this [tutorial](https://docs.victoriametrics.com/helm/requirements/).
-
-Generate docs with ``helm-docs`` command.
-
-```bash
-cd charts/victoria-metrics-cluster
-
-helm-docs
-```
-
-The markdown generation is entirely go template driven. The tool parses metadata from charts and generates a number of sub-templates that can be referenced in a template file (by default ``README.md.gotmpl``). If no template file is provided, the tool has a default internal template that will generate a reasonably formatted README.
 
 ## Parameters
 
@@ -386,6 +372,17 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(string)</code></em><p>Overrides the full name of vmauth component</p>
 </td>
     </tr>
+    <tr id="vmauth-horizontalpodautoscaler">
+      <td><a href="#vmauth-horizontalpodautoscaler"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.horizontalPodAutoscaler</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">behavior</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">maxReplicas</span><span class="p">:</span><span class="w"> </span><span class="m">10</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">metrics</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">minReplicas</span><span class="p">:</span><span class="w"> </span><span class="m">2</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Horizontal Pod Autoscaling</p>
+</td>
+    </tr>
     <tr id="vmauth-horizontalpodautoscaler-behavior">
       <td><a href="#vmauth-horizontalpodautoscaler-behavior"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.horizontalPodAutoscaler.behavior</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
@@ -518,9 +515,30 @@ Change the values according to the need of the environment in ``victoria-metrics
     <tr id="vmauth-poddisruptionbudget">
       <td><a href="#vmauth-poddisruptionbudget"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.podDisruptionBudget</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>See <code>kubectl explain poddisruptionbudget.spec</code> for more. Details are <a href="https://kubernetes.io/docs/tasks/run-application/configure-pdb/" target="_blank">here</a></p>
+</td>
+    </tr>
+    <tr id="vmauth-poddisruptionbudget-maxunavailable">
+      <td><a href="#vmauth-poddisruptionbudget-maxunavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.podDisruptionBudget.maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>max number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="vmauth-poddisruptionbudget-minavailable">
+      <td><a href="#vmauth-poddisruptionbudget-minavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.podDisruptionBudget.minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>min number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="vmauth-poddisruptionbudget-unhealthypodevictionpolicy">
+      <td><a href="#vmauth-poddisruptionbudget-unhealthypodevictionpolicy"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.podDisruptionBudget.unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>Defines criteria when unhealthy pods should be considered for eviction</p>
 </td>
     </tr>
     <tr id="vmauth-podlabels">
@@ -814,6 +832,19 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(list)</code></em><p>Pod topologySpreadConstraints</p>
 </td>
     </tr>
+    <tr id="vmauth-verticalpodautoscaling">
+      <td><a href="#vmauth-verticalpodautoscaling"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.verticalPodAutoscaling</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Vertical Pod Autoscaling. Requires VPA CRD (<code>autoscaling.k8s.io/v1</code>) to be installed in the cluster. Note that VPA should not be used together with HPA on the same resource metrics (CPU/memory).</p>
+</td>
+    </tr>
+    <tr id="vmauth-verticalpodautoscaling-enabled">
+      <td><a href="#vmauth-verticalpodautoscaling-enabled"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.verticalPodAutoscaling.enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(bool)</code></em><p>Use VPA for vmagent</p>
+</td>
+    </tr>
     <tr id="vminsert-affinity">
       <td><a href="#vminsert-affinity"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.affinity</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
@@ -894,6 +925,17 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#vminsert-fullnameoverride"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.fullnameOverride</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
 </a></td>
       <td><em><code>(string)</code></em><p>Overrides the full name of vminsert component</p>
+</td>
+    </tr>
+    <tr id="vminsert-horizontalpodautoscaler">
+      <td><a href="#vminsert-horizontalpodautoscaler"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.horizontalPodAutoscaler</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">behavior</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">maxReplicas</span><span class="p">:</span><span class="w"> </span><span class="m">10</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">metrics</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">minReplicas</span><span class="p">:</span><span class="w"> </span><span class="m">2</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Horizontal Pod Autoscaling</p>
 </td>
     </tr>
     <tr id="vminsert-horizontalpodautoscaler-behavior">
@@ -1035,9 +1077,30 @@ Change the values according to the need of the environment in ``victoria-metrics
     <tr id="vminsert-poddisruptionbudget">
       <td><a href="#vminsert-poddisruptionbudget"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.podDisruptionBudget</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>See <code>kubectl explain poddisruptionbudget.spec</code> for more. Details are <a href="https://kubernetes.io/docs/tasks/run-application/configure-pdb/" target="_blank">here</a></p>
+</td>
+    </tr>
+    <tr id="vminsert-poddisruptionbudget-maxunavailable">
+      <td><a href="#vminsert-poddisruptionbudget-maxunavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.podDisruptionBudget.maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>max number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="vminsert-poddisruptionbudget-minavailable">
+      <td><a href="#vminsert-poddisruptionbudget-minavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.podDisruptionBudget.minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>min number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="vminsert-poddisruptionbudget-unhealthypodevictionpolicy">
+      <td><a href="#vminsert-poddisruptionbudget-unhealthypodevictionpolicy"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.podDisruptionBudget.unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>Defines criteria when unhealthy pods should be considered for eviction</p>
 </td>
     </tr>
     <tr id="vminsert-podlabels">
@@ -1370,6 +1433,19 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(list)</code></em><p>Pod topologySpreadConstraints</p>
 </td>
     </tr>
+    <tr id="vminsert-verticalpodautoscaling">
+      <td><a href="#vminsert-verticalpodautoscaling"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.verticalPodAutoscaling</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Vertical Pod Autoscaling. Requires VPA CRD (<code>autoscaling.k8s.io/v1</code>) to be installed in the cluster. Note that VPA should not be used together with HPA on the same resource metrics (CPU/memory).</p>
+</td>
+    </tr>
+    <tr id="vminsert-verticalpodautoscaling-enabled">
+      <td><a href="#vminsert-verticalpodautoscaling-enabled"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.verticalPodAutoscaling.enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(bool)</code></em><p>Use VPA for vmagent</p>
+</td>
+    </tr>
     <tr id="vmselect-affinity">
       <td><a href="#vmselect-affinity"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.affinity</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
@@ -1599,7 +1675,7 @@ Change the values according to the need of the environment in ``victoria-metrics
     <tr id="vmselect-mode">
       <td><a href="#vmselect-mode"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.mode</span><span class="p">:</span><span class="w"> </span><span class="l">deployment</span></span></span></code></pre>
 </a></td>
-      <td><em><code>(string)</code></em><p>vmselect mode: deployment, daemonSet</p>
+      <td><em><code>(string)</code></em><p>vmselect mode: deployment, statefulSet</p>
 </td>
     </tr>
     <tr id="vmselect-name">
@@ -1672,7 +1748,10 @@ Change the values according to the need of the environment in ``victoria-metrics
     <tr id="vmselect-poddisruptionbudget">
       <td><a href="#vmselect-poddisruptionbudget"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.podDisruptionBudget</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>See <code>kubectl explain poddisruptionbudget.spec</code> for more. Details are <a href="https://kubernetes.io/docs/tasks/run-application/configure-pdb/" target="_blank">here</a></p>
 </td>
@@ -1681,6 +1760,24 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#vmselect-poddisruptionbudget-enabled"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.podDisruptionBudget.enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
 </a></td>
       <td><em><code>(bool)</code></em><p>See <code>kubectl explain poddisruptionbudget.spec</code> for more. Details are <a href="https://kubernetes.io/docs/tasks/run-application/configure-pdb/" target="_blank">here</a></p>
+</td>
+    </tr>
+    <tr id="vmselect-poddisruptionbudget-maxunavailable">
+      <td><a href="#vmselect-poddisruptionbudget-maxunavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.podDisruptionBudget.maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>max number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="vmselect-poddisruptionbudget-minavailable">
+      <td><a href="#vmselect-poddisruptionbudget-minavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.podDisruptionBudget.minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>min number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="vmselect-poddisruptionbudget-unhealthypodevictionpolicy">
+      <td><a href="#vmselect-poddisruptionbudget-unhealthypodevictionpolicy"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.podDisruptionBudget.unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>Defines criteria when unhealthy pods should be considered for eviction</p>
 </td>
     </tr>
     <tr id="vmselect-podlabels">
@@ -2001,6 +2098,19 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(list)</code></em><p>Pod topologySpreadConstraints</p>
 </td>
     </tr>
+    <tr id="vmselect-verticalpodautoscaling">
+      <td><a href="#vmselect-verticalpodautoscaling"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.verticalPodAutoscaling</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Vertical Pod Autoscaling. Requires VPA CRD (<code>autoscaling.k8s.io/v1</code>) to be installed in the cluster. Note that VPA should not be used together with HPA on the same resource metrics (CPU/memory).</p>
+</td>
+    </tr>
+    <tr id="vmselect-verticalpodautoscaling-enabled">
+      <td><a href="#vmselect-verticalpodautoscaling-enabled"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.verticalPodAutoscaling.enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(bool)</code></em><p>Use VPA for vmagent</p>
+</td>
+    </tr>
     <tr id="vmstorage-affinity">
       <td><a href="#vmstorage-affinity"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.affinity</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
@@ -2256,9 +2366,30 @@ Change the values according to the need of the environment in ``victoria-metrics
     <tr id="vmstorage-poddisruptionbudget">
       <td><a href="#vmstorage-poddisruptionbudget"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.podDisruptionBudget</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>See <code>kubectl explain poddisruptionbudget.spec</code> for more. Details are <a href="https://kubernetes.io/docs/tasks/run-application/configure-pdb/" target="_blank">here</a></p>
+</td>
+    </tr>
+    <tr id="vmstorage-poddisruptionbudget-maxunavailable">
+      <td><a href="#vmstorage-poddisruptionbudget-maxunavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.podDisruptionBudget.maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>max number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="vmstorage-poddisruptionbudget-minavailable">
+      <td><a href="#vmstorage-poddisruptionbudget-minavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.podDisruptionBudget.minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>min number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="vmstorage-poddisruptionbudget-unhealthypodevictionpolicy">
+      <td><a href="#vmstorage-poddisruptionbudget-unhealthypodevictionpolicy"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.podDisruptionBudget.unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>Defines criteria when unhealthy pods should be considered for eviction</p>
 </td>
     </tr>
     <tr id="vmstorage-podlabels">
@@ -2494,6 +2625,19 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#vmstorage-topologyspreadconstraints"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.topologySpreadConstraints</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
       <td><em><code>(list)</code></em><p>Pod topologySpreadConstraints</p>
+</td>
+    </tr>
+    <tr id="vmstorage-verticalpodautoscaling">
+      <td><a href="#vmstorage-verticalpodautoscaling"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.verticalPodAutoscaling</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Vertical Pod Autoscaling. Requires VPA CRD (<code>autoscaling.k8s.io/v1</code>) to be installed in the cluster. Note that VPA should not be used together with HPA on the same resource metrics (CPU/memory).</p>
+</td>
+    </tr>
+    <tr id="vmstorage-verticalpodautoscaling-enabled">
+      <td><a href="#vmstorage-verticalpodautoscaling-enabled"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.verticalPodAutoscaling.enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(bool)</code></em><p>Use VPA for vmagent</p>
 </td>
     </tr>
     <tr id="vmstorage-vmbackupmanager-destination">

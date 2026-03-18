@@ -16,7 +16,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.57.1-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230571)
+![Version](https://img.shields.io/badge/0.59.2-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230592)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-operator)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -212,20 +212,6 @@ Remove application with command.
 helm uninstall vmo -n NAMESPACE
 ```
 
-## Documentation of Helm Chart
-
-Install ``helm-docs`` following the instructions on this [tutorial](https://docs.victoriametrics.com/helm/requirements/).
-
-Generate docs with ``helm-docs`` command.
-
-```bash
-cd charts/victoria-metrics-operator
-
-helm-docs
-```
-
-The markdown generation is entirely go template driven. The tool parses metadata from charts and generates a number of sub-templates that can be referenced in a template file (by default ``README.md.gotmpl``). If no template file is provided, the tool has a default internal template that will generate a reasonably formatted README.
-
 ## Disabling automatic ServiceAccount token mount
 
 There are cases when it is required to disable automatic ServiceAccount token mount due to hardening reasons. To disable it, set the following values:
@@ -393,6 +379,11 @@ Change the values according to the need of the environment in ``victoria-metrics
 </a></td>
       <td><em><code>(object)</code></em><p>Annotations to be added to the all resources</p>
 </td>
+    </tr>
+    <tr id="configreloader-image">
+      <td><a href="#configreloader-image"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">configReloader.image</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em></td>
     </tr>
     <tr id="crds-annotations">
       <td><a href="#crds-annotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">crds.annotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
@@ -763,18 +754,33 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(bool)</code></em><p>Compare-options and sync-options for prometheus objects converted by operator for properly use with ArgoCD</p>
 </td>
     </tr>
-    <tr id="operator-usecustomconfigreloader">
-      <td><a href="#operator-usecustomconfigreloader"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">operator.useCustomConfigReloader</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(bool)</code></em><p>Enables custom config-reloader, bundled with operator. It should reduce vmagent and vmauth config sync-time and make it predictable.</p>
-</td>
-    </tr>
     <tr id="poddisruptionbudget">
       <td><a href="#poddisruptionbudget"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podDisruptionBudget</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>See <code>kubectl explain poddisruptionbudget.spec</code> for more or check <a href="https://kubernetes.io/docs/tasks/run-application/configure-pdb/" target="_blank">these docs</a></p>
+</td>
+    </tr>
+    <tr id="poddisruptionbudget-maxunavailable">
+      <td><a href="#poddisruptionbudget-maxunavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podDisruptionBudget.maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>max number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="poddisruptionbudget-minavailable">
+      <td><a href="#poddisruptionbudget-minavailable"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podDisruptionBudget.minAvailable</span><span class="p">:</span><span class="w"> </span><span class="m">0</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(int)</code></em><p>min number or percentage of pods that can be unavailable</p>
+</td>
+    </tr>
+    <tr id="poddisruptionbudget-unhealthypodevictionpolicy">
+      <td><a href="#poddisruptionbudget-unhealthypodevictionpolicy"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podDisruptionBudget.unhealthyPodEvictionPolicy</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>Defines criteria when unhealthy pods should be considered for eviction</p>
 </td>
     </tr>
     <tr id="podlabels">
@@ -1003,6 +1009,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#servicemonitor-vm"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">serviceMonitor.vm</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span></span></span></code></pre>
 </a></td>
       <td><em><code>(bool)</code></em><p>Creates <code>VMServiceScrape</code> if <code>true</code> and <code>ServiceMonitor</code> otherwise. Make sure <a href="https://artifacthub.io/packages/helm/prometheus-community/prometheus-operator-crds" target="_blank">Prometheus Operator CRDs</a> are installed if it&rsquo;s set to <code>false</code></p>
+</td>
+    </tr>
+    <tr id="shareprocessnamespace">
+      <td><a href="#shareprocessnamespace"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">shareProcessNamespace</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(bool)</code></em><p>Enable sharing process Namespace between Containers in a Pod. This only makes sense with extraContainers</p>
 </td>
     </tr>
     <tr id="terminationgraceperiodseconds">

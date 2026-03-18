@@ -22,6 +22,8 @@ const (
 
 var MODEL_TO_ENCODING = map[string]string{
 	// chat
+	"gpt-4.5":       MODEL_O200K_BASE,
+	"gpt-4.1":       MODEL_O200K_BASE,
 	"gpt-4o":        MODEL_O200K_BASE,
 	"gpt-4":         MODEL_CL100K_BASE,
 	"gpt-3.5-turbo": MODEL_CL100K_BASE,
@@ -67,17 +69,19 @@ var MODEL_TO_ENCODING = map[string]string{
 
 var MODEL_PREFIX_TO_ENCODING = map[string]string{
 	// chat
+	"gpt-4.5-":       MODEL_O200K_BASE,  // e.g., gpt-4.5-preview, etc.
+	"gpt-4.1-":       MODEL_O200K_BASE,  // e.g., gpt-4.1-2025-04-14, etc.
 	"gpt-4o-":        MODEL_O200K_BASE,  // e.g., gpt-4o-2024-05-13, etc.
 	"gpt-4-":         MODEL_CL100K_BASE, // e.g., gpt-4-0314, etc., plus gpt-4-32k
 	"gpt-3.5-turbo-": MODEL_CL100K_BASE, // e.g, gpt-3.5-turbo-0301, -0401, etc.
 }
 
 var encodingMap map[string]*Encoding
-var l *sync.Mutex
+var l *sync.RWMutex
 
 func init() {
 	encodingMap = make(map[string]*Encoding)
-	l = &sync.Mutex{}
+	l = &sync.RWMutex{}
 }
 
 type Encoding struct {
@@ -89,11 +93,15 @@ type Encoding struct {
 }
 
 func getEncoding(encodingName string) (*Encoding, error) {
-	l.Lock()
-	defer l.Unlock()
-	if encoding, ok := encodingMap[encodingName]; ok {
+	l.RLock()
+	encoding, ok := encodingMap[encodingName]
+	l.RUnlock()
+	if ok {
 		return encoding, nil
 	}
+
+	l.Lock()
+	defer l.Unlock()
 	initEncoding, err := initEncoding(encodingName)
 	if err != nil {
 		return nil, err

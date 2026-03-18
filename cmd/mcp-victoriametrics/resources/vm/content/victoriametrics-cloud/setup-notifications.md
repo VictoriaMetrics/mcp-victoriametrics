@@ -8,68 +8,76 @@ menu:
     name: Notifications
 tags:
   - metrics
+  - logs
   - cloud
   - enterprise
 aliases:
   - /victoriametrics-cloud/setup-notifications/index.html
   - /managed-victoriametrics/setup-notifications/index.html
 ---
-The guide covers how to enable email and Slack notifications.
+The section explains the `Notifications` concept in VictoriaMetrics Cloud.
 
-Table of content:
-1. [Setup Slack notifications](https://docs.victoriametrics.com/victoriametrics-cloud/setup-notifications/#setup-slack-notifications)
-1. [Setup emails notifications](https://docs.victoriametrics.com/victoriametrics-cloud/setup-notifications/#setup-emails-notifications)
-1. [Send test notification](https://docs.victoriametrics.com/victoriametrics-cloud/setup-notifications/#send-test-notification)
+## What are notifications?
 
-When you enter the notification section, you will be able to fill in the channels in which you
-want to receive notifications
+The purpose of notifications is to help teams stay informed about critical events, product updates,
+and account activities. They are divided into different interest groups:
+* `System alerts`: Critical updates about platform health and infrastructure
+* `Billing`: Notifications about invoices, usage limits, and payment issues
+* `Product news`: Updates on new features, improvements, and releases
+* `Activity`: Events related to user actions and deployments
 
-![Notifications view](notifications_view.webp)
+## Default notification recipients
 
-## Setup Slack notifications
+By default, organization administrators are automatically subscribed to all VictoriaMetrics Cloud
+notification categories.
 
-1. Setup Slack webhook
-   How to do this is indicated on the following link
-<a href="https://api.slack.com/messaging/webhooks" target="_blank">https://api.slack.com/messaging/webhooks</a>
+> [!TIP]
+> Dedicated documentation about [User Management](https://docs.victoriametrics.com/victoriametrics-cloud/account-management/organizations/)
+> is available, including roles and permissions, user management and organizations.
 
-   ![Notifications view](notifications_view.webp)
+## Configuring notifications
 
-1. Specify Slack channels
+Organization administrators can manage notification settings by using the pencil (✏️) icon next to
+each category to edit recipients. Changes done apply across the whole organization.
+At a user level, it's also possible to opt-out from available notifications.
 
-   Enter one or more channels into input and press enter or choose it after each input.
+Notifications can be received in the following channels:
+* Email addresses can be defined for all notification types
+* Additionally, Slack channels can be defined to receive System Alerts.
 
-     ![Slack setup](notifications_setup_slack.webp)
-     ![Slack enter channel](notifications_setup_slack_enter_channel.webp)
+![Editing System Alerts](https://docs.victoriametrics.com/victoriametrics-cloud/notifications-emails.webp)
+<figcaption style="text-align: center; font-style: italic;">Editing System Alerts Recipients</figcaption>
 
-## Setup emails notifications
+> [!TIP]
+> Not sure if everything is properly defined? Click on `Send test message` and click `Save` to
+> make a fast check.
 
-You can specify one or multiple emails for notifications in the input field. By default,
-email notifications are enabled for the account owner
+### Configuring Slack notifications
 
-  ![Setup emails](notifications_setup_emails.webp)
-  ![Emails input](notifications_setup_emails_input.webp)
+Slack channel notifications may be configured for System Alerts via webhooks. In order to define
+where in Slack notifications should show up, VictoriaMetrics Cloud needs to know:
+* The Slack webhook url
+* The Channels to receive notifications
+
+To learn about Slack webhook urls please check this information: https://api.slack.com/messaging/webhooks.
+In a nutshell, it's needed to create a Slack app, enable incoming webhook, and create an incoming
+webhook.
+
+>[!TIP]
+> The webhook url to paste in VictoriaMetrics Cloud will have the following format:
+> `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX`
 
 
-## Send test notification
+{{% collapse name="Expand to see notification message examples" %}}
 
-To test your notification settings, press Save and Test.
+![Test Slack Notifications](https://docs.victoriametrics.com/victoriametrics-cloud/notifications_slack_test.webp)
+<figcaption style="text-align: center; font-style: italic;">Test message in Slack notifications</figcaption>
 
-If only Slack channels and webhook are specified correctly, you will receive the notification in the Slack channels.
-If only the emails are specified, you will receive notifications to those emails.
-When both notifications are specified, all notifications will be sent to Slack channels and emails.
+<br>
 
-  ![Save and test](notifications_save_and_test.webp)
+![Test Email Notifications](https://docs.victoriametrics.com/victoriametrics-cloud/notifications_email_test.webp)
+<figcaption style="text-align: center; font-style: italic;">Test message via email</figcaption>
 
-If the Save button is pressed, then entered channels will be only saved, and you get a success message.
+{{% /collapse %}}
 
-If the Save and Test button is pressed, then all entered information will be saved,
-and test notifications will be sent to the entered channels
-
-  ![Save success](notifications_save_success.webp)
-
-Examples of the test notification messages:
-
-  ![Slack test](notifications_slack_test.webp)
-
-  ![Email test](notifications_email_test.webp)
-
+<br>

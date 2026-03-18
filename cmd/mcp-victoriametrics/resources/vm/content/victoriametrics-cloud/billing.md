@@ -32,7 +32,8 @@ __Note__: VictoriaMetrics Cloud does not store or process your payment informati
 
 ## Pricing
 
-Pricing begins at **$190/month** for the Starter Tier. To view other tiers and their costs, navigate to the [Create New Deployment](https://console.victoriametrics.cloud/deployments/create) section in the VictoriaMetrics Cloud application.
+Pricing begins at ~**$190/month** for the smallest [tiers](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/#capacity-tiers) of VictoriaMetrics and VictoriaLogs.
+To view other tiers and their costs, navigate to the [Create New Deployment](https://console.victoriametrics.cloud/deployments/create) section in the VictoriaMetrics Cloud application.
 
 Our aim is to make pricing information easy to access and understand. If you have any questions or feedback on our pricing, please contact us.
 

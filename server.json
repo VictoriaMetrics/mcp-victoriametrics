@@ -1,17 +1,17 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
-  "name": "io.github.VictoriaMetrics-Community/mcp-victoriametrics",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.VictoriaMetrics/mcp-victoriametrics",
   "description": "MCP Server for VictoriaMetrics. Provides integration with VictoriaMetrics API and documentation",
   "status": "active",
   "repository": {
-    "url": "https://github.com/VictoriaMetrics-Community/mcp-victoriametrics",
+    "url": "https://github.com/VictoriaMetrics/mcp-victoriametrics",
     "source": "github"
   },
   "version": "${VERSION}",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/victoriametrics-community/mcp-victoriametrics:${VERSION}",
+      "identifier": "ghcr.io/victoriametrics/mcp-victoriametrics:${VERSION}",
       "transport": {
         "type": "stdio"
       },
@@ -54,6 +54,13 @@
         {
           "name": "MCP_DISABLE_RESOURCES",
           "description": "Disable all resources (documentation tool will continue to work)",
+          "isRequired": false,
+          "format": "boolean",
+          "isSecret": false
+        },
+        {
+          "name": "MCP_PASSTHROUGH_HEADERS",
+          "description": "HTTP header names to forward from incoming MCP requests to VictoriaMetrics (comma-separated list). Overrides VM_INSTANCE_HEADERS on collision.",
           "isRequired": false,
           "format": "boolean",
           "isSecret": false

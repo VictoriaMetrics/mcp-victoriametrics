@@ -8,7 +8,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 const toolNameRegions = "regions"
@@ -26,7 +26,10 @@ func toolRegions(_ *config.Config) mcp.Tool {
 	return mcp.NewTool(toolNameRegions, options...)
 }
 
-func toolRegionsHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func toolRegionsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if cfg.IsCloudSharedInstance() {
+		ctx = withCloudAccessKey(ctx, tcr)
+	}
 	regions, err := cfg.VMC().ListRegions(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list regions: %v", err)), nil

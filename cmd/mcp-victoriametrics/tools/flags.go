@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
 	vmcloud "github.com/VictoriaMetrics/victoriametrics-cloud-api-go/v1"
 
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 const toolNameFlags = "flags"
@@ -46,6 +47,9 @@ func toolFlagsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolR
 		}
 		if deploymentID == "" {
 			return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
+		}
+		if cfg.IsCloudSharedInstance() {
+			ctx = withCloudAccessKey(ctx, tcr)
 		}
 		dd, err := cfg.VMC().GetDeploymentDetails(ctx, deploymentID)
 		if err != nil {

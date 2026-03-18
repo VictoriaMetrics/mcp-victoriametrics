@@ -8,7 +8,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 const toolNameTiers = "tiers"
@@ -26,7 +26,10 @@ func toolTiers(_ *config.Config) mcp.Tool {
 	return mcp.NewTool(toolNameTiers, options...)
 }
 
-func toolTiersHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func toolTiersHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if cfg.IsCloudSharedInstance() {
+		ctx = withCloudAccessKey(ctx, tcr)
+	}
 	tiers, err := cfg.VMC().ListTiers(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list tiers: %v", err)), nil

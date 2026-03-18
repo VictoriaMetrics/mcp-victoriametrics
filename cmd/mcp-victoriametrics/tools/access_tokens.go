@@ -8,7 +8,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 const toolNameAccessTokens = "access_tokens"
@@ -42,6 +42,9 @@ func toolAccessTokensHandler(ctx context.Context, cfg *config.Config, tcr mcp.Ca
 	}
 	if deploymentID == "" {
 		return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
+	}
+	if cfg.IsCloudSharedInstance() {
+		ctx = withCloudAccessKey(ctx, tcr)
 	}
 	accessTokens, err := cfg.VMC().ListDeploymentAccessTokens(ctx, deploymentID)
 	if err != nil {

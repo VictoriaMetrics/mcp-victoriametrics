@@ -202,7 +202,7 @@ Cloud, your feedback and contributions are what makes us better every day. See y
 update!
 
 And… remember that you can try [VictoriaMetrics Cloud for free](https://victoriametrics.com/products/cloud/)!
-[Sign up](https://cloud.victoriametrics.com/signUp) today!
+[Sign up](https://console.victoriametrics.cloud/signUp) today!
 
 ## Further reading
 - [VictoriaMetrics Cloud reduces monitoring costs by 5x](https://victoriametrics.com/blog/victoriametrics-cloud-reduces-monitoring-costs-by-5x/)

@@ -8,7 +8,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 const toolNameDeployments = "deployments"
@@ -26,7 +26,10 @@ func toolDeployments(_ *config.Config) mcp.Tool {
 	return mcp.NewTool(toolNameDeployments, options...)
 }
 
-func toolDeploymentsHandler(ctx context.Context, cfg *config.Config, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func toolDeploymentsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if cfg.IsCloudSharedInstance() {
+		ctx = withCloudAccessKey(ctx, tcr)
+	}
 	deployments, err := cfg.VMC().ListDeployments(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to list deployments: %v", err)), nil

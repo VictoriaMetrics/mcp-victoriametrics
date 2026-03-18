@@ -33,6 +33,97 @@ see [Extra arguments section](https://docs.victoriametrics.com/operator/resource
 
 Also, you can check out the [examples](https://docs.victoriametrics.com/operator/resources/vmsingle/#examples) section.
 
+## Scraping
+
+`VMSingle` supports scraping targets with {{% available_from "v0.69.0" "operator" %}}:
+
+- [VMServiceScrape](https://docs.victoriametrics.com/operator/resources/vmservicescrape/)
+- [VMPodScrape](https://docs.victoriametrics.com/operator/resources/vmpodscrape/)
+- [VMNodeScrape](https://docs.victoriametrics.com/operator/resources/vmnodescrape/)
+- [VMStaticScrape](https://docs.victoriametrics.com/operator/resources/vmstaticscrape/)
+- [VMProbe](https://docs.victoriametrics.com/operator/resources/vmprobe/)
+- [VMScrapeConfig](https://docs.victoriametrics.com/operator/resources/vmscrapeconfig/)
+
+These objects specify which targets VMSingle should scrape and how to collect metrics, and generate part of [VMSingle](https://docs.victoriametrics.com/victoriametrics/vmsingle/) scrape configuration.
+
+To enable scraping on VMSingle, set `spec.ingestOnlyMode` to `false`.
+
+`VMSingle` uses selectors to filter scrape objects. Selectors are defined using the `NamespaceSelector` and `Selector` suffixes for each scrape object type in the VMSingle spec:
+
+- `serviceScrapeNamespaceSelector` and `serviceScrapeSelector` for [VMServiceScrape](https://docs.victoriametrics.com/operator/resources/vmservicescrape/) objects,
+- `podScrapeNamespaceSelector` and `podScrapeSelector` for [VMPodScrape](https://docs.victoriametrics.com/operator/resources/vmpodscrape/) objects,
+- `probeNamespaceSelector` and `probeSelector` for [VMProbe](https://docs.victoriametrics.com/operator/resources/vmprobe/) objects,
+- `staticScrapeNamespaceSelector` and `staticScrapeSelector` for [VMStaticScrape](https://docs.victoriametrics.com/operator/resources/vmstaticscrape/) objects,
+- `nodeScrapeNamespaceSelector` and `nodeScrapeSelector` for [VMNodeScrape](https://docs.victoriametrics.com/operator/resources/vmnodescrape/) objects.
+- `scrapeConfigNamespaceSelector` and `scrapeConfigSelector` for [VMScrapeConfig](https://docs.victoriametrics.com/operator/resources/vmscrapeconfig/) objects.
+
+This enables access control configuration for objects across namespaces.
+See [this doc](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#labelselector-v1-meta/) for selector specifications.
+
+In addition to these selectors, object filtering in a cluster can be done by the `selectAllByDefault` VMSingle spec field and the operator's `WATCH_NAMESPACE` environment variable.
+
+Following rules are applied:
+
+- If both `...NamespaceSelector` and `...Selector` are undefined, no objects are selected by default. Setting `spec.selectAllByDefault: true` selects all objects of the given type.
+- If `...NamespaceSelector` is defined and `...Selector` is undefined, all objects in the namespaces matched by ...NamespaceSelector are selected.
+- If `...NamespaceSelector` is undefined and `...Selector` is defined, all objects in VMSingle’s namespaces matching ...Selector are selected.
+- If `...NamespaceSelector` and `...Selector` both are defined, then only objects in the namespaces matched by...NamespaceSelector for the given ...Selector are matching.
+
+Below is a more visual and detailed view:
+
+| `...NamespaceSelector` | `...Selector` | `selectAllByDefault` | `WATCH_NAMESPACE` | Selected objects                                                                                            |
+|------------------------|---------------|----------------------|-------------------|-------------------------------------------------------------------------------------------------------------|
+| undefined              | undefined     | false                | undefined         | nothing                                                                                                     |
+| undefined              | undefined     | **true**             | undefined         | all objects of given type (`...`) in the cluster                                                            |
+| **defined**            | undefined     | *any*                | undefined         | all objects of given type (`...`) at namespaces for given `...NamespaceSelector`                            |
+| undefined              | **defined**   | *any*                | undefined         | all objects of given type (`...`) only at `VMSingle`'s namespace are matching for given `Selector`          |
+| **defined**            | **defined**   | *any*                | undefined         | all objects of given type (`...`) only at namespaces matched `...NamespaceSelector` for given `...Selector` |
+| *any*                  | undefined     | *any*                | **defined**       | all objects of given type (`...`) only at `VMSingle`'s namespace                                            |
+| *any*                  | **defined**   | *any*                | **defined**       | all objects of given type (`...`) only at `VMSingle`'s namespace for given `...Selector`                    |
+
+For more details about the `WATCH_NAMESPACE` variable, see [this doc](https://docs.victoriametrics.com/operator/configuration/#namespaced-mode).
+
+Here are some examples of `VMSingle` configuration with selectors:
+
+```yaml
+# select all scrape objects in the cluster
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMSingle
+metadata:
+  name: select-all
+spec:
+  # ...
+  ingestOnlyMode: false
+  selectAllByDefault: true
+
+---
+# select all scrape objects in specific namespace (my-namespace)
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMSingle
+metadata:
+  name: select-ns
+spec:
+  # ...
+  serviceScrapeNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: my-namespace
+  podScrapeNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: my-namespace
+  nodeScrapeNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: my-namespace
+  staticScrapeNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: my-namespace
+  probeNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: my-namespace
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: my-namespace
+```
+
 ## High availability
 
 `VMSingle` doesn't support high availability by default, for such purpose
@@ -131,7 +222,7 @@ After that you can pass [Downsampling](https://docs.victoriametrics.com/victoria
 flag to `VMSingle` with [extraArgs](https://docs.victoriametrics.com/operator/resources/#extra-arguments) too.
 
 Here are complete example for [Downsampling](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#downsampling):
- 
+
 ```yaml
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMSingle
@@ -181,7 +272,7 @@ spec:
 ### Backup automation
 
 You can check [vmbackupmanager documentation](https://docs.victoriametrics.com/victoriametrics/vmbackupmanager/) for backup automation.
-It contains a description of the service and its features. This section covers vmbackumanager integration in vmoperator.
+It contains a description of the service and its features. This section covers vmbackupmanager integration in vmoperator.
 
 `VMSingle` has built-in backup configuration, it uses `vmbackupmanager` - proprietary tool for backups.
 It supports incremental backups (hourly, daily, weekly, monthly) with popular object storages (aws s3, google cloud storage).
@@ -223,7 +314,7 @@ stringData:
     [default]
     aws_access_key_id = your_access_key_id
     aws_secret_access_key = your_secret_access_key
-``` 
+```
 
 You can read more about backup configuration options and mechanics [here](https://docs.victoriametrics.com/victoriametrics/vmbackupmanager/)
 
@@ -270,10 +361,10 @@ Steps:
         credentialsSecret:
           name: remote-storage-keys
           key: credentials
-          
+
       extraArgs:
         runOnStart: "true"
-        
+
       initContainers:
         - name: vmrestore
           image: victoriametrics/vmrestore:latest
@@ -287,7 +378,7 @@ Steps:
             - -storageDataPath=/victoria-metrics-data
             - -src=s3://your_bucket/folder/latest
             - -credsFilePath=/etc/vm/creds/credentials
-    
+
       # ...other fields...
     ```
 1. Apply it, and db will be restored from S3

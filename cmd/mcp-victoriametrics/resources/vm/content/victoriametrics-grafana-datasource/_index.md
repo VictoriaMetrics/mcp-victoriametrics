@@ -117,6 +117,40 @@ WITH (
 
 To view the raw query in the interface, enable the `Raw` toggle.
 
+## Correlations
+
+Signals can be correlated together if they share the same list of attributes, so they can uniquely identify the
+same system or event. Grafana provides various interfaces for the [correlations](https://grafana.com/docs/grafana/latest/administration/correlations/)
+feature for interactive links between visualizations.
+
+### Trace to metrics
+
+_Will be supported since Grafana@v12.4.0. See issue [#392](https://github.com/VictoriaMetrics/victoriametrics-datasource/issues/392)._
+
+Tempo, Jaeger, and Zipkin data sources support [Trace to metrics](https://grafana.com/docs/grafana/latest/visualizations/explore/trace-integration/#trace-to-metrics)
+feature for navigating from a span in a trace directly to metrics relevant for attributes of that trace. 
+
+### Metric to logs
+
+Metric to logs correlation can be configured using [correlations](https://grafana.com/docs/grafana/latest/administration/correlations/)
+interface:
+
+<img alt="Metric to logs correlation 1" width="50%" src="https://github.com/VictoriaMetrics/victoriametrics-datasource/blob/main/src/img/correlation-metric-to-logs-1.png?raw=true">
+<img alt="Metric to logs correlation 2" width="50%" src="https://github.com/VictoriaMetrics/victoriametrics-datasource/blob/main/src/img/correlation-metric-to-logs-2.png?raw=true">
+<img alt="Metric to logs correlation 3" width="50%" src="https://github.com/VictoriaMetrics/victoriametrics-datasource/blob/main/src/img/correlation-metric-to-logs-3.png?raw=true">
+
+Then, in Grafana's Explore mode click on the specified field will open a split view of Logs datasource already filtered 
+by the configured fields:
+<img alt="Metric to logs correlation 4" width="100%" src="https://github.com/VictoriaMetrics/victoriametrics-datasource/blob/main/src/img/correlation-metric-to-logs-4.png?raw=true">
+
+### Metric to traces
+
+VictoriaMetrics storage [doesn't support exemplars](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/1169#issuecomment-2206324361)
+for traversing from time series to specific trace.
+
+Jumping from the metric to traces is still possible via [correlations](https://grafana.com/docs/grafana/latest/administration/correlations/)
+interface in the same fashion as described in `Metrics to Logs` section above.
+
 ## FAQ
 
 ### How to convert dashboard from Prometheus to VictoriaMetrics datasource?

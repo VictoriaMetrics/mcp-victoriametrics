@@ -18,12 +18,12 @@ import (
 
 	"github.com/VictoriaMetrics/metrics"
 
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/hooks"
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/logging"
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/prompts"
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/resources"
-	"github.com/VictoriaMetrics-Community/mcp-victoriametrics/cmd/mcp-victoriametrics/tools"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/hooks"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/logging"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/prompts"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/resources"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/tools"
 )
 
 var (
@@ -88,9 +88,6 @@ Try not to second guess information - if you don't know something or lack inform
 	`),
 	)
 
-	// Registering resources
-	resources.RegisterDocsResources(s, c)
-
 	// Registering common tools
 	tools.RegisterToolQuery(s, c)
 	tools.RegisterToolFlags(s, c)
@@ -115,6 +112,11 @@ Try not to second guess information - if you don't know something or lack inform
 	tools.RegisterToolMetricRelabelDebug(s, c)
 	tools.RegisterToolRetentionFiltersDebug(s, c)
 	tools.RegisterToolDownsamplingFiltersDebug(s, c)
+
+	// Registering resources (only if documentation tool is not disabled)
+	if !c.IsToolDisabled(tools.ToolNameDocumentation) {
+		resources.RegisterDocsResources(s, c)
+	}
 
 	// Registering cloud-specific tools
 	tools.RegisterToolTiers(s, c)

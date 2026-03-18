@@ -12,8 +12,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/VictoriaMetrics/metricsql"
 	"github.com/cespare/xxhash/v2"
 
@@ -28,6 +28,7 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/querytracer"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/slicesutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/uint64set"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/workingsetcache"
 )
 
 const (
@@ -124,7 +125,7 @@ type indexDB struct {
 
 	// Cache for (date, tagFilter) -> loopsCount, which is used for reducing
 	// the amount of work when matching a set of filters.
-	loopsPerDateTagFilterCache *lrucache.Cache
+	loopsPerDateTagFilterCache *workingsetcache.Cache
 
 	// A cache that stores metricIDs that have been added to the index.
 	// The cache is not populated on startup nor does it store a complete set of
@@ -162,9 +163,7 @@ func getTagFiltersCacheSize() uint64 {
 	return maxTagFiltersCacheSize
 }
 
-func getTagFiltersLoopsCacheSize() uint64 {
-	return uint64(float64(memory.Allowed()) / 128)
-}
+var maxMetricIDsForDirectLabelsLookup int = 100e3
 
 func mustOpenIndexDB(id uint64, tr TimeRange, name, path string, s *Storage, isReadOnly *atomic.Bool, noRegisterNewSeries bool) *indexDB {
 	if s == nil {
@@ -181,7 +180,7 @@ func mustOpenIndexDB(id uint64, tr TimeRange, name, path string, s *Storage, isR
 		tb:                             tb,
 		s:                              s,
 		tagFiltersToMetricIDsCache:     tfssCache,
-		loopsPerDateTagFilterCache:     lrucache.NewCache(getTagFiltersLoopsCacheSize),
+		loopsPerDateTagFilterCache:     workingsetcache.New(memory.Allowed() / 128),
 		metricIDCache:                  newMetricIDCache(),
 		dateMetricIDCache:              newDateMetricIDCache(),
 	}
@@ -200,6 +199,12 @@ type IndexDBMetrics struct {
 	TagFiltersToMetricIDsCacheRequests     uint64
 	TagFiltersToMetricIDsCacheMisses       uint64
 	TagFiltersToMetricIDsCacheResets       uint64
+
+	LoopsPerDateTagFilterCacheSize         uint64
+	LoopsPerDateTagFilterCacheSizeBytes    uint64
+	LoopsPerDateTagFilterCacheSizeMaxBytes uint64
+	LoopsPerDateTagFilterCacheRequests     uint64
+	LoopsPerDateTagFilterCacheMisses       uint64
 
 	MetricIDCacheSize           uint64
 	MetricIDCacheSizeBytes      uint64
@@ -245,20 +250,32 @@ func (db *indexDB) UpdateMetrics(m *IndexDBMetrics) {
 	m.CompositeFilterSuccessConversions = compositeFilterSuccessConversions.Load()
 	m.CompositeFilterMissingConversions = compositeFilterMissingConversions.Load()
 
-	// Report only once and either for the first met indexDB instance or whose
-	// tagFiltersCache is utilized the most.
-	//
-	// In case of tagFiltersCache, use TagFiltersToMetricIDsCacheRequests as an
-	// indicator that this is the first indexDB instance whose metrics are being
-	// collected because this cache may be reset too often.
+	// aggregate per-indexdb metrics
+	// counters must be summed
+	// while gauges could only use max value
+
+	// Report only once and for either the first met indexDB instance or whose
+	// tagFiltersToMetricIDsCache is utilized the most.
 	if m.TagFiltersToMetricIDsCacheRequests == 0 || db.tagFiltersToMetricIDsCache.SizeBytes() > m.TagFiltersToMetricIDsCacheSizeBytes {
 		m.TagFiltersToMetricIDsCacheSize = uint64(db.tagFiltersToMetricIDsCache.Len())
 		m.TagFiltersToMetricIDsCacheSizeBytes = db.tagFiltersToMetricIDsCache.SizeBytes()
 		m.TagFiltersToMetricIDsCacheSizeMaxBytes = db.tagFiltersToMetricIDsCache.SizeMaxBytes()
-		m.TagFiltersToMetricIDsCacheRequests = db.tagFiltersToMetricIDsCache.Requests()
-		m.TagFiltersToMetricIDsCacheMisses = db.tagFiltersToMetricIDsCache.Misses()
-		m.TagFiltersToMetricIDsCacheResets = db.tagFiltersToMetricIDsCache.Resets()
 	}
+	m.TagFiltersToMetricIDsCacheRequests += db.tagFiltersToMetricIDsCache.Requests()
+	m.TagFiltersToMetricIDsCacheMisses += db.tagFiltersToMetricIDsCache.Misses()
+	m.TagFiltersToMetricIDsCacheResets += db.tagFiltersToMetricIDsCache.Resets()
+
+	// Report only once and for either the first met indexDB instance or whose
+	// loopsPerDateTagFilterCache is utilized the most.
+	var cs fastcache.Stats
+	db.loopsPerDateTagFilterCache.UpdateStats(&cs)
+	if cs.BytesSize > m.LoopsPerDateTagFilterCacheSizeBytes {
+		m.LoopsPerDateTagFilterCacheSize = cs.EntriesCount
+		m.LoopsPerDateTagFilterCacheSizeBytes = cs.BytesSize
+		m.LoopsPerDateTagFilterCacheSizeMaxBytes = cs.MaxBytesSize
+	}
+	m.LoopsPerDateTagFilterCacheRequests += cs.GetCalls
+	m.LoopsPerDateTagFilterCacheMisses += cs.Misses
 
 	// Report only once and for either the first met indexDB instance or whose
 	// metricIDCache is utilized the most.
@@ -266,9 +283,9 @@ func (db *indexDB) UpdateMetrics(m *IndexDBMetrics) {
 	if m.MetricIDCacheSizeBytes == 0 || mcs.SizeBytes > m.MetricIDCacheSizeBytes {
 		m.MetricIDCacheSize = mcs.Size
 		m.MetricIDCacheSizeBytes = mcs.SizeBytes
-		m.MetricIDCacheSyncsCount = mcs.SyncsCount
-		m.MetricIDCacheRotationsCount = mcs.RotationsCount
 	}
+	m.MetricIDCacheSyncsCount += mcs.SyncsCount
+	m.MetricIDCacheRotationsCount += mcs.RotationsCount
 
 	// Report only once and for either the first met indexDB instance or whose
 	// dateMetricIDCache is utilized the most.
@@ -276,9 +293,9 @@ func (db *indexDB) UpdateMetrics(m *IndexDBMetrics) {
 	if m.DateMetricIDCacheSizeBytes == 0 || dmcs.SizeBytes > m.DateMetricIDCacheSizeBytes {
 		m.DateMetricIDCacheSize = dmcs.Size
 		m.DateMetricIDCacheSizeBytes = dmcs.SizeBytes
-		m.DateMetricIDCacheSyncsCount = dmcs.SyncsCount
-		m.DateMetricIDCacheRotationsCount = dmcs.RotationsCount
 	}
+	m.DateMetricIDCacheSyncsCount += dmcs.SyncsCount
+	m.DateMetricIDCacheRotationsCount += dmcs.RotationsCount
 
 	m.DateRangeSearchCalls += db.dateRangeSearchCalls.Load()
 	m.DateRangeSearchHits += db.dateRangeSearchHits.Load()
@@ -298,7 +315,7 @@ func (db *indexDB) MustClose() {
 
 	// Free space occupied by caches owned by db.
 	db.tagFiltersToMetricIDsCache.MustStop()
-	db.loopsPerDateTagFilterCache.MustStop()
+	db.loopsPerDateTagFilterCache.Stop()
 	db.metricIDCache.MustStop()
 	db.dateMetricIDCache.MustStop()
 
@@ -338,28 +355,6 @@ func (db *indexDB) putMetricIDsToTagFiltersCache(qt *querytracer.Tracer, metricI
 	qt.Printf("put %d metricIDs in cache", metricIDs.Len())
 	db.tagFiltersToMetricIDsCache.PutEntry(string(key), metricIDs)
 	qt.Printf("stored %d metricIDs into cache", metricIDs.Len())
-}
-
-func (db *indexDB) getFromMetricIDCache(dst *TSID, metricID uint64) error {
-	// There is no need in checking for deleted metricIDs here, since they
-	// must be checked by the caller.
-	buf := (*[unsafe.Sizeof(*dst)]byte)(unsafe.Pointer(dst))
-	key := (*[unsafe.Sizeof(metricID)]byte)(unsafe.Pointer(&metricID))
-	tmp := db.s.metricIDCache.Get(buf[:0], key[:])
-	if len(tmp) == 0 {
-		// The TSID for the given metricID wasn't found in the cache.
-		return io.EOF
-	}
-	if &tmp[0] != &buf[0] || len(tmp) != len(buf) {
-		return fmt.Errorf("corrupted MetricID->TSID cache: unexpected size for metricID=%d value; got %d bytes; want %d bytes", metricID, len(tmp), len(buf))
-	}
-	return nil
-}
-
-func (db *indexDB) putToMetricIDCache(metricID uint64, tsid *TSID) {
-	buf := (*[unsafe.Sizeof(*tsid)]byte)(unsafe.Pointer(tsid))
-	key := (*[unsafe.Sizeof(metricID)]byte)(unsafe.Pointer(&metricID))
-	db.s.metricIDCache.Set(key[:], buf[:])
 }
 
 func marshalTagFiltersKey(dst []byte, tfss []*TagFilters, tr TimeRange) []byte {
@@ -538,13 +533,10 @@ func (is *indexSearch) searchLabelNamesWithFiltersOnTimeRange(qt *querytracer.Tr
 	lns := make(map[string]struct{})
 	qt = qt.NewChild("parallel search for label names: filters=%s, timeRange=%s", tfss, &tr)
 	for date := minDate; date <= maxDate; date++ {
-		wg.Add(1)
 		qtChild := qt.NewChild("search for label names: filters=%s, date=%s", tfss, dateToString(date))
-		go func(date uint64) {
-			defer func() {
-				qtChild.Done()
-				wg.Done()
-			}()
+		wg.Go(func() {
+			defer qtChild.Done()
+
 			isLocal := is.db.getIndexSearch(is.deadline)
 			lnsLocal, err := isLocal.searchLabelNamesWithFiltersOnDate(qtChild, tfss, date, maxLabelNames, maxMetrics)
 			is.db.putIndexSearch(isLocal)
@@ -563,7 +555,7 @@ func (is *indexSearch) searchLabelNamesWithFiltersOnTimeRange(qt *querytracer.Tr
 			for k := range lnsLocal {
 				lns[k] = struct{}{}
 			}
-		}(date)
+		})
 	}
 	wg.Wait()
 	putWaitGroup(wg)
@@ -574,11 +566,12 @@ func (is *indexSearch) searchLabelNamesWithFiltersOnTimeRange(qt *querytracer.Tr
 func (is *indexSearch) searchLabelNamesWithFiltersOnDate(qt *querytracer.Tracer, tfss []*TagFilters, date uint64, maxLabelNames, maxMetrics int) (map[string]struct{}, error) {
 	var filter *uint64set.Set
 	if !isSingleMetricNameFilter(tfss) {
-		filter, err := is.searchMetricIDsWithFiltersOnDate(qt, tfss, date, maxMetrics)
+		var err error
+		filter, err = is.searchMetricIDsWithFiltersOnDate(qt, tfss, date, maxMetrics)
 		if err != nil {
 			return nil, err
 		}
-		if filter != nil && filter.Len() <= 100e3 {
+		if filter != nil && filter.Len() <= maxMetricIDsForDirectLabelsLookup {
 			// It is faster to obtain label names by metricIDs from the filter
 			// instead of scanning the inverted index for the matching filters.
 			// This should help https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2978
@@ -798,13 +791,10 @@ func (is *indexSearch) searchLabelValuesOnTimeRange(qt *querytracer.Tracer, labe
 	lvs := make(map[string]struct{})
 	qt = qt.NewChild("parallel search for label values: labelName=%q, filters=%s, timeRange=%s", labelName, tfss, &tr)
 	for date := minDate; date <= maxDate; date++ {
-		wg.Add(1)
 		qtChild := qt.NewChild("search for label values: filters=%s, date=%s", tfss, dateToString(date))
-		go func(date uint64) {
-			defer func() {
-				qtChild.Done()
-				wg.Done()
-			}()
+		wg.Go(func() {
+			defer qtChild.Done()
+
 			isLocal := is.db.getIndexSearch(is.deadline)
 			lvsLocal, err := isLocal.searchLabelValuesOnDate(qtChild, labelName, tfss, date, maxLabelValues, maxMetrics)
 			is.db.putIndexSearch(isLocal)
@@ -823,7 +813,7 @@ func (is *indexSearch) searchLabelValuesOnTimeRange(qt *querytracer.Tracer, labe
 			for v := range lvsLocal {
 				lvs[v] = struct{}{}
 			}
-		}(date)
+		})
 	}
 	wg.Wait()
 	putWaitGroup(wg)
@@ -844,11 +834,12 @@ func (is *indexSearch) searchLabelValuesOnDate(qt *querytracer.Tracer, labelName
 	useCompositeScan := labelName != "" && isSingleMetricNameFilter(tfss)
 	var filter *uint64set.Set
 	if !useCompositeScan {
-		filter, err := is.searchMetricIDsWithFiltersOnDate(qt, tfss, date, maxMetrics)
+		var err error
+		filter, err = is.searchMetricIDsWithFiltersOnDate(qt, tfss, date, maxMetrics)
 		if err != nil {
 			return nil, err
 		}
-		if filter != nil && filter.Len() <= 100e3 {
+		if filter != nil && filter.Len() <= maxMetricIDsForDirectLabelsLookup {
 			// It is faster to obtain label values by metricIDs from the filter
 			// instead of scanning the inverted index for the matching filters.
 			// This should help https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2978
@@ -993,9 +984,8 @@ func (is *indexSearch) searchTagValueSuffixesForTimeRange(tr TimeRange, tagKey, 
 	var mu sync.Mutex // protects tvss + errGlobal from concurrent access below.
 	tvss := make(map[string]struct{})
 	for minDate <= maxDate {
-		wg.Add(1)
-		go func(date uint64) {
-			defer wg.Done()
+		date := minDate
+		wg.Go(func() {
 			isLocal := is.db.getIndexSearch(is.deadline)
 			tvssLocal, err := isLocal.searchTagValueSuffixesForDate(date, tagKey, tagValuePrefix, delimiter, maxTagValueSuffixes)
 			is.db.putIndexSearch(isLocal)
@@ -1014,7 +1004,7 @@ func (is *indexSearch) searchTagValueSuffixesForTimeRange(tr TimeRange, tagKey, 
 			for k := range tvssLocal {
 				tvss[k] = struct{}{}
 			}
-		}(minDate)
+		})
 		minDate++
 	}
 	wg.Wait()
@@ -1287,7 +1277,7 @@ func (is *indexSearch) getSeriesCount() (uint64, error) {
 
 // GetTSDBStatus returns topN entries for tsdb status for the given tfss, date and focusLabel.
 func (db *indexDB) GetTSDBStatus(qt *querytracer.Tracer, tfss []*TagFilters, date uint64, focusLabel string, topN, maxMetrics int, deadline uint64) (*TSDBStatus, error) {
-	qt = qt.NewChild("collect TSDB status: filters=%s, date=%d, focusLabel=%q, topN=%d, maxMetrics=%d", tfss, date, focusLabel, topN, maxMetrics)
+	qt = qt.NewChild("collect TSDB status: filters=%s, date=%s, focusLabel=%q, topN=%d, maxMetrics=%d", tfss, dateToString(date), focusLabel, topN, maxMetrics)
 	defer qt.Done()
 
 	is := db.getIndexSearch(deadline)
@@ -1755,7 +1745,7 @@ func (db *indexDB) SearchTSIDs(qt *querytracer.Tracer, tfss []*TagFilters, tr Ti
 			// Try obtaining TSIDs from MetricID->TSID cache. This is much faster
 			// than scanning the mergeset if it contains a lot of metricIDs.
 			tsid := &tsids[i]
-			err = db.getFromMetricIDCache(tsid, metricID)
+			err = db.s.getTSIDByMetricIDFromCache(tsid, metricID)
 			if err == nil {
 				// Fast path - the tsid for metricID is found in cache.
 				i++
@@ -1777,7 +1767,7 @@ func (db *indexDB) SearchTSIDs(qt *querytracer.Tracer, tfss []*TagFilters, tr Ti
 				}
 				continue
 			}
-			db.putToMetricIDCache(metricID, tsid)
+			db.s.putTSIDByMetricIDToCache(metricID, tsid)
 			i++
 		}
 		return true
@@ -1910,7 +1900,7 @@ func (is *indexSearch) getTSIDByMetricName(dst *TSID, metricName []byte, date ui
 }
 
 func (is *indexSearch) searchMetricNameWithCache(dst []byte, metricID uint64) ([]byte, bool) {
-	metricName := is.db.s.getMetricNameFromCache(dst, metricID)
+	metricName := is.db.s.getMetricNameByMetricIDFromCache(dst, metricID)
 	if len(metricName) > len(dst) {
 		return metricName, true
 	}
@@ -1919,7 +1909,7 @@ func (is *indexSearch) searchMetricNameWithCache(dst []byte, metricID uint64) ([
 	if ok {
 		// There is no need in verifying whether the given metricID is deleted,
 		// since the filtering must be performed before calling this func.
-		is.db.s.putMetricNameToCache(metricID, dst)
+		is.db.s.putMetricNameByMetricIDToCache(metricID, dst)
 		return dst, true
 	}
 	return dst, false
@@ -2474,13 +2464,11 @@ func (is *indexSearch) updateMetricIDsForDateRange(qt *querytracer.Tracer, metri
 	var errGlobal error
 	var mu sync.Mutex // protects metricIDs + errGlobal vars from concurrent access below
 	for minDate <= maxDate {
-		qtChild := qt.NewChild("parallel thread for date=%s", dateToString(minDate))
-		wg.Add(1)
-		go func(date uint64) {
-			defer func() {
-				qtChild.Done()
-				wg.Done()
-			}()
+		date := minDate
+		qtChild := qt.NewChild("parallel thread for date=%s", dateToString(date))
+		wg.Go(func() {
+			defer qtChild.Done()
+
 			isLocal := is.db.getIndexSearch(is.deadline)
 			m, err := isLocal.getMetricIDsForDateAndFilters(qtChild, date, tfs, maxMetrics)
 			is.db.putIndexSearch(isLocal)
@@ -2497,7 +2485,7 @@ func (is *indexSearch) updateMetricIDsForDateRange(qt *querytracer.Tracer, metri
 			if metricIDs.Len() < maxMetrics {
 				metricIDs.UnionMayOwn(m)
 			}
-		}(minDate)
+		})
 		minDate++
 	}
 	wg.Wait()
@@ -2974,32 +2962,25 @@ func (is *indexSearch) getLoopsCountAndTimestampForDateFilter(date uint64, tf *t
 	is.kb.B = appendDateTagFilterCacheKey(is.kb.B[:0], is.db.name, date, tf)
 	kb := kbPool.Get()
 	defer kbPool.Put(kb)
-	e := is.db.loopsPerDateTagFilterCache.GetEntry(bytesutil.ToUnsafeString(is.kb.B))
-	if e == nil {
+	kb.B = is.db.loopsPerDateTagFilterCache.Get(kb.B[:0], is.kb.B)
+	if len(kb.B) != 3*8 {
 		return 0, 0, 0
 	}
-	v := e.(*tagFiltersLoops)
-	return v.loopsCount, v.filterLoopsCount, v.timestamp
-}
-
-type tagFiltersLoops struct {
-	loopsCount       int64
-	filterLoopsCount int64
-	timestamp        uint64
-}
-
-func (v *tagFiltersLoops) SizeBytes() uint64 {
-	return uint64(unsafe.Sizeof(*v))
+	loopsCount := encoding.UnmarshalInt64(kb.B)
+	filterLoopsCount := encoding.UnmarshalInt64(kb.B[8:])
+	timestamp := encoding.UnmarshalUint64(kb.B[16:])
+	return loopsCount, filterLoopsCount, timestamp
 }
 
 func (is *indexSearch) storeLoopsCountForDateFilter(date uint64, tf *tagFilter, loopsCount, filterLoopsCount int64) {
-	v := tagFiltersLoops{
-		loopsCount:       loopsCount,
-		filterLoopsCount: filterLoopsCount,
-		timestamp:        fasttime.UnixTimestamp(),
-	}
+	currentTimestamp := fasttime.UnixTimestamp()
 	is.kb.B = appendDateTagFilterCacheKey(is.kb.B[:0], is.db.name, date, tf)
-	is.db.loopsPerDateTagFilterCache.PutEntry(string(is.kb.B), &v)
+	kb := kbPool.Get()
+	kb.B = encoding.MarshalInt64(kb.B[:0], loopsCount)
+	kb.B = encoding.MarshalInt64(kb.B, filterLoopsCount)
+	kb.B = encoding.MarshalUint64(kb.B, currentTimestamp)
+	is.db.loopsPerDateTagFilterCache.Set(is.kb.B, kb.B)
+	kbPool.Put(kb)
 }
 
 func appendDateTagFilterCacheKey(dst []byte, indexDBName string, date uint64, tf *tagFilter) []byte {
@@ -3220,7 +3201,7 @@ func (mp *tagToMetricIDsRowParser) ParseMetricIDs() {
 	mp.MetricIDs = slicesutil.SetLength(mp.MetricIDs, n)
 	metricIDs := mp.MetricIDs
 	_ = metricIDs[n-1]
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if len(tail) < 8 {
 			logger.Panicf("BUG: tail cannot be smaller than 8 bytes; got %d bytes; tail=%X", len(tail), tail)
 			return

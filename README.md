@@ -1,8 +1,8 @@
 # <img width="25" height="25" alt="vm-community-icon" src="https://github.com/user-attachments/assets/1c060750-370a-4440-b619-78b78c7abd7a" /> VictoriaMetrics MCP Server
 
-[![Latest Release](https://img.shields.io/github/v/release/VictoriaMetrics-Community/mcp-victoriametrics?sort=semver&label=&filter=!*-victorialogs&logo=github&labelColor=gray&color=gray&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics-Community%2Fmcp-victoriametrics%2Freleases%2Flatest)](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases)
-[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/VictoriaMetrics-Community/mcp-victoriametrics)](https://archestra.ai/mcp-catalog/victoriametrics-community__mcp-victoriametrics)
-![License](https://img.shields.io/github/license/VictoriaMetrics-Community/mcp-victoriametrics?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics-Community%2Fmcp-victoriametrics%2Fblob%2Fmain%2FLICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/VictoriaMetrics/mcp-victoriametrics?sort=semver&label=&filter=!*-victorialogs&logo=github&labelColor=gray&color=gray&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fmcp-victoriametrics%2Freleases%2Flatest)](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases)
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/VictoriaMetrics/mcp-victoriametrics)](https://archestra.ai/mcp-catalog/victoriametrics-community__mcp-victoriametrics)
+![License](https://img.shields.io/github/license/VictoriaMetrics/mcp-victoriametrics?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fmcp-victoriametrics%2Fblob%2Fmain%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
 ![X](https://img.shields.io/twitter/follow/VictoriaMetrics?style=flat&label=Follow&color=black&logo=x&labelColor=black&link=https%3A%2F%2Fx.com%2FVictoriaMetrics)
 ![Reddit](https://img.shields.io/reddit/subreddit-subscribers/VictoriaMetrics?style=flat&label=Join&labelColor=red&logoColor=white&logo=reddit&link=https%3A%2F%2Fwww.reddit.com%2Fr%2FVictoriaMetrics)
@@ -60,13 +60,13 @@ Here is example of configuration for [Claude Desktop](https://claude.ai/download
 
 ### Binaries
 
-Just download the latest release from [Releases](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases) page and put it to your PATH.
+Just download the latest release from [Releases](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases) page and put it to your PATH.
 
 Example for Linux x86_64 (note that other architectures and platforms are also available):
 
 ```bash
-latest=$(curl -s https://api.github.com/repos/VictoriaMetrics-Community/mcp-victoriametrics/releases/latest | grep 'tag_name' | cut -d\" -f4)
-wget https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases/download/$latest/mcp-victoriametrics_Linux_x86_64.tar.gz
+latest=$(curl -s https://api.github.com/repos/VictoriaMetrics/mcp-victoriametrics/releases/latest | grep 'tag_name' | cut -d\" -f4)
+wget https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/download/$latest/mcp-victoriametrics_Linux_x86_64.tar.gz
 tar axvf mcp-victoriametrics_Linux_x86_64.tar.gz
 ```
 
@@ -83,7 +83,7 @@ docker run -d --name mcp-victoriametrics \
   -e MCP_SERVER_MODE=sse \
   -e MCP_LISTEN_ADDR=:8080 \
   -p 8080:8080 \
-  ghcr.io/victoriametrics-community/mcp-victoriametrics
+  ghcr.io/victoriametrics/mcp-victoriametrics
 ```
 
 You should replace environment variables with your own parameters.
@@ -91,7 +91,7 @@ You should replace environment variables with your own parameters.
 Note that the `MCP_SERVER_MODE=http` flag is used to enable Streamable HTTP mode. 
 More details about server modes can be found in the [Configuration](#configuration) section.
 
-See available docker images in [github registry](https://github.com/orgs/VictoriaMetrics-Community/packages/container/package/mcp-victoriametrics).
+See available docker images in [github registry](https://github.com/orgs/VictoriaMetrics/packages/container/package/mcp-victoriametrics).
 
 Also see [Using Docker instead of binary](#using-docker-instead-of-binary) section for more details about using Docker with MCP server with clients in stdio mode.
 
@@ -102,7 +102,7 @@ For building binary from source code you can use the following approach:
 - Clone repo:
   
   ```bash
-  git clone https://github.com/VictoriaMetrics-Community/mcp-victoriametrics.git
+  git clone https://github.com/VictoriaMetrics/mcp-victoriametrics.git
   cd mcp-victoriametrics
   ```
 - Build binary from cloned source code: 
@@ -118,25 +118,30 @@ For building binary from source code you can use the following approach:
   # after that you can use docker image mcp-victoriametrics for running or pushing
   ```
 
+### Helm
+
+Check out [VictoriaMetrics MCP Server Helm chart](https://docs.victoriametrics.com/helm/victoria-metrics-mcp/) documentation for more details about installation using Helm.
+
 ## Configuration
 
 MCP Server for VictoriaMetrics is configured via environment variables:
 
-| Variable                                 | Description                                                                                                                                                                                                                                                            | Required                               | Default                                                                                           | Allowed values         |
-|------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|---------------------------------------------------------------------------------------------------|------------------------|
-| `VM_INSTANCE_ENTRYPOINT` / `VMC_API_KEY` | URL to VictoriaMetrics instance (it should be root `/` URL of vmsingle or vmselect)                                                                                                                                                                                    | Yes (if you don't use `VMC_API_KEY`)   | -                                                                                                 | -                      |
-| `VM_INSTANCE_TYPE`                       | Type of VictoriaMetrics instance                                                                                                                                                                                                                                       | Yes (if you don't use ``VMC_API_KEY``) | -                                                                                                 | `single`, `cluster`    |
-| `VM_INSTANCE_BEARER_TOKEN`               | Authentication token for VictoriaMetrics API                                                                                                                                                                                                                           | No                                     | -                                                                                                 | -                      |
-| `VM_INSTANCE_HEADERS`      | Custom HTTP headers to send with requests (comma-separated key=value pairs) | No       | -                                                                                                 | -                      |
-| `VM_DEFAULT_TENANT_ID`                   | Default tenant ID for cluster mode. Format: `accountID` or `accountID:projectID` (32-bit integers). See [VictoriaMetrics cluster docs](https://docs.victoriametrics.com/cluster-victoriametrics/#multitenancy) | No                                     | `0`                                                                                               | -                      |
-| `VMC_API_KEY`                            | [API key from VictoriaMetrics Cloud Console](https://docs.victoriametrics.com/victoriametrics-cloud/api/)                                                                                                                                                              | No                                     | -                                                                                                 | -                      |
-| `MCP_SERVER_MODE`                        | Server operation mode. See [Modes](#modes) for details.                                                                                                                                                                                                                | No                                     | `stdio`                                                                                           | `stdio`, `sse`, `http` |
-| `MCP_LISTEN_ADDR`                        | Address for SSE or HTTP server to listen on                                                                                                                                                                                                                            | No                                     | `localhost:8080`                                                                                  | -                      |
-| `MCP_DISABLED_TOOLS`                     | Comma-separated list of tools to disable                                                                                                                                                                                                                               | No                                     | 'export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules' | -                      |
-| `MCP_DISABLE_RESOURCES`                  | Disable all resources (documentation tool will continue to work)                                                                                                                                                                                                       | No                                     | `false`                                                                                           | `false`, `true`        |                   
-| `MCP_HEARTBEAT_INTERVAL`                 | Defines the heartbeat interval for the streamable-http protocol. <br /> It means the MCP server will send a heartbeat to the client through the GET connection, <br /> to keep the connection alive from being closed by the network infrastructure (e.g. gateways)    | No                                     | `30s`                                                                                             | -                      |
-| `MCP_LOG_FORMAT`                         | Log output format                                                                                                                                                                                                                                                      | No                                     | `text`                                                                                            | `text`, `json`         |
-| `MCP_LOG_LEVEL`                          | Minimum log level                                                                                                                                                                                                                                                      | No                                     | `info`                                                                                            | `debug`, `info`, `warn`, `error` |
+| Variable                                 | Description                                                                                                                                                                                                                                                         | Required                               | Default                                                                                           | Allowed values         |
+|------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|---------------------------------------------------------------------------------------------------|------------------------|
+| `VM_INSTANCE_ENTRYPOINT` / `VMC_API_KEY` | URL to VictoriaMetrics instance (it should be root `/` URL of vmsingle or vmselect)                                                                                                                                                                                 | Yes (if you don't use `VMC_API_KEY`)   | -                                                                                                 | -                      |
+| `VM_INSTANCE_TYPE`                       | Type of VictoriaMetrics instance                                                                                                                                                                                                                                    | Yes (if you don't use ``VMC_API_KEY``) | -                                                                                                 | `single`, `cluster`    |
+| `VM_INSTANCE_BEARER_TOKEN`               | Authentication token for VictoriaMetrics API                                                                                                                                                                                                                        | No                                     | -                                                                                                 | -                      |
+| `VM_INSTANCE_HEADERS`                    | Custom HTTP headers to send with requests (comma-separated key=value pairs)                                                                                                                                                                                         | No       | -                                                                                                 | -                      |
+| `MCP_PASSTHROUGH_HEADERS`                | HTTP header names to forward from incoming MCP requests to VictoriaMetrics (comma-separated list). Overrides `VM_INSTANCE_HEADERS` on collision. Only applies in `sse`/`http` modes.                                                                                | No | - | - |
+| `VM_DEFAULT_TENANT_ID`                   | Default tenant ID for cluster mode. Format: `accountID` or `accountID:projectID` (32-bit integers). See [VictoriaMetrics cluster docs](https://docs.victoriametrics.com/cluster-victoriametrics/#multitenancy)                                                      | No                                     | `0`                                                                                               | -                      |
+| `VMC_API_KEY`                            | [API key from VictoriaMetrics Cloud Console](https://docs.victoriametrics.com/victoriametrics-cloud/api/)                                                                                                                                                           | No                                     | -                                                                                                 | -                      |
+| `MCP_SERVER_MODE`                        | Server operation mode. See [Modes](#modes) for details.                                                                                                                                                                                                             | No                                     | `stdio`                                                                                           | `stdio`, `sse`, `http` |
+| `MCP_LISTEN_ADDR`                        | Address for SSE or HTTP server to listen on                                                                                                                                                                                                                         | No                                     | `localhost:8080`                                                                                  | -                      |
+| `MCP_DISABLED_TOOLS`                     | Comma-separated list of tools to disable                                                                                                                                                                                                                            | No                                     | 'export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules' | -                      |
+| `MCP_DISABLE_RESOURCES`                  | Disable all resources (documentation tool will continue to work)                                                                                                                                                                                                    | No                                     | `false`                                                                                           | `false`, `true`        |                   
+| `MCP_HEARTBEAT_INTERVAL`                 | Defines the heartbeat interval for the streamable-http protocol. <br /> It means the MCP server will send a heartbeat to the client through the GET connection, <br /> to keep the connection alive from being closed by the network infrastructure (e.g. gateways) | No                                     | `30s`                                                                                             | -                      |
+| `MCP_LOG_FORMAT`                         | Log output format                                                                                                                                                                                                                                                   | No                                     | `text`                                                                                            | `text`, `json`         |
+| `MCP_LOG_LEVEL`                          | Minimum log level                                                                                                                                                                                                                                                   | No                                     | `info`                                                                                            | `debug`, `info`, `warn`, `error` |
 
 You can use two options to connect to your VictoriaMetrics instance:
 
@@ -163,6 +168,7 @@ More info about traqnsports you can find in MCP docs:
 export VM_INSTANCE_ENTRYPOINT="http://localhost:8428"
 export VM_INSTANCE_TYPE="single"
 export VM_INSTANCE_BEARER_TOKEN="your-token"
+export MCP_PASSTHROUGH_HEADERS="X-Token,X-Access-Key"
 
 # For a cluster
 export VM_INSTANCE_ENTRYPOINT="https://play.victoriametrics.com"
@@ -185,14 +191,14 @@ export VM_INSTANCE_HEADERS="<HEADER>=<HEADER_VALUE>,<HEADER>=<HEADER_VALUE>"
 
 In SSE and HTTP modes the MCP server provides the following endpoints:
 
-| Endpoint             | Description                                                                                       |
-|----------------------|---------------------------------------------------------------------------------------------------|
-| `/`                  | Landing page with setup help, tool inspection, and chat playground                                |
-| `/sse` + `/message`  | Endpoints for messages in SSE mode (for MCP clients that support SSE)                             |
-| `/mcp`               | HTTP endpoint for streaming messages in HTTP mode (for MCP clients that support Streamable HTTP)  |
-| `/metrics`           | Metrics in Prometheus format for monitoring the MCP server                                        |
-| `/health/liveness`   | Liveness check endpoint to ensure the server is running                                           |
-| `/health/readiness`  | Readiness check endpoint to ensure the server is ready to accept requests                         |
+| Endpoint             | Description                                                                                      |
+|----------------------|--------------------------------------------------------------------------------------------------|
+| `/`                  | Landing page with setup help and tool inspection                                                 |
+| `/sse` + `/message`  | Endpoints for messages in SSE mode (for MCP clients that support SSE)                            |
+| `/mcp`               | HTTP endpoint for streaming messages in HTTP mode (for MCP clients that support Streamable HTTP) |
+| `/metrics`           | Metrics in Prometheus format for monitoring the MCP server                                       |
+| `/health/liveness`   | Liveness check endpoint to ensure the server is running                                          |
+| `/health/readiness`  | Readiness check endpoint to ensure the server is ready to accept requests                        |
 
 ## Setup in clients
 
@@ -253,6 +259,43 @@ claude mcp add victoriametrics -- /path/to/mcp-victoriametrics \
 ```
 
 See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/tutorials#set-up-model-context-protocol-mcp) for more info.
+
+### Codex
+
+Codex CLI and the IDE extension use the same MCP configuration file: `~/.codex/config.toml`
+(or `.codex/config.toml` in a trusted project).
+
+Run the command:
+
+```sh
+codex mcp add victoriametrics \
+  --env VM_INSTANCE_ENTRYPOINT=<YOUR_VM_INSTANCE> \
+  --env VM_INSTANCE_TYPE=<YOUR_VM_INSTANCE_TYPE> \
+  --env VM_INSTANCE_BEARER_TOKEN=<YOUR_VM_BEARER_TOKEN> \
+  --env VM_INSTANCE_HEADERS="<HEADER>=<HEADER_VALUE>,<HEADER>=<HEADER_VALUE>" \
+  -- /path/to/mcp-victoriametrics
+```
+
+Or add the following to your Codex `~/.codex/config.toml` file:
+
+```toml
+[mcp_servers.victoriametrics]
+command = "/path/to/mcp-victoriametrics"
+
+[mcp_servers.victoriametrics.env]
+VM_INSTANCE_ENTRYPOINT = "<YOUR_VM_INSTANCE>"
+VM_INSTANCE_TYPE = "<YOUR_VM_INSTANCE_TYPE>"
+VM_INSTANCE_BEARER_TOKEN = "<YOUR_VM_BEARER_TOKEN>"
+VM_INSTANCE_HEADERS = "<HEADER>=<HEADER_VALUE>,<HEADER>=<HEADER_VALUE>"
+```
+
+If you run the server in Streamable HTTP mode, you can register it with:
+
+```sh
+codex mcp add victoriametrics --url http://localhost:8080/mcp
+```
+
+See [Codex MCP docs](https://developers.openai.com/codex/mcp) for more info.
 
 ### Visual Studio Code
 
@@ -364,7 +407,7 @@ You should replace run command in configuration examples above in the following 
           "-e", "VM_INSTANCE_TYPE",
           "-e", "VM_INSTANCE_BEARER_TOKEN",
           "-e", "VM_INSTANCE_HEADERS",
-          "ghcr.io/victoriametrics-community/mcp-victoriametrics",
+          "ghcr.io/victoriametrics/mcp-victoriametrics",
         ],
       "env": {
         "VM_INSTANCE_ENTRYPOINT": "<YOUR_VM_INSTANCE>",
@@ -584,32 +627,39 @@ But you can use any other tools and combine them in your own way.
 
 ## Monitoring
 
-In [SSE and HTTP modes](#modes) the MCP Server provides metrics in Prometheus format (see [endpoints](#endpoints)) and you can find [in repo simple grafana dashboard](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/blob/main/dashboard/mcp-victoriametrics-grafana.json) for these metrics. 
+In [SSE and HTTP modes](#modes) the MCP Server provides metrics in Prometheus format (see [endpoints](#endpoints)) and you can find [in repo simple grafana dashboard](https://github.com/VictoriaMetrics/mcp-victoriametrics/blob/main/dashboard/mcp-victoriametrics-grafana.json) for these metrics. 
+
+## FAQ
+
+### Why is the MCP server using more resources than I would expect from a simple API proxy?
+
+The server contains an embedded vector database with VictoriaMetrics documentation and blog posts for the `documentation` tool.
+It helps to answer for complex questions about VictoriaMetrics without providing all data to LLM.  
+This is the main source of resource usage. To reduce it, add `documentation` to `MCP_DISABLED_TOOLS` environment variable to completely disable the vector database loading. See [tools configuration](#tools) for details.
+
+### How to use one MCP server instance for several VictoriaMetrics instances?
+
+You can use `MCP_PASSTHROUGH_HEADERS` parameter in the MCP Server together with [Header-based routing in vmauth](https://docs.victoriametrics.com/victoriametrics/vmauth/#routing-by-header) to route MCP calls between instances based on HTTP header values from you MCP client config.  
 
 ## Roadmap
 
-- [x] Support "Prettify query" tool (done in [`v0.0.5`](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases/tag/v0.0.5))
-- [x] Support "Explain query" tool (done in [`v0.0.6`](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases/tag/v0.0.6))
-- [x] Support CI pipeline for building and pushing multiarch docker images (done in [`v1.0.0`](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases/tag/v1.0.0))
-- [ ] Support tool for analysis of [Query execution statistics](https://docs.victoriametrics.com/victoriametrics/query-stats/)
-- [ ] Support vmanomaly
-- [x] Support tool for [unit-testing of alerting and recording rules](https://docs.victoriametrics.com/victoriametrics/vmalert-tool/) (done in [`v0.0.7`](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases/tag/v0.0.7))
-- [x] Support optional integration with [VictoriaMetrics Cloud](https://victoriametrics.com/products/cloud/) (via [API keys](https://docs.victoriametrics.com/victoriametrics-cloud/api/)) (done in [`v0.0.9`](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases/tag/v0.0.9))
+- [x] Support "Prettify query" tool (done in [`v0.0.5`](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/tag/v0.0.5))
+- [x] Support "Explain query" tool (done in [`v0.0.6`](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/tag/v0.0.6))
+- [x] Support CI pipeline for building and pushing multiarch docker images (done in [`v1.0.0`](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/tag/v1.0.0))
+- [x] Support tool for [unit-testing of alerting and recording rules](https://docs.victoriametrics.com/victoriametrics/vmalert-tool/) (done in [`v0.0.7`](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/tag/v0.0.7))
+- [x] Support optional integration with [VictoriaMetrics Cloud](https://victoriametrics.com/products/cloud/) (via [API keys](https://docs.victoriametrics.com/victoriametrics-cloud/api/)) (done in [`v0.0.9`](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/tag/v0.0.9))
 - [ ] Add some extra knowledge to server in addition to current documentation tool:
-  - [x] [VictoriaMetrics blog](https://victoriametrics.com/blog/) posts (done in [`v1.1.0`](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases/tag/v1.1.0))
-  - [ ] Github issues
-  - [ ] Public slack chat history
-  - [ ] CRD schemas
-  - [ ] Alerting and recording rule sets
+  - [x] [VictoriaMetrics blog](https://victoriametrics.com/blog/) posts (done in [`v1.1.0`](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/tag/v1.1.0))
+  - [x] CRD schemas
 - [ ] Implement multitenant version of MCP (that will support several deployments)
 - [ ] Add flags/configs validation tool
 - [ ] Support tools for vmagent API
 - [ ] Support [new vmalert API](https://github.com/VictoriaMetrics/VictoriaMetrics/pull/9046/files)
-- [x] Enabling/disabling tools via configuration (done in [`v0.0.8`](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/releases/tag/v0.0.8))
-- [ ] Tools for Alertmanager APIs [#6](https://github.com/VictoriaMetrics-Community/mcp-victoriametrics/issues/6)
-- [ ] Support for [metrics metadata](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2974) in case of implementation in VictoriaMetrics
+- [x] Enabling/disabling tools via configuration (done in [`v0.0.8`](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/tag/v0.0.8))
+- [ ] Tools for Alertmanager APIs [#6](https://github.com/VictoriaMetrics/mcp-victoriametrics/issues/6)
+- [x] Support for [metrics metadata](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2974) in case of implementation in VictoriaMetrics
 - [ ] Support authentication
-- [ ] Add static index page with description and links to documentation
+- [x] Add static index page with description and links to documentation
 
 ## Mentions
 
