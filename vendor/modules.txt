@@ -186,8 +186,8 @@ github.com/VictoriaMetrics/metrics
 ## explicit; go 1.24.2
 github.com/VictoriaMetrics/metricsql
 github.com/VictoriaMetrics/metricsql/binaryop
-# github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.0.4
-## explicit; go 1.24
+# github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.0
+## explicit; go 1.26
 github.com/VictoriaMetrics/victoriametrics-cloud-api-go/v1
 # github.com/VividCortex/ewma v1.2.0
 ## explicit; go 1.12

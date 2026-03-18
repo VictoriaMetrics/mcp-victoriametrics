@@ -14,6 +14,10 @@ const (
 	DefaultBaseURL = "https://api.victoriametrics.cloud"
 	// AccessTokenHeader is the header name for the access token
 	AccessTokenHeader = "X-VM-Cloud-Access"
+	// DynamicAPIKey - use this constant as a value for API key in the context to indicate that the API key
+	// should be taken from the context instead of the client configuration.
+	// This allows using different API keys for different requests with the same client instance.
+	DynamicAPIKey = "dynamic"
 )
 
 // VMCloudAPIClient represents a API client for VictoriaMetrics Cloud API
@@ -45,6 +49,9 @@ func WithBaseURL(baseURL string) VMCloudAPIClientOption {
 func New(apiKey string, options ...VMCloudAPIClientOption) (*VMCloudAPIClient, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key cannot be empty")
+	}
+	if apiKey == DynamicAPIKey {
+		apiKey = ""
 	}
 	result := &VMCloudAPIClient{
 		c:       http.DefaultClient,
