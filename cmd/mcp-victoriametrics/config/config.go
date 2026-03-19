@@ -24,6 +24,7 @@ type Config struct {
 	bearerToken        string
 	disabledTools      map[string]bool
 	apiKey             string
+	apiBaseURL         string
 	heartbeatInterval  time.Duration
 	disableResources   bool
 	customHeaders      map[string]string
@@ -128,6 +129,7 @@ func InitConfig() (*Config, error) {
 		bearerToken:        os.Getenv("VM_INSTANCE_BEARER_TOKEN"),
 		disabledTools:      disabledToolsMap,
 		apiKey:             os.Getenv("VMC_API_KEY"),
+		apiBaseURL:         os.Getenv("VMC_API_BASE_URL"),
 		heartbeatInterval:  heartbeatInterval,
 		disableResources:   disableResources,
 		customHeaders:      customHeadersMap,
@@ -170,7 +172,11 @@ func InitConfig() (*Config, error) {
 		}
 	}
 	if result.apiKey != "" {
-		result.vmc, err = vmcloud.New(result.apiKey)
+		vmcOptions := []vmcloud.VMCloudAPIClientOption{}
+		if result.apiBaseURL != "" {
+			vmcOptions = append(vmcOptions, vmcloud.WithBaseURL(result.apiBaseURL))
+		}
+		result.vmc, err = vmcloud.New(result.apiKey, vmcOptions...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create VMCloud API client: %w", err)
 		}
