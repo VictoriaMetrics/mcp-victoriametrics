@@ -12,6 +12,10 @@ The implementation of [Model Context Protocol (MCP)](https://modelcontextprotoco
 This provides access to your VictoriaMetrics instance and seamless integration with [VictoriaMetrics APIs](https://docs.victoriametrics.com/victoriametrics/url-examples/) and [documentation](https://docs.victoriametrics.com/).
 It can give you a comprehensive interface for monitoring, observability, and debugging tasks related to your VictoriaMetrics instances, enable advanced automation and interaction capabilities for engineers and tools.
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/victoriametrics-community-mcp-victoriametrics).
+
 ## Features
 
 This MCP server allows you to use almost all read-only APIs of VictoriaMetrics, i.e. all functions available in [VMUI](https://docs.victoriametrics.com/#vmui):
