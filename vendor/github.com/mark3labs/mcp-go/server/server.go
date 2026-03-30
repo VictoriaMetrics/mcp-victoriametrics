@@ -72,6 +72,12 @@ type ResourceHandlerMiddleware func(ResourceHandlerFunc) ResourceHandlerFunc
 // ToolFilterFunc is a function that filters tools based on context, typically using session information.
 type ToolFilterFunc func(ctx context.Context, tools []mcp.Tool) []mcp.Tool
 
+// PromptHandlerMiddleware is a middleware function that wraps a PromptHandlerFunc.
+type PromptHandlerMiddleware func(PromptHandlerFunc) PromptHandlerFunc
+
+// PromptFilterFunc is a function that filters prompts based on context, typically using session information.
+type PromptFilterFunc func(ctx context.Context, prompts []mcp.Prompt) []mcp.Prompt
+
 // ServerTool combines a Tool with its ToolHandlerFunc.
 type ServerTool struct {
 	Tool    mcp.Tool
@@ -173,9 +179,11 @@ type MCPServer struct {
 	promptsMu              sync.RWMutex
 	toolsMu                sync.RWMutex
 	toolMiddlewareMu       sync.RWMutex
+	promptMiddlewareMu     sync.RWMutex
 	notificationHandlersMu sync.RWMutex
 	capabilitiesMu         sync.RWMutex
 	toolFiltersMu          sync.RWMutex
+	promptFiltersMu        sync.RWMutex
 	tasksMu                sync.RWMutex
 
 	name                       string
@@ -189,7 +197,9 @@ type MCPServer struct {
 	taskTools                  map[string]ServerTaskTool
 	toolHandlerMiddlewares     []ToolHandlerMiddleware
 	resourceHandlerMiddlewares []ResourceHandlerMiddleware
+	promptHandlerMiddlewares   []PromptHandlerMiddleware
 	toolFilters                []ToolFilterFunc
+	promptFilters              []PromptFilterFunc
 	notificationHandlers       map[string]NotificationHandlerFunc
 	promptCompletionProvider   PromptCompletionProvider
 	resourceCompletionProvider ResourceCompletionProvider
@@ -202,6 +212,7 @@ type MCPServer struct {
 	expiredTasks               map[string]time.Time // Tracks recently expired task IDs with expiration timestamp
 	maxConcurrentTasks         *int                 // Optional limit on concurrent running tasks
 	activeTasks                int                  // Current count of running (non-terminal) tasks
+	inflightCancels            sync.Map             // Maps request ID -> context.CancelFunc for in-flight requests
 }
 
 // WithPaginationLimit sets the pagination limit for the server.
@@ -213,15 +224,16 @@ func WithPaginationLimit(limit int) ServerOption {
 
 // serverCapabilities defines the supported features of the MCP server
 type serverCapabilities struct {
-	tools       *toolCapabilities
-	resources   *resourceCapabilities
-	prompts     *promptCapabilities
-	logging     *bool
-	sampling    *bool
-	elicitation *bool
-	roots       *bool
-	tasks       *taskCapabilities
-	completions *bool
+	tools        *toolCapabilities
+	resources    *resourceCapabilities
+	prompts      *promptCapabilities
+	logging      *bool
+	sampling     *bool
+	elicitation  *bool
+	roots        *bool
+	tasks        *taskCapabilities
+	completions  *bool
+	experimental map[string]any
 }
 
 // resourceCapabilities defines the supported resource-related features
@@ -322,6 +334,29 @@ func WithToolFilter(
 		s.toolFiltersMu.Lock()
 		s.toolFilters = append(s.toolFilters, toolFilter)
 		s.toolFiltersMu.Unlock()
+	}
+}
+
+// WithPromptHandlerMiddleware allows adding a middleware for the
+// prompt handler call chain.
+func WithPromptHandlerMiddleware(
+	promptHandlerMiddleware PromptHandlerMiddleware,
+) ServerOption {
+	return func(s *MCPServer) {
+		s.promptMiddlewareMu.Lock()
+		s.promptHandlerMiddlewares = append(s.promptHandlerMiddlewares, promptHandlerMiddleware)
+		s.promptMiddlewareMu.Unlock()
+	}
+}
+
+// WithPromptFilter adds a filter function that will be applied to prompts before they are returned in list_prompts
+func WithPromptFilter(
+	promptFilter PromptFilterFunc,
+) ServerOption {
+	return func(s *MCPServer) {
+		s.promptFiltersMu.Lock()
+		s.promptFilters = append(s.promptFilters, promptFilter)
+		s.promptFiltersMu.Unlock()
 	}
 }
 
@@ -444,6 +479,13 @@ func WithCompletions() ServerOption {
 	}
 }
 
+// WithExperimental sets experimental, non-standard capabilities on the server.
+func WithExperimental(experimental map[string]any) ServerOption {
+	return func(s *MCPServer) {
+		s.capabilities.experimental = experimental
+	}
+}
+
 // NewMCPServer creates a new MCP server instance with the given name, version and options
 func NewMCPServer(
 	name, version string,
@@ -458,6 +500,7 @@ func NewMCPServer(
 		taskTools:                  make(map[string]ServerTaskTool),
 		toolHandlerMiddlewares:     make([]ToolHandlerMiddleware, 0),
 		resourceHandlerMiddlewares: make([]ResourceHandlerMiddleware, 0),
+		promptHandlerMiddlewares:   make([]PromptHandlerMiddleware, 0),
 		name:                       name,
 		version:                    version,
 		notificationHandlers:       make(map[string]NotificationHandlerFunc),
@@ -884,6 +927,10 @@ func (s *MCPServer) handleInitialize(
 		capabilities.Completions = &struct{}{}
 	}
 
+	if s.capabilities.experimental != nil {
+		capabilities.Experimental = s.capabilities.experimental
+	}
+
 	result := mcp.InitializeResult{
 		ProtocolVersion: s.protocolVersion(request.Params.ProtocolVersion),
 		ServerInfo: mcp.Implementation{
@@ -1286,6 +1333,16 @@ func (s *MCPServer) handleListPrompts(
 	sort.Slice(prompts, func(i, j int) bool {
 		return prompts[i].Name < prompts[j].Name
 	})
+
+	// Apply prompt filters if any are defined
+	s.promptFiltersMu.RLock()
+	if len(s.promptFilters) > 0 {
+		for _, filter := range s.promptFilters {
+			prompts = filter(ctx, prompts)
+		}
+	}
+	s.promptFiltersMu.RUnlock()
+
 	promptsToReturn, nextCursor, err := listByPagination(
 		ctx,
 		s,
@@ -1325,7 +1382,18 @@ func (s *MCPServer) handleGetPrompt(
 		}
 	}
 
-	result, err := handler(ctx, request)
+	finalHandler := handler
+
+	s.promptMiddlewareMu.RLock()
+	mw := s.promptHandlerMiddlewares
+
+	// Apply middlewares in reverse order
+	for i := len(mw) - 1; i >= 0; i-- {
+		finalHandler = mw[i](finalHandler)
+	}
+	s.promptMiddlewareMu.RUnlock()
+
+	result, err := finalHandler(ctx, request)
 	if err != nil {
 		return nil, &requestError{
 			id:   id,
@@ -1442,6 +1510,7 @@ func (s *MCPServer) handleToolCall(
 	// First check session-specific tools
 	var tool ServerTool
 	var ok bool
+	var taskToolOnly bool
 
 	session := ClientSessionFromContext(ctx)
 	if session != nil {
@@ -1470,6 +1539,7 @@ func (s *MCPServer) handleToolCall(
 					Handler: nil, // Handler will be used from taskTool in handleTaskAugmentedToolCall
 				}
 				ok = true
+				taskToolOnly = true
 			}
 		}
 		s.toolsMu.RUnlock()
@@ -1504,6 +1574,14 @@ func (s *MCPServer) handleToolCall(
 	if shouldExecuteAsTask {
 		// Route to task-augmented execution handler
 		return s.handleTaskAugmentedToolCall(ctx, id, request)
+	}
+
+	if taskToolOnly {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.METHOD_NOT_FOUND,
+			err:  fmt.Errorf("tool '%s' does not support synchronous execution", request.Params.Name),
+		}
 	}
 
 	finalHandler := tool.Handler
@@ -1775,6 +1853,19 @@ func (s *MCPServer) handleNotification(
 	ctx context.Context,
 	notification mcp.JSONRPCNotification,
 ) mcp.JSONRPCMessage {
+	// Handle cancellation notifications per MCP spec
+	if notification.Method == "notifications/cancelled" {
+		if reqID, ok := notification.Params.AdditionalFields["requestId"]; ok {
+			key := inflightKey(ctx, reqID)
+			if cancel, loaded := s.inflightCancels.LoadAndDelete(key); loaded {
+				if cancelFunc, ok := cancel.(context.CancelFunc); ok {
+					cancelFunc()
+				}
+			}
+		}
+		return nil
+	}
+
 	s.notificationHandlersMu.RLock()
 	handler, ok := s.notificationHandlers[notification.Method]
 	s.notificationHandlersMu.RUnlock()
@@ -1783,6 +1874,15 @@ func (s *MCPServer) handleNotification(
 		handler(ctx, notification)
 	}
 	return nil
+}
+
+// inflightKey returns a session-scoped key for the inflight cancellation map.
+// This prevents cross-session request ID collisions in multi-client scenarios.
+func inflightKey(ctx context.Context, requestID any) string {
+	if session := ClientSessionFromContext(ctx); session != nil {
+		return fmt.Sprintf("%s:%v", session.SessionID(), requestID)
+	}
+	return fmt.Sprintf(":%v", requestID)
 }
 
 func createResponse(id any, result any) mcp.JSONRPCMessage {
@@ -1923,28 +2023,36 @@ func (s *MCPServer) handleTaskResult(
 		},
 	}
 
-	// If the stored result is a CallToolResult, extract its fields
-	if callToolResult, ok := storedResult.(*mcp.CallToolResult); ok {
-		result.Content = callToolResult.Content
-		result.StructuredContent = callToolResult.StructuredContent
-		result.IsError = callToolResult.IsError
-
-		// Merge any meta from the original result with the related task meta
-		if callToolResult.Meta != nil {
-			if result.Meta.AdditionalFields == nil {
-				result.Meta.AdditionalFields = make(map[string]any)
-			}
-			// Copy over any additional fields from the original result
-			for k, v := range callToolResult.Meta.AdditionalFields {
-				// Don't overwrite the related task meta
-				if k != mcp.RelatedTaskMetaKey {
-					result.Meta.AdditionalFields[k] = v
-				}
-			}
-		}
+	switch taskResult := storedResult.(type) {
+	case *mcp.CallToolResult:
+		result.Content = taskResult.Content
+		result.StructuredContent = taskResult.StructuredContent
+		result.IsError = taskResult.IsError
+		mergeTaskResultMeta(result, taskResult.Meta)
+	case *mcp.CreateTaskResult:
+		result.Content = taskResult.Content
+		result.StructuredContent = taskResult.StructuredContent
+		result.IsError = taskResult.IsError
+		mergeTaskResultMeta(result, taskResult.Meta)
 	}
 
 	return result, nil
+}
+
+func mergeTaskResultMeta(result *mcp.TaskResultResult, meta *mcp.Meta) {
+	if meta == nil {
+		return
+	}
+
+	if result.Meta.AdditionalFields == nil {
+		result.Meta.AdditionalFields = make(map[string]any)
+	}
+
+	for k, v := range meta.AdditionalFields {
+		if k != mcp.RelatedTaskMetaKey {
+			result.Meta.AdditionalFields[k] = v
+		}
+	}
 }
 
 // handleCancelTask handles tasks/cancel requests to cancel a task.

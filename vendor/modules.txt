@@ -192,9 +192,6 @@ github.com/VictoriaMetrics/victoriametrics-cloud-api-go/v1
 # github.com/VividCortex/ewma v1.2.0
 ## explicit; go 1.12
 github.com/VividCortex/ewma
-# github.com/bahlo/generic-list-go v0.2.0
-## explicit; go 1.18
-github.com/bahlo/generic-list-go
 # github.com/bits-and-blooms/bitset v1.24.4
 ## explicit; go 1.16
 github.com/bits-and-blooms/bitset
@@ -303,9 +300,6 @@ github.com/blevesearch/zapx/v16
 # github.com/bmatcuk/doublestar/v4 v4.10.0
 ## explicit; go 1.16
 github.com/bmatcuk/doublestar/v4
-# github.com/buger/jsonparser v1.1.1
-## explicit; go 1.13
-github.com/buger/jsonparser
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
@@ -326,12 +320,12 @@ github.com/fatih/color
 # github.com/golang/snappy v1.0.0
 ## explicit
 github.com/golang/snappy
+# github.com/google/jsonschema-go v0.4.2
+## explicit; go 1.23.0
+github.com/google/jsonschema-go/jsonschema
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
-# github.com/invopop/jsonschema v0.13.0
-## explicit; go 1.18
-github.com/invopop/jsonschema
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
@@ -352,11 +346,7 @@ github.com/klauspost/compress/internal/snapref
 github.com/klauspost/compress/zlib
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
-# github.com/mailru/easyjson v0.9.2
-## explicit; go 1.20
-github.com/mailru/easyjson/buffer
-github.com/mailru/easyjson/jwriter
-# github.com/mark3labs/mcp-go v0.45.0
+# github.com/mark3labs/mcp-go v0.46.0
 ## explicit; go 1.23.0
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
@@ -413,9 +403,6 @@ github.com/valyala/histogram
 # github.com/valyala/quicktemplate v1.8.0
 ## explicit; go 1.17
 github.com/valyala/quicktemplate
-# github.com/wk8/go-ordered-map/v2 v2.1.8
-## explicit; go 1.18
-github.com/wk8/go-ordered-map/v2
 # github.com/yosida95/uritemplate/v3 v3.0.2
 ## explicit; go 1.14
 github.com/yosida95/uritemplate/v3
@@ -498,7 +485,4 @@ google.golang.org/protobuf/runtime/protoimpl
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.1
-## explicit
-gopkg.in/yaml.v3
 # github.com/VictoriaMetrics/VictoriaLogs => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032
