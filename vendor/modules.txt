@@ -10,7 +10,7 @@ github.com/RoaringBitmap/roaring/v2/roaring64
 ## explicit; go 1.26.0
 github.com/VictoriaMetrics/VictoriaLogs/lib/logstorage
 github.com/VictoriaMetrics/VictoriaLogs/lib/prefixfilter
-# github.com/VictoriaMetrics/VictoriaMetrics v1.138.0
+# github.com/VictoriaMetrics/VictoriaMetrics v1.139.0
 ## explicit; go 1.26.1
 github.com/VictoriaMetrics/VictoriaMetrics/app/victoria-metrics/test
 github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert-tool/unittest
