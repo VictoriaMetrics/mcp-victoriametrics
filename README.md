@@ -637,12 +637,12 @@ In [SSE and HTTP modes](#modes) the MCP Server provides metrics in Prometheus fo
 ### Why is the MCP server using more resources than I would expect from a simple API proxy?
 
 The server contains an embedded vector database with VictoriaMetrics documentation and blog posts for the `documentation` tool.
-It helps to answer for complex questions about VictoriaMetrics without providing all data to LLM.  
-This is the main source of resource usage. To reduce it, add `documentation` to `MCP_DISABLED_TOOLS` environment variable to completely disable the vector database loading. See [tools configuration](#tools) for details.
+It helps to answer complex questions about VictoriaMetrics without providing all data to LLM.  
+This is the main source of resource usage. To reduce it, add `documentation` to `MCP_DISABLED_TOOLS` environment variable to completely disable the vector database loading. 
 
 ### How to use one MCP server instance for several VictoriaMetrics instances?
 
-You can use `MCP_PASSTHROUGH_HEADERS` parameter in the MCP Server together with [Header-based routing in vmauth](https://docs.victoriametrics.com/victoriametrics/vmauth/#routing-by-header) to route MCP calls between instances based on HTTP header values from you MCP client config.  
+You can use `MCP_PASSTHROUGH_HEADERS` parameter in the MCP Server together with [Header-based routing in vmauth](https://docs.victoriametrics.com/victoriametrics/vmauth/#routing-by-header) to route MCP calls between instances based on HTTP header values from your MCP client config.  
 
 ## Roadmap
 
