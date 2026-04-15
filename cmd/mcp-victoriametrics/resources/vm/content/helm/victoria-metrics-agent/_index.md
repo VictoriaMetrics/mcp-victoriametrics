@@ -16,7 +16,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.33.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-agent%2Fchangelog%2F%230330)
+![Version](https://img.shields.io/badge/0.36.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-agent%2Fchangelog%2F%230360)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-agent)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -982,6 +982,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(string)</code></em><p>StorageClass to use for persistent volume. Requires server.persistentVolume.enabled: true. If defined, PVC created automatically</p>
 </td>
     </tr>
+    <tr id="persistentvolume-volumeattributesclassname">
+      <td><a href="#persistentvolume-volumeattributesclassname"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">persistentVolume.volumeAttributesClassName</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>VolumeClassAttribute to user for persistent volume</p>
+</td>
+    </tr>
     <tr id="podannotations">
       <td><a href="#podannotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podAnnotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
@@ -1121,6 +1127,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(bool)</code></em><p>Enable deployment of HTTPRoute for VMAgent</p>
 </td>
     </tr>
+    <tr id="route-extralabels">
+      <td><a href="#route-extralabels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">route.extraLabels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
+</td>
+    </tr>
     <tr id="route-extrarules">
       <td><a href="#route-extrarules"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">route.extraRules</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
@@ -1137,12 +1149,6 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#route-hostnames"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">route.hostnames</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
       <td><em><code>(list)</code></em><p>Array of hostnames</p>
-</td>
-    </tr>
-    <tr id="route-labels">
-      <td><a href="#route-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">route.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
 </td>
     </tr>
     <tr id="route-matches">

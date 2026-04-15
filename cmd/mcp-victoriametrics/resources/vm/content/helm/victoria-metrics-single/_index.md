@@ -16,7 +16,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.32.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-single%2Fchangelog%2F%230320)
+![Version](https://img.shields.io/badge/0.35.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-single%2Fchangelog%2F%230350)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-single)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -542,6 +542,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(string)</code></em><p>Mount subpath</p>
 </td>
     </tr>
+    <tr id="server-persistentvolume-volumeattributesclassname">
+      <td><a href="#server-persistentvolume-volumeattributesclassname"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.persistentVolume.volumeAttributesClassName</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>VolumeClassAttribute to user for persistent volume</p>
+</td>
+    </tr>
     <tr id="server-podannotations">
       <td><a href="#server-podannotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.podAnnotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
@@ -659,6 +665,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(bool)</code></em><p>Enable deployment of HTTPRoute for single component</p>
 </td>
     </tr>
+    <tr id="server-route-extralabels">
+      <td><a href="#server-route-extralabels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.route.extraLabels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
+</td>
+    </tr>
     <tr id="server-route-extrarules">
       <td><a href="#server-route-extrarules"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.route.extraRules</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
@@ -675,12 +687,6 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#server-route-hostnames"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.route.hostnames</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
       <td><em><code>(list)</code></em><p>Array of hostnames</p>
-</td>
-    </tr>
-    <tr id="server-route-labels">
-      <td><a href="#server-route-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.route.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
 </td>
     </tr>
     <tr id="server-route-matches">

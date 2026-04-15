@@ -1,8 +1,48 @@
 ## Next release
 
+- TODO
+
+## 0.74.0
+
+**Release date:** 15 Apr 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.140.0](https://img.shields.io/badge/v1.140.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11400)
+
+**Update note 1**: In this release custom `app` labels were replaced by well-known `app.kubernetes.io/component`. Additionally chart name prefix was removed.
+
+- add ability to set custom labels for scrape configs. See [#2810](https://github.com/VictoriaMetrics/helm-charts/issues/2810).
+- replaced custom `app` label with `app.kubernetes.io/component`. See [#2785](https://github.com/VictoriaMetrics/helm-charts/issues/2785).
+- delegate [relabeling-debug](https://docs.victoriametrics.com/victoria-metrics/relabeling/#relabel-debugging) configuration to the vmagent defaults, by removing `promscrape.dropOriginalLabels` from extraArgs.
+
+## 0.73.0
+
+**Release date:** 13 Apr 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.140.0](https://img.shields.io/badge/v1.140.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11400)
+
+- bump version of VM components to [v1.140.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.140.0)
+
+## 0.72.6
+
+**Release date:** 02 Apr 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.139.0](https://img.shields.io/badge/v1.139.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11390)
+
+- bump version of VM components to [v1.139.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.139.0)
+
+## 0.72.5
+
+**Release date:** 16 Mar 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.138.0](https://img.shields.io/badge/v1.138.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11380)
+
 - bump node-exporter dependency chart to version 4.52.0
-- bump kube-state-metrics dependency chart to version 7.2.0
+- bump kube-state-metrics dependency chart to version 7.2.1
 - added vmdistributed support as alternative to vmsingle and vmcluster
+- updates operator to [v0.68.2](https://github.com/VictoriaMetrics/operator/releases/tag/v0.68.2) version
+- bump version of VM components to [v1.138.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.138.0)
+- bump grafana dependency chart to version 11.3.2
+- synced dashboards and rules
 
 ## 0.72.4
 

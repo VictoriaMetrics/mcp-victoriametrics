@@ -1,7 +1,60 @@
 ## Next release
 
+**Update node 1**: due to change in label name pods will be restarted. Please delete old StatefulSets with `--cascade=orphan`.
+
+- replace custom app label with app.kubernetes.io/component. See [#2785](https://github.com/VictoriaMetrics/helm-charts/issues/2785).
+
+## 0.37.0
+
+**Release date:** 13 Apr 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.140.0](https://img.shields.io/badge/v1.140.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11400)
+
+- bump version of VM components to [v1.140.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.140.0)
+
+## 0.36.0
+
+**Release date:** 02 Apr 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.139.0](https://img.shields.io/badge/v1.139.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11390)
+
+- bump version of VM components to [v1.139.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.139.0)
+- support volumeAttributesClassName PVC attribute. See [#2782](https://github.com/VictoriaMetrics/helm-charts/issues/2782).
+
+## 0.35.0
+
+**Release date:** 18 Mar 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.138.0](https://img.shields.io/badge/v1.138.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11380)
+
+**Update note 1**: `.Values.remote.read` was moved to `.Values.remoteRead`. Legacy property is also supported.
+
+**Update note 2**: `.Values.remote.write` was moved to `.Values.remoteWrite`. Legacy property is also supported.
+
+**Update note 3**: `.Values.notifier.alertmanager` was moved to `.Values.notifier`. Legacy property is also supported.
+
+**Update note 4**: `.Values.notifiers[*].alertmanager` was moved to `.Values.notifiers[*]`. Legacy property is also supported.
+
+**Update note 5**: `*.basicAuth.username` was moved to `*."basicAuth.username"`. Legacy property is also supported.
+
+**Update note 6**: `*.basicAuth.password` was moved to `*."basicAuth.password"`. Legacy property is also supported.
+
+**Update note 7**: `*.bearer.token` was moved to `*.bearerToken`. Legacy property is also supported.
+
+**Update note 8**: `*.bearer.tokenFile` was moved to `*.bearerTokenFile`. Legacy property is also supported.
+
+- support setting HTTP headers for remoteWrite, remoteRead, notifiers and datasource. See [#2754](https://github.com/VictoriaMetrics/helm-charts/issues/2754).
+- fix: rename `route.labels` to `route.extraLabels` in values.yaml to match the route template
+
+## 0.34.0
+
+**Release date:** 16 Mar 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.138.0](https://img.shields.io/badge/v1.138.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11380)
+
 - Alertmanager 0.27.0 -> 0.31.1
 - support unhealthyPodEvictionPolicy for PodDisruptionBudget. See [#2747](https://github.com/VictoriaMetrics/helm-charts/issues/2747).
+- bump version of VM components to [v1.138.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.138.0)
 
 ## 0.33.0
 
