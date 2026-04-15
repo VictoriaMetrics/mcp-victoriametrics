@@ -1177,6 +1177,7 @@ Appears in: [VMDistributedZoneAgent](#vmdistributedzoneagent)
 | hostAliases<a href="#vmdistributedzoneagentspec-hostaliases" id="vmdistributedzoneagentspec-hostaliases">#</a><br/>_[HostAlias](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#hostalias-v1-core) array_ | _(Optional)_<br/>HostAliases provides mapping for ip and hostname,<br />that would be propagated to pod,<br />cannot be used with HostNetwork. |
 | hostNetwork<a href="#vmdistributedzoneagentspec-hostnetwork" id="vmdistributedzoneagentspec-hostnetwork">#</a><br/>_boolean_ | _(Optional)_<br/>HostNetwork controls whether the pod may use the node network namespace |
 | host_aliases<a href="#vmdistributedzoneagentspec-host_aliases" id="vmdistributedzoneagentspec-host_aliases">#</a><br/>_[HostAlias](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#hostalias-v1-core) array_ | _(Optional)_<br/>HostAliasesUnderScore provides mapping for ip and hostname,<br />that would be propagated to pod,<br />cannot be used with HostNetwork.<br />Has Priority over hostAliases field |
+| hpa<a href="#vmdistributedzoneagentspec-hpa" id="vmdistributedzoneagentspec-hpa">#</a><br/>_[EmbeddedHPA](#embeddedhpa)_ | _(Optional)_<br/>Configures horizontal pod autoscaling. |
 | image<a href="#vmdistributedzoneagentspec-image" id="vmdistributedzoneagentspec-image">#</a><br/>_[Image](#image)_ | _(Optional)_<br/>Image - docker image settings<br />if no specified operator uses default version from operator config |
 | imagePullSecrets<a href="#vmdistributedzoneagentspec-imagepullsecrets" id="vmdistributedzoneagentspec-imagepullsecrets">#</a><br/>_[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#localobjectreference-v1-core) array_ | _(Optional)_<br/>ImagePullSecrets An optional list of references to secrets in the same namespace<br />to use for pulling images from registries<br />see https://kubernetes.io/docs/concepts/containers/images/#referring-to-an-imagepullsecrets-on-a-pod |
 | initContainers<a href="#vmdistributedzoneagentspec-initcontainers" id="vmdistributedzoneagentspec-initcontainers">#</a><br/>_[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#container-v1-core) array_ | _(Optional)_<br/>InitContainers allows adding initContainers to the pod definition.<br />Any errors during the execution of an initContainer will lead to a restart of the Pod.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
@@ -1208,6 +1209,7 @@ Appears in: [VMDistributedZoneAgent](#vmdistributedzoneagent)
 | startupProbe<a href="#vmdistributedzoneagentspec-startupprobe" id="vmdistributedzoneagentspec-startupprobe">#</a><br/>_[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#probe-v1-core)_ | _(Optional)_<br/>StartupProbe that will be added to CR pod |
 | statefulMode<a href="#vmdistributedzoneagentspec-statefulmode" id="vmdistributedzoneagentspec-statefulmode">#</a><br/>_boolean_ | _(Optional)_<br/>StatefulMode enables StatefulSet for `VMAgent` instead of Deployment<br />it allows using persistent storage for vmagent's persistentQueue |
 | statefulRollingUpdateStrategy<a href="#vmdistributedzoneagentspec-statefulrollingupdatestrategy" id="vmdistributedzoneagentspec-statefulrollingupdatestrategy">#</a><br/>_[StatefulSetUpdateStrategyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#statefulsetupdatestrategytype-v1-apps)_ | _(Optional)_<br/>StatefulRollingUpdateStrategy allows configuration for strategyType<br />set it to RollingUpdate for disabling operator statefulSet rollingUpdate |
+| statefulRollingUpdateStrategyBehavior<a href="#vmdistributedzoneagentspec-statefulrollingupdatestrategybehavior" id="vmdistributedzoneagentspec-statefulrollingupdatestrategybehavior">#</a><br/>_[StatefulSetUpdateStrategyBehavior](#statefulsetupdatestrategybehavior)_ | _(Optional)_<br/>StatefulRollingUpdateStrategyBehavior defines customized behavior for rolling updates.<br />It applies if the RollingUpdateStrategy is set to OnDelete, which is the default. |
 | statefulStorage<a href="#vmdistributedzoneagentspec-statefulstorage" id="vmdistributedzoneagentspec-statefulstorage">#</a><br/>_[StorageSpec](#storagespec)_ | _(Optional)_<br/>StatefulStorage configures storage for StatefulSet |
 | terminationGracePeriodSeconds<a href="#vmdistributedzoneagentspec-terminationgraceperiodseconds" id="vmdistributedzoneagentspec-terminationgraceperiodseconds">#</a><br/>_integer_ | _(Optional)_<br/>TerminationGracePeriodSeconds period for container graceful termination |
 | tolerations<a href="#vmdistributedzoneagentspec-tolerations" id="vmdistributedzoneagentspec-tolerations">#</a><br/>_[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#toleration-v1-core) array_ | _(Optional)_<br/>Tolerations If specified, the pod's tolerations. |
@@ -1498,7 +1500,7 @@ Appears in: [VLAgentSpec](#vlagentspec), [VLInsert](#vlinsert), [VLSelect](#vlse
 
 #### CommonConfigReloaderParams
 
-Appears in: [VMAgentSpec](#vmagentspec), [VMAlertSpec](#vmalertspec), [VMAlertmanagerSpec](#vmalertmanagerspec), [VMAuthLoadBalancerSpec](#vmauthloadbalancerspec), [VMAuthSpec](#vmauthspec), [VMSingleSpec](#vmsinglespec)
+Appears in: [VMAgentSpec](#vmagentspec), [VMAlertSpec](#vmalertspec), [VMAlertmanagerSpec](#vmalertmanagerspec), [VMAuthSpec](#vmauthspec), [VMSingleSpec](#vmsinglespec)
 
 | Field | Description |
 | --- | --- |
@@ -1750,7 +1752,7 @@ Appears in: [Receiver](#receiver)
 EmbeddedHPA embeds HorizontalPodAutoScaler spec v2.
 https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2/
 
-Appears in: [VLInsert](#vlinsert), [VLSelect](#vlselect), [VLStorage](#vlstorage), [VMAuthSpec](#vmauthspec), [VMInsert](#vminsert), [VMSelect](#vmselect), [VMStorage](#vmstorage), [VTInsert](#vtinsert), [VTSelect](#vtselect), [VTStorage](#vtstorage)
+Appears in: [VLInsert](#vlinsert), [VLSelect](#vlselect), [VLStorage](#vlstorage), [VMAgentSpec](#vmagentspec), [VMAuthSpec](#vmauthspec), [VMDistributedZoneAgentSpec](#vmdistributedzoneagentspec), [VMInsert](#vminsert), [VMSelect](#vmselect), [VMStorage](#vmstorage), [VTInsert](#vtinsert), [VTSelect](#vtselect), [VTStorage](#vtstorage)
 
 | Field | Description |
 | --- | --- |
@@ -2731,6 +2733,7 @@ Appears in: [Receiver](#receiver)
 | thumb_url<a href="#slackconfig-thumb_url" id="slackconfig-thumb_url">#</a><br/>_string_ | _(Optional)_<br/> |
 | title<a href="#slackconfig-title" id="slackconfig-title">#</a><br/>_string_ | _(Optional)_<br/> |
 | title_link<a href="#slackconfig-title_link" id="slackconfig-title_link">#</a><br/>_string_ | _(Optional)_<br/> |
+| update_message<a href="#slackconfig-update_message" id="slackconfig-update_message">#</a><br/>_boolean_ | _(Optional)_<br/>Whether to update the original message in-place instead of sending a new one.<br />Requires Slack Bot API and chat:write scope.<br />Available since alertmanager v0.32.0. |
 | username<a href="#slackconfig-username" id="slackconfig-username">#</a><br/>_string_ | _(Optional)_<br/> |
 
 #### SlackConfirmationField
@@ -2784,7 +2787,7 @@ Appears in: [Receiver](#receiver)
 
 StatefulSetUpdateStrategyBehavior customizes behavior for StatefulSet updates.
 
-Appears in: [VLStorage](#vlstorage), [VMSelect](#vmselect), [VMStorage](#vmstorage), [VTStorage](#vtstorage)
+Appears in: [VLStorage](#vlstorage), [VMAgentSpec](#vmagentspec), [VMDistributedZoneAgentSpec](#vmdistributedzoneagentspec), [VMSelect](#vmselect), [VMStorage](#vmstorage), [VTStorage](#vtstorage)
 
 | Field | Description |
 | --- | --- |
@@ -3236,6 +3239,8 @@ Appears in: [VMAgent](#vmagent)
 | configReloaderResources<a href="#vmagentspec-configreloaderresources" id="vmagentspec-configreloaderresources">#</a><br/>_[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#resourcerequirements-v1-core)_ | _(Optional)_<br/>ConfigReloaderResources config-reloader container resource request and limits, https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br />if not defined default resources from operator config will be used |
 | containers<a href="#vmagentspec-containers" id="vmagentspec-containers">#</a><br/>_[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#container-v1-core) array_ | _(Optional)_<br/>Containers property allows to inject additions sidecars or to patch existing containers.<br />It can be useful for proxies, backup, etc. |
 | daemonSetMode<a href="#vmagentspec-daemonsetmode" id="vmagentspec-daemonsetmode">#</a><br/>_boolean_ | _(Optional)_<br/>DaemonSetMode enables DaemonSet deployment mode instead of Deployment.<br />Supports only VMPodScrape<br />(available from v0.55.0).<br />Cannot be used with statefulMode |
+| daemonSetRollingUpdateStrategyBehavior<a href="#vmagentspec-daemonsetrollingupdatestrategybehavior" id="vmagentspec-daemonsetrollingupdatestrategybehavior">#</a><br/>_[RollingUpdateDaemonSet](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#rollingupdatedaemonset-v1-apps)_ | _(Optional)_<br/>DaemonSetRollingUpdateStrategyBehavior defines customized behavior for rolling updates.<br />It applies if the DaemonSetUpdateStrategy is set to RollingUpdate, which is the default. |
+| daemonSetUpdateStrategy<a href="#vmagentspec-daemonsetupdatestrategy" id="vmagentspec-daemonsetupdatestrategy">#</a><br/>_[DaemonSetUpdateStrategyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#daemonsetupdatestrategytype-v1-apps)_ | _(Optional)_<br/>DaemonSetUpdateStrategy allows configuration for the DaemonSet update strategy type. |
 | disableAutomountServiceAccountToken<a href="#vmagentspec-disableautomountserviceaccounttoken" id="vmagentspec-disableautomountserviceaccounttoken">#</a><br/>_boolean_ | _(Optional)_<br/>DisableAutomountServiceAccountToken whether to disable serviceAccount auto mount by Kubernetes (available from v0.54.0).<br />Operator will conditionally create volumes and volumeMounts for containers if it requires k8s API access.<br />For example, vmagent and vm-config-reloader requires k8s API access.<br />Operator creates volumes with name: "kube-api-access", which can be used as volumeMount for extraContainers if needed.<br />And also adds VolumeMounts at /var/run/secrets/kubernetes.io/serviceaccount. |
 | disableSelfServiceScrape<a href="#vmagentspec-disableselfservicescrape" id="vmagentspec-disableselfservicescrape">#</a><br/>_boolean_ | _(Optional)_<br/>DisableSelfServiceScrape controls creation of VMServiceScrape by operator<br />for the application.<br />Has priority over `VM_DISABLESELFSERVICESCRAPECREATION` operator env variable |
 | dnsConfig<a href="#vmagentspec-dnsconfig" id="vmagentspec-dnsconfig">#</a><br/>_[PodDNSConfig](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#poddnsconfig-v1-core)_ | _(Optional)_<br/>Specifies the DNS parameters of a pod.<br />Parameters specified here will be merged to the generated DNS<br />configuration based on DNSPolicy. |
@@ -3252,6 +3257,7 @@ Appears in: [VMAgent](#vmagent)
 | hostAliases<a href="#vmagentspec-hostaliases" id="vmagentspec-hostaliases">#</a><br/>_[HostAlias](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#hostalias-v1-core) array_ | _(Optional)_<br/>HostAliases provides mapping for ip and hostname,<br />that would be propagated to pod,<br />cannot be used with HostNetwork. |
 | hostNetwork<a href="#vmagentspec-hostnetwork" id="vmagentspec-hostnetwork">#</a><br/>_boolean_ | _(Optional)_<br/>HostNetwork controls whether the pod may use the node network namespace |
 | host_aliases<a href="#vmagentspec-host_aliases" id="vmagentspec-host_aliases">#</a><br/>_[HostAlias](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#hostalias-v1-core) array_ | _(Optional)_<br/>HostAliasesUnderScore provides mapping for ip and hostname,<br />that would be propagated to pod,<br />cannot be used with HostNetwork.<br />Has Priority over hostAliases field |
+| hpa<a href="#vmagentspec-hpa" id="vmagentspec-hpa">#</a><br/>_[EmbeddedHPA](#embeddedhpa)_ | _(Optional)_<br/>Configures horizontal pod autoscaling. |
 | ignoreNamespaceSelectors<a href="#vmagentspec-ignorenamespaceselectors" id="vmagentspec-ignorenamespaceselectors">#</a><br/>_boolean_ | _(Optional)_<br/>IgnoreNamespaceSelectors if set to true will ignore NamespaceSelector settings from<br />scrape objects, and they will only discover endpoints<br />within their current namespace. Defaults to false. |
 | image<a href="#vmagentspec-image" id="vmagentspec-image">#</a><br/>_[Image](#image)_ | _(Optional)_<br/>Image - docker image settings<br />if no specified operator uses default version from operator config |
 | imagePullSecrets<a href="#vmagentspec-imagepullsecrets" id="vmagentspec-imagepullsecrets">#</a><br/>_[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#localobjectreference-v1-core) array_ | _(Optional)_<br/>ImagePullSecrets An optional list of references to secrets in the same namespace<br />to use for pulling images from registries<br />see https://kubernetes.io/docs/concepts/containers/images/#referring-to-an-imagepullsecrets-on-a-pod |
@@ -3317,6 +3323,7 @@ Appears in: [VMAgent](#vmagent)
 | startupProbe<a href="#vmagentspec-startupprobe" id="vmagentspec-startupprobe">#</a><br/>_[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#probe-v1-core)_ | _(Optional)_<br/>StartupProbe that will be added to CR pod |
 | statefulMode<a href="#vmagentspec-statefulmode" id="vmagentspec-statefulmode">#</a><br/>_boolean_ | _(Optional)_<br/>StatefulMode enables StatefulSet for `VMAgent` instead of Deployment<br />it allows using persistent storage for vmagent's persistentQueue |
 | statefulRollingUpdateStrategy<a href="#vmagentspec-statefulrollingupdatestrategy" id="vmagentspec-statefulrollingupdatestrategy">#</a><br/>_[StatefulSetUpdateStrategyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#statefulsetupdatestrategytype-v1-apps)_ | _(Optional)_<br/>StatefulRollingUpdateStrategy allows configuration for strategyType<br />set it to RollingUpdate for disabling operator statefulSet rollingUpdate |
+| statefulRollingUpdateStrategyBehavior<a href="#vmagentspec-statefulrollingupdatestrategybehavior" id="vmagentspec-statefulrollingupdatestrategybehavior">#</a><br/>_[StatefulSetUpdateStrategyBehavior](#statefulsetupdatestrategybehavior)_ | _(Optional)_<br/>StatefulRollingUpdateStrategyBehavior defines customized behavior for rolling updates.<br />It applies if the RollingUpdateStrategy is set to OnDelete, which is the default. |
 | statefulStorage<a href="#vmagentspec-statefulstorage" id="vmagentspec-statefulstorage">#</a><br/>_[StorageSpec](#storagespec)_ | _(Optional)_<br/>StatefulStorage configures storage for StatefulSet |
 | staticScrapeNamespaceSelector<a href="#vmagentspec-staticscrapenamespaceselector" id="vmagentspec-staticscrapenamespaceselector">#</a><br/>_[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#labelselector-v1-meta)_ | _(Optional)_<br/>StaticScrapeNamespaceSelector defines Namespaces to be selected for VMStaticScrape discovery.<br />Works in combination with NamespaceSelector.<br />NamespaceSelector nil - only objects at VMAgent or VMSingle namespace.<br />Selector nil - only objects at NamespaceSelector namespaces.<br />If both nil - behaviour controlled by selectAllByDefault |
 | staticScrapeRelabelTemplate<a href="#vmagentspec-staticscraperelabeltemplate" id="vmagentspec-staticscraperelabeltemplate">#</a><br/>_[RelabelConfig](#relabelconfig) array_ | _(Optional)_<br/>StaticScrapeRelabelTemplate defines relabel config, that will be added to each VMStaticScrape.<br />it's useful for adding specific labels to all targets |
@@ -3698,11 +3705,6 @@ Appears in: [VMAuthLoadBalancer](#vmauthloadbalancer)
 | affinity<a href="#vmauthloadbalancerspec-affinity" id="vmauthloadbalancerspec-affinity">#</a><br/>_[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#affinity-v1-core)_ | _(Optional)_<br/>Affinity If specified, the pod's scheduling constraints. |
 | componentVersion<a href="#vmauthloadbalancerspec-componentversion" id="vmauthloadbalancerspec-componentversion">#</a><br/>_string_ | _(Optional)_<br/>ComponentVersion defines default images tag for this component.<br />it can be overwritten with component specific image.tag value. |
 | configMaps<a href="#vmauthloadbalancerspec-configmaps" id="vmauthloadbalancerspec-configmaps">#</a><br/>_string array_ | _(Optional)_<br/>ConfigMaps is a list of ConfigMaps in the same namespace as the Application<br />object, which shall be mounted into the Application container<br />at /etc/vm/configs/CONFIGMAP_NAME folder |
-| configReloadAuthKeySecret<a href="#vmauthloadbalancerspec-configreloadauthkeysecret" id="vmauthloadbalancerspec-configreloadauthkeysecret">#</a><br/>_[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#secretkeyselector-v1-core)_ | _(Optional)_<br/>ConfigReloadAuthKeySecret defines optional secret reference authKey for /-/reload API requests.<br />Given secret reference will be added to the application and vm-config-reloader as volume<br />available since v0.57.0 version |
-| configReloaderExtraArgs<a href="#vmauthloadbalancerspec-configreloaderextraargs" id="vmauthloadbalancerspec-configreloaderextraargs">#</a><br/>_object (keys:string, values:string)_ | _(Optional)_<br/>ConfigReloaderExtraArgs that will be passed to  VMAuths config-reloader container<br />for example resync-interval: "30s" |
-| configReloaderImage<a href="#vmauthloadbalancerspec-configreloaderimage" id="vmauthloadbalancerspec-configreloaderimage">#</a><br/>_string_ | _(Optional)_<br/>ConfigReloaderImage defines image:tag for config-reloader container |
-| configReloaderImageTag<a href="#vmauthloadbalancerspec-configreloaderimagetag" id="vmauthloadbalancerspec-configreloaderimagetag">#</a><br/>_string_ | _(Optional)_<br/>ConfigReloaderImageTag defines image:tag for config-reloader container<br/><b>Deprecated: </b>since version <a href="https://docs.victoriametrics.com/operator/changelog/#v0670">v0.67.0</a> will be removed in <a href="https://docs.victoriametrics.com/operator/changelog/#v0690">v0.69.0</a> use <a href="#vmauthloadbalancerspec-configreloaderimage">configReloaderImage</a> instead<br/> |
-| configReloaderResources<a href="#vmauthloadbalancerspec-configreloaderresources" id="vmauthloadbalancerspec-configreloaderresources">#</a><br/>_[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#resourcerequirements-v1-core)_ | _(Optional)_<br/>ConfigReloaderResources config-reloader container resource request and limits, https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br />if not defined default resources from operator config will be used |
 | containers<a href="#vmauthloadbalancerspec-containers" id="vmauthloadbalancerspec-containers">#</a><br/>_[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#container-v1-core) array_ | _(Optional)_<br/>Containers property allows to inject additions sidecars or to patch existing containers.<br />It can be useful for proxies, backup, etc. |
 | disableAutomountServiceAccountToken<a href="#vmauthloadbalancerspec-disableautomountserviceaccounttoken" id="vmauthloadbalancerspec-disableautomountserviceaccounttoken">#</a><br/>_boolean_ | _(Optional)_<br/>DisableAutomountServiceAccountToken whether to disable serviceAccount auto mount by Kubernetes (available from v0.54.0).<br />Operator will conditionally create volumes and volumeMounts for containers if it requires k8s API access.<br />For example, vmagent and vm-config-reloader requires k8s API access.<br />Operator creates volumes with name: "kube-api-access", which can be used as volumeMount for extraContainers if needed.<br />And also adds VolumeMounts at /var/run/secrets/kubernetes.io/serviceaccount. |
 | disableSelfServiceScrape<a href="#vmauthloadbalancerspec-disableselfservicescrape" id="vmauthloadbalancerspec-disableselfservicescrape">#</a><br/>_boolean_ | _(Optional)_<br/>DisableSelfServiceScrape controls creation of VMServiceScrape by operator<br />for the application.<br />Has priority over `VM_DISABLESELFSERVICESCRAPECREATION` operator env variable |
@@ -3747,7 +3749,6 @@ Appears in: [VMAuthLoadBalancer](#vmauthloadbalancer)
 | updateStrategy<a href="#vmauthloadbalancerspec-updatestrategy" id="vmauthloadbalancerspec-updatestrategy">#</a><br/>_[DeploymentStrategyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#deploymentstrategytype-v1-apps)_ | _(Optional)_<br/>UpdateStrategy - overrides default update strategy.<br />Available from operator v0.64.0 |
 | useDefaultResources<a href="#vmauthloadbalancerspec-usedefaultresources" id="vmauthloadbalancerspec-usedefaultresources">#</a><br/>_boolean_ | _(Optional)_<br/>UseDefaultResources controls resource settings<br />By default, operator sets built-in resource requirements |
 | useStrictSecurity<a href="#vmauthloadbalancerspec-usestrictsecurity" id="vmauthloadbalancerspec-usestrictsecurity">#</a><br/>_boolean_ | _(Optional)_<br/>UseStrictSecurity enables strict security mode for component<br />it restricts disk writes access<br />uses non-root user out of the box<br />drops not needed security permissions |
-| useVMConfigReloader<a href="#vmauthloadbalancerspec-usevmconfigreloader" id="vmauthloadbalancerspec-usevmconfigreloader">#</a><br/>_boolean_ | _(Optional)_<br/>UseVMConfigReloader replaces prometheus-like config-reloader<br />with vm one. It uses secrets watch instead of file watch<br />which greatly increases speed of config updates<br />Removed since v0.67.0: this property is ignored and no longer needed |
 | volumeMounts<a href="#vmauthloadbalancerspec-volumemounts" id="vmauthloadbalancerspec-volumemounts">#</a><br/>_[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#volumemount-v1-core) array_ | _(Optional)_<br/>VolumeMounts allows configuration of additional VolumeMounts on the output Deployment/StatefulSet definition.<br />VolumeMounts specified will be appended to other VolumeMounts in the Application container |
 | volumes<a href="#vmauthloadbalancerspec-volumes" id="vmauthloadbalancerspec-volumes">#</a><br/>_[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#volume-v1-core) array_ | _(Required)_<br/>Volumes allows configuration of additional volumes on the output Deployment/StatefulSet definition.<br />Volumes specified will be appended to other volumes that are generated.<br />/ +optional |
 
@@ -4637,6 +4638,30 @@ Appears in: [VMAuthSpec](#vmauthspec), [VMAuthUnauthorizedUserAccessSpec](#vmaut
 | allow_list<a href="#vmuseripfilters-allow_list" id="vmuseripfilters-allow_list">#</a><br/>_string array_ | _(Required)_<br/> |
 | deny_list<a href="#vmuseripfilters-deny_list" id="vmuseripfilters-deny_list">#</a><br/>_string array_ | _(Required)_<br/> |
 
+#### VMUserJWT
+
+VMUserJWT defines configuration for JWT
+
+Appears in: [VMUserSpec](#vmuserspec)
+
+| Field | Description |
+| --- | --- |
+| matchClaims<a href="#vmuserjwt-matchclaims" id="vmuserjwt-matchclaims">#</a><br/>_object (keys:string, values:string)_ | _(Required)_<br/>MatchClaims enables claim based routing |
+| oidc<a href="#vmuserjwt-oidc" id="vmuserjwt-oidc">#</a><br/>_[VMUserOIDC](#vmuseroidc)_ | _(Required)_<br/>OIDC defines OIDC configuration section |
+| publicKeyRefs<a href="#vmuserjwt-publickeyrefs" id="vmuserjwt-publickeyrefs">#</a><br/>_[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#secretkeyselector-v1-core) array_ | _(Required)_<br/>PublicKeyRefs defines a list of Secret selectors that reference public keys |
+| publicKeys<a href="#vmuserjwt-publickeys" id="vmuserjwt-publickeys">#</a><br/>_string array_ | _(Required)_<br/>PublicKeys defines a list of public keys that are used for signature verification |
+| skipVerify<a href="#vmuserjwt-skipverify" id="vmuserjwt-skipverify">#</a><br/>_boolean_ | _(Required)_<br/>SkipVerify skips signature verification for testing purposes |
+
+#### VMUserOIDC
+
+VMUserOIDC defines configuration for OIDC
+
+Appears in: [VMUserJWT](#vmuserjwt)
+
+| Field | Description |
+| --- | --- |
+| issuer<a href="#vmuseroidc-issuer" id="vmuseroidc-issuer">#</a><br/>_string_ | _(Required)_<br/>Issuer defines issuer URL for OIDC |
+
 #### VMUserSpec
 
 VMUserSpec defines the desired state of VMUser
@@ -4654,6 +4679,7 @@ Appears in: [VMUser](#vmuser)
 | generatePassword<a href="#vmuserspec-generatepassword" id="vmuserspec-generatepassword">#</a><br/>_boolean_ | _(Optional)_<br/>GeneratePassword instructs operator to generate password for user<br />if spec.password if empty. |
 | headers<a href="#vmuserspec-headers" id="vmuserspec-headers">#</a><br/>_string array_ | _(Optional)_<br/>Headers represent additional http headers, that vmauth uses<br />in form of ["header_key: header_value"]<br />multiple values for header key:<br />["header_key: value1,value2"]<br />it's available since 1.68.0 version of vmauth |
 | ip_filters<a href="#vmuserspec-ip_filters" id="vmuserspec-ip_filters">#</a><br/>_[VMUserIPFilters](#vmuseripfilters)_ | _(Optional)_<br/>IPFilters defines per target src ip filters<br />supported only with enterprise version of [vmauth](https://docs.victoriametrics.com/victoriametrics/vmauth/#ip-filters) |
+| jwt<a href="#vmuserspec-jwt" id="vmuserspec-jwt">#</a><br/>_[VMUserJWT](#vmuserjwt)_ | _(Required)_<br/>JWT defines JWT based auth for a user |
 | load_balancing_policy<a href="#vmuserspec-load_balancing_policy" id="vmuserspec-load_balancing_policy">#</a><br/>_string_ | _(Optional)_<br/>LoadBalancingPolicy defines load balancing policy to use for backend urls.<br />Supported policies: least_loaded, first_available.<br />See [here](https://docs.victoriametrics.com/victoriametrics/vmauth/#load-balancing) for more details (default "least_loaded") |
 | managedMetadata<a href="#vmuserspec-managedmetadata" id="vmuserspec-managedmetadata">#</a><br/>_[ManagedObjectsMetadata](#managedobjectsmetadata)_ | _(Required)_<br/>ManagedMetadata defines metadata that will be added to the all objects<br />created by operator for the given CustomResource |
 | max_concurrent_requests<a href="#vmuserspec-max_concurrent_requests" id="vmuserspec-max_concurrent_requests">#</a><br/>_integer_ | _(Optional)_<br/>MaxConcurrentRequests defines max concurrent requests per user<br />300 is default value for vmauth |

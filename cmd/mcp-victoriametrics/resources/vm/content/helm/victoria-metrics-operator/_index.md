@@ -16,7 +16,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.59.2-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230592)
+![Version](https://img.shields.io/badge/0.60.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230600)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-operator)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -265,6 +265,7 @@ Change the values according to the need of the environment in ``victoria-metrics
   <tbody>
     <tr id="admissionwebhooks">
       <td><a href="#admissionwebhooks"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">admissionWebhooks</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">annotations</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">certManager</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">ca</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">commonName</span><span class="p">:</span><span class="w"> </span><span class="l">ca.validation.victoriametrics</span><span class="w">
@@ -288,6 +289,12 @@ Change the values according to the need of the environment in ``victoria-metrics
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>Configures resource validation</p>
+</td>
+    </tr>
+    <tr id="admissionwebhooks-annotations">
+      <td><a href="#admissionwebhooks-annotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">admissionWebhooks.annotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Annotations for webhook. Can be used to define Helm or ArgoCD annotations.</p>
 </td>
     </tr>
     <tr id="admissionwebhooks-certmanager">
@@ -1015,6 +1022,16 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#shareprocessnamespace"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">shareProcessNamespace</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
 </a></td>
       <td><em><code>(bool)</code></em><p>Enable sharing process Namespace between Containers in a Pod. This only makes sense with extraContainers</p>
+</td>
+    </tr>
+    <tr id="strategy">
+      <td><a href="#strategy"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">strategy</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">rollingUpdate</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">maxSurge</span><span class="p">:</span><span class="w"> </span><span class="m">25</span><span class="l">%</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">maxUnavailable</span><span class="p">:</span><span class="w"> </span><span class="m">25</span><span class="l">%</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l">RollingUpdate</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Deployment strategy, set to standard k8s default</p>
 </td>
     </tr>
     <tr id="terminationgraceperiodseconds">

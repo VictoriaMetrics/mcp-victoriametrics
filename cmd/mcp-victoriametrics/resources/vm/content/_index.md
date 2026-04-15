@@ -19,7 +19,7 @@ sections:
           - label: "Integrations"
             url: "/victoriametrics/integrations/"
           - label: "Playground"
-            url: "https://play.victoriametrics.com/select/0/vmui/?#/?g0.expr=vm_app_version"
+            url: "https://docs.victoriametrics.com/playgrounds/#victoriametrics-playground"
           - label: "See all"
             url: "/victoriametrics/"
         upcoming: false
@@ -33,7 +33,7 @@ sections:
           - label: "Key concepts"
             url: "/victorialogs/keyconcepts/"
           - label: "Playground"
-            url: "https://play-vmlogs.victoriametrics.com/"
+            url: "https://docs.victoriametrics.com/playgrounds/#victorialogs-playground"
           - label: "See all"
             url: "/victorialogs/"
         upcoming: false
@@ -47,7 +47,7 @@ sections:
           - label: "Key concepts"
             url: "/victoriatraces/keyconcepts/"
           - label: "Playground"
-            url: "https://play-vtraces.victoriametrics.com/"
+            url: "https://docs.victoriametrics.com/playgrounds/#victoriatraces-playground"
           - label: "See all"
             url: "/victoriatraces/"
         upcoming: false
@@ -61,7 +61,7 @@ sections:
           - label: "Enterprise components"
             url: "/victoriametrics/enterprise/"
           - label: "Playground"
-            url: "https://play.victoriametrics.com/select/0/vmui/?#/?g0.expr=vm_app_version"
+            url: "https://docs.victoriametrics.com/playgrounds/#victoriametrics-playground"
           - label: "Contact Us"
             url: "https://victoriametrics.com/contact-us/"
         upcoming: false
@@ -74,6 +74,8 @@ sections:
             url: "/victoriametrics-cloud/get-started/"
           - label: "Integrations"
             url: "/victoriametrics-cloud/integrations/"
+          - label: "Playground"
+            url: "https://docs.victoriametrics.com/playgrounds/#victoriametrics-cloud"
           - label: "See all"
             url: "/victoriametrics-cloud/"
         upcoming: false
@@ -87,7 +89,7 @@ sections:
           - label: "Components"
             url: "/anomaly-detection/components/"
           - label: "Playground"
-            url: "https://play-vmanomaly.victoriametrics.com/"
+            url: "https://docs.victoriametrics.com/playgrounds/#vmanomaly-playground"
           - label: "See all"
             url: "/anomaly-detection/"
         upcoming: false
@@ -109,20 +111,20 @@ resources:
     text: "This repository provides all our helm charts for VictoriaMetrics and VictoriaLogs."
     url: "/helm/"
 
-  - title: "Grafana playground"
+  - title: "Playgrounds"
     icon: "grafana"
-    text: "Play with real VictoriaMetrics, VictoriaLogs and VictoriaTraces installations integrated with Grafana via plugins."
-    url: "https://play-grafana.victoriametrics.com/"
+    text: "Play with real VictoriaMetrics, VictoriaLogs and VictoriaTraces installations, and integration with Grafana."
+    url: "https://docs.victoriametrics.com/playgrounds/"
     
-  - title: "SQL to LogsQL converter"
-    icon: "vl-sql-converter"
-    text: "Query VictoriaLogs using SQL using a lightweight UI and REST API."
-    url: "https://play-sql.victoriametrics.com/"
+  - title: "OpenTelemetry"
+    icon: "opentelemetry"
+    text: "VictoriaMetrics provides native OpenTelemetry ingestion across metrics, logs, and traces."
+    url: "/opentelemetry/"
 
-  - title: "VictoriaMetrics MCP"
-    icon: "vm-mcp"
-    text: "Implementation of Model Context Protocol (MCP) server for VictoriaMetrics."
-    url: "https://github.com/VictoriaMetrics/mcp-victoriametrics"
+  - title: "AI tools"
+    icon: "ai-tools"
+    text: "Integrations with Model Context Protocol (MCP) servers and AI assistants."
+    url: "/ai-tools/"
 ---
 
 {{< ds-homepage >}}

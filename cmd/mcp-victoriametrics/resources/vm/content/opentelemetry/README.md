@@ -13,7 +13,7 @@ VictoriaMetrics provides a dedicated database for each [signal type](https://ope
 Each database is optimized for its own signal and usage scenario to improve maintainability and efficiency.
 
 Resources:
-* [OpenTelemetry Astronomy Shop demo](https://github.com/VictoriaMetrics/opentelemetry-demo) with integrated VictoriaMetrics backends.
+* [OpenTelemetry Astronomy Shop demo](https://github.com/VictoriaMetrics-Community/opentelemetry-demo) with integrated VictoriaMetrics backends.
 * Live [Grafana Playground](https://play-grafana.victoriametrics.com/) with OTeL demo and VictoriaMetrics components.
 * [Full-Stack Observability with VictoriaMetrics in the OTel Demo](https://victoriametrics.com/blog/victoriametrics-full-stack-observability-otel-demo/) blogpost.
 

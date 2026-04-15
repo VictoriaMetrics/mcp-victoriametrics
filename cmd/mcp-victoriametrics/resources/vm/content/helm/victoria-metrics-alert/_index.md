@@ -17,7 +17,7 @@ tags:
   - logs
 ---
 
-![Version](https://img.shields.io/badge/0.33.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-alert%2Fchangelog%2F%230330)
+![Version](https://img.shields.io/badge/0.37.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-alert%2Fchangelog%2F%230370)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-alert)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -296,7 +296,7 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#alertmanager-image"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">alertmanager.image</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">registry</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l">prom/alertmanager</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="l">v0.31.1</span></span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="l">v0.32.0</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>Alertmanager image configuration</p>
 </td>
@@ -438,6 +438,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(string)</code></em><p>Mount subpath</p>
 </td>
     </tr>
+    <tr id="alertmanager-persistentvolume-volumeattributesclassname">
+      <td><a href="#alertmanager-persistentvolume-volumeattributesclassname"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">alertmanager.persistentVolume.volumeAttributesClassName</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>VolumeClassAttribute to user for persistent volume</p>
+</td>
+    </tr>
     <tr id="alertmanager-podannotations">
       <td><a href="#alertmanager-podannotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">alertmanager.podAnnotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
@@ -520,6 +526,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(bool)</code></em><p>Enable deployment of HTTPRoute for VMAlertmanager</p>
 </td>
     </tr>
+    <tr id="alertmanager-route-extralabels">
+      <td><a href="#alertmanager-route-extralabels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">alertmanager.route.extraLabels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
+</td>
+    </tr>
     <tr id="alertmanager-route-extrarules">
       <td><a href="#alertmanager-route-extrarules"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">alertmanager.route.extraRules</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
@@ -536,12 +548,6 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#alertmanager-route-hostnames"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">alertmanager.route.hostnames</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
       <td><em><code>(list)</code></em><p>Array of hostnames</p>
-</td>
-    </tr>
-    <tr id="alertmanager-route-labels">
-      <td><a href="#alertmanager-route-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">alertmanager.route.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
 </td>
     </tr>
     <tr id="alertmanager-route-matches">
@@ -791,35 +797,44 @@ Change the values according to the need of the environment in ``victoria-metrics
     </tr>
     <tr id="server-datasource">
       <td><a href="#server-datasource"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.datasource</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">basicAuth</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">bearer</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">tokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">basicAuth.password</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">basicAuth.username</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">bearerToken</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">bearerTokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">headers</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>VMAlert reads metrics from source, next section represents its configuration. It can be any service which supports MetricsQL or PromQL.</p>
 </td>
     </tr>
-    <tr id="server-datasource-basicauth">
-      <td><a href="#server-datasource-basicauth"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.datasource.basicAuth</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
+    <tr id="server-datasource-"basicauth-password"">
+      <td><a href="#server-datasource-"basicauth-password""><pre class="chroma"><code><span class="line"><span class="cl"><span class="l">server.datasource.&#34;basicAuth.password&#34;: &#34;&#34;</span></span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Basic auth for datasource</p>
+      <td><em><code>(string)</code></em><p>Basic auth password for remote write</p>
 </td>
     </tr>
-    <tr id="server-datasource-bearer-token">
-      <td><a href="#server-datasource-bearer-token"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.datasource.bearer.token</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
+    <tr id="server-datasource-"basicauth-username"">
+      <td><a href="#server-datasource-"basicauth-username""><pre class="chroma"><code><span class="line"><span class="cl"><span class="l">server.datasource.&#34;basicAuth.username&#34;: &#34;&#34;</span></span></span></code></pre>
 </a></td>
-      <td><em><code>(string)</code></em><p>Token with Bearer token. You can use one of token or tokenFile. You don&rsquo;t need to add &ldquo;Bearer&rdquo; prefix string</p>
+      <td><em><code>(string)</code></em><p>Basic auth username for remote write</p>
 </td>
     </tr>
-    <tr id="server-datasource-bearer-tokenfile">
-      <td><a href="#server-datasource-bearer-tokenfile"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.datasource.bearer.tokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
+    <tr id="server-datasource-bearertoken">
+      <td><a href="#server-datasource-bearertoken"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.datasource.bearerToken</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
 </a></td>
-      <td><em><code>(string)</code></em><p>Token Auth file with Bearer token. You can use one of token or tokenFile</p>
+      <td><em><code>(string)</code></em><p>Auth based on Bearer token for remote write</p>
+</td>
+    </tr>
+    <tr id="server-datasource-bearertokenfile">
+      <td><a href="#server-datasource-bearertokenfile"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.datasource.bearerTokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>Auth based on Bearer token file path for remote write</p>
+</td>
+    </tr>
+    <tr id="server-datasource-headers">
+      <td><a href="#server-datasource-headers"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.datasource.headers</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>HTTP headers for remote write</p>
 </td>
     </tr>
     <tr id="server-env">
@@ -970,37 +985,9 @@ Change the values according to the need of the environment in ``victoria-metrics
 </td>
     </tr>
     <tr id="server-notifier">
-      <td><a href="#server-notifier"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.notifier</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">alertmanager</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">basicAuth</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">bearer</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">tokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
+      <td><a href="#server-notifier"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.notifier</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Notifier to use for alerts. Multiple notifiers can be enabled by using <code>notifiers</code> section</p>
-</td>
-    </tr>
-    <tr id="server-notifier-alertmanager-basicauth">
-      <td><a href="#server-notifier-alertmanager-basicauth"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.notifier.alertmanager.basicAuth</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>Basic auth for alertmanager</p>
-</td>
-    </tr>
-    <tr id="server-notifier-alertmanager-bearer-token">
-      <td><a href="#server-notifier-alertmanager-bearer-token"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.notifier.alertmanager.bearer.token</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(string)</code></em><p>Token with Bearer token. You can use one of token or tokenFile. You don&rsquo;t need to add &ldquo;Bearer&rdquo; prefix string</p>
-</td>
-    </tr>
-    <tr id="server-notifier-alertmanager-bearer-tokenfile">
-      <td><a href="#server-notifier-alertmanager-bearer-tokenfile"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.notifier.alertmanager.bearer.tokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(string)</code></em><p>Token Auth file with Bearer token. You can use one of token or tokenFile</p>
+      <td><em><code>(object)</code></em><p>Default VMAlertmanager notifier configuration.</p>
 </td>
     </tr>
     <tr id="server-notifiers">
@@ -1091,72 +1078,16 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(object)</code></em><p>Startup probe</p>
 </td>
     </tr>
-    <tr id="server-remote-read-basicauth">
-      <td><a href="#server-remote-read-basicauth"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.read.basicAuth</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
+    <tr id="server-remoteread">
+      <td><a href="#server-remoteread"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remoteRead</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Basic auth for remote read</p>
+      <td><em><code>(object)</code></em><p>VMAlert remote read configuration</p>
 </td>
     </tr>
-    <tr id="server-remote-read-bearer">
-      <td><a href="#server-remote-read-bearer"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.read.bearer</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">tokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
+    <tr id="server-remotewrite">
+      <td><a href="#server-remotewrite"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remoteWrite</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Auth based on Bearer token for remote read</p>
-</td>
-    </tr>
-    <tr id="server-remote-read-bearer-token">
-      <td><a href="#server-remote-read-bearer-token"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.read.bearer.token</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(string)</code></em><p>Token with Bearer token. You can use one of token or tokenFile. You don&rsquo;t need to add &ldquo;Bearer&rdquo; prefix string</p>
-</td>
-    </tr>
-    <tr id="server-remote-read-bearer-tokenfile">
-      <td><a href="#server-remote-read-bearer-tokenfile"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.read.bearer.tokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(string)</code></em><p>Token Auth file with Bearer token. You can use one of token or tokenFile</p>
-</td>
-    </tr>
-    <tr id="server-remote-read-url">
-      <td><a href="#server-remote-read-url"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.read.url</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(string)</code></em><p>VMAlert remote read URL</p>
-</td>
-    </tr>
-    <tr id="server-remote-write-basicauth">
-      <td><a href="#server-remote-write-basicauth"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.write.basicAuth</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>Basic auth for remote write</p>
-</td>
-    </tr>
-    <tr id="server-remote-write-bearer">
-      <td><a href="#server-remote-write-bearer"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.write.bearer</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">tokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>Auth based on Bearer token for remote write</p>
-</td>
-    </tr>
-    <tr id="server-remote-write-bearer-token">
-      <td><a href="#server-remote-write-bearer-token"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.write.bearer.token</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(string)</code></em><p>Token with Bearer token. You can use one of token or tokenFile. You don&rsquo;t need to add &ldquo;Bearer&rdquo; prefix string</p>
-</td>
-    </tr>
-    <tr id="server-remote-write-bearer-tokenfile">
-      <td><a href="#server-remote-write-bearer-tokenfile"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.write.bearer.tokenFile</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(string)</code></em><p>Token Auth file with Bearer token. You can use one of token or tokenFile</p>
-</td>
-    </tr>
-    <tr id="server-remote-write-url">
-      <td><a href="#server-remote-write-url"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.remote.write.url</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
-</a></td>
-      <td><em><code>(string)</code></em><p>VMAlert remote write URL</p>
+      <td><em><code>(object)</code></em><p>VMAlert remote write configuration</p>
 </td>
     </tr>
     <tr id="server-replicacount">
@@ -1183,6 +1114,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(bool)</code></em><p>Enable deployment of HTTPRoute for VMAlert</p>
 </td>
     </tr>
+    <tr id="server-route-extralabels">
+      <td><a href="#server-route-extralabels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.route.extraLabels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
+</td>
+    </tr>
     <tr id="server-route-extrarules">
       <td><a href="#server-route-extrarules"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.route.extraRules</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
@@ -1199,12 +1136,6 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#server-route-hostnames"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.route.hostnames</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
       <td><em><code>(list)</code></em><p>Array of hostnames</p>
-</td>
-    </tr>
-    <tr id="server-route-labels">
-      <td><a href="#server-route-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">server.route.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
 </td>
     </tr>
     <tr id="server-route-matches">

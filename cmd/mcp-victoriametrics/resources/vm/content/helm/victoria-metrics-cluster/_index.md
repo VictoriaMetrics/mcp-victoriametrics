@@ -16,7 +16,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.36.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-cluster%2Fchangelog%2F%230360)
+![Version](https://img.shields.io/badge/0.39.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-cluster%2Fchangelog%2F%230390)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-cluster)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -618,6 +618,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(bool)</code></em><p>Enable deployment of HTTPRoute for vmauth component</p>
 </td>
     </tr>
+    <tr id="vmauth-route-extralabels">
+      <td><a href="#vmauth-route-extralabels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.route.extraLabels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
+</td>
+    </tr>
     <tr id="vmauth-route-extrarules">
       <td><a href="#vmauth-route-extrarules"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.route.extraRules</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
@@ -636,12 +642,6 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(list)</code></em><p>Array of hostnames</p>
 </td>
     </tr>
-    <tr id="vmauth-route-labels">
-      <td><a href="#vmauth-route-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.route.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
-</td>
-    </tr>
     <tr id="vmauth-route-matches">
       <td><a href="#vmauth-route-matches"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.route.matches</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="nt">path</span><span class="p">:</span><span class="w">
@@ -655,6 +655,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#vmauth-route-parentrefs"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.route.parentRefs</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
       <td><em><code>(list)</code></em><p>HTTPGateway objects refs</p>
+</td>
+    </tr>
+    <tr id="vmauth-route-timeouts">
+      <td><a href="#vmauth-route-timeouts"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.route.timeouts</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Timeouts for a default rule in HTTPRoute</p>
 </td>
     </tr>
     <tr id="vmauth-securitycontext">
@@ -1214,6 +1220,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(bool)</code></em><p>Enable deployment of HTTPRoute for insert component</p>
 </td>
     </tr>
+    <tr id="vminsert-route-extralabels">
+      <td><a href="#vminsert-route-extralabels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.route.extraLabels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
+</td>
+    </tr>
     <tr id="vminsert-route-extrarules">
       <td><a href="#vminsert-route-extrarules"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.route.extraRules</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
@@ -1232,12 +1244,6 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(list)</code></em><p>Array of hostnames</p>
 </td>
     </tr>
-    <tr id="vminsert-route-labels">
-      <td><a href="#vminsert-route-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.route.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
-</td>
-    </tr>
     <tr id="vminsert-route-matches">
       <td><a href="#vminsert-route-matches"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.route.matches</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="nt">path</span><span class="p">:</span><span class="w">
@@ -1251,6 +1257,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#vminsert-route-parentrefs"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.route.parentRefs</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
       <td><em><code>(list)</code></em><p>HTTPGateway objects refs</p>
+</td>
+    </tr>
+    <tr id="vminsert-route-timeouts">
+      <td><a href="#vminsert-route-timeouts"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vminsert.route.timeouts</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Timeouts for a default rule in HTTPRoute</p>
 </td>
     </tr>
     <tr id="vminsert-securitycontext">
@@ -1739,6 +1751,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(string)</code></em><p>Mount subpath</p>
 </td>
     </tr>
+    <tr id="vmselect-persistentvolume-volumeattributesclassname">
+      <td><a href="#vmselect-persistentvolume-volumeattributesclassname"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.persistentVolume.volumeAttributesClassName</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>VolumeClassAttribute to user for persistent volume</p>
+</td>
+    </tr>
     <tr id="vmselect-podannotations">
       <td><a href="#vmselect-podannotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.podAnnotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
@@ -1876,6 +1894,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(bool)</code></em><p>Enable deployment of HTTPRoute for select component</p>
 </td>
     </tr>
+    <tr id="vmselect-route-extralabels">
+      <td><a href="#vmselect-route-extralabels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.route.extraLabels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
+</td>
+    </tr>
     <tr id="vmselect-route-extrarules">
       <td><a href="#vmselect-route-extrarules"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.route.extraRules</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
@@ -1894,12 +1918,6 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><em><code>(list)</code></em><p>Array of hostnames</p>
 </td>
     </tr>
-    <tr id="vmselect-route-labels">
-      <td><a href="#vmselect-route-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.route.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
-</a></td>
-      <td><em><code>(object)</code></em><p>HTTPRoute extra labels</p>
-</td>
-    </tr>
     <tr id="vmselect-route-matches">
       <td><a href="#vmselect-route-matches"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.route.matches</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="nt">path</span><span class="p">:</span><span class="w">
@@ -1913,6 +1931,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#vmselect-route-parentrefs"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.route.parentRefs</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span></span></span></code></pre>
 </a></td>
       <td><em><code>(list)</code></em><p>HTTPGateway objects refs</p>
+</td>
+    </tr>
+    <tr id="vmselect-route-timeouts">
+      <td><a href="#vmselect-route-timeouts"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmselect.route.timeouts</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
+</a></td>
+      <td><em><code>(object)</code></em><p>Timeouts for a default rule in HTTPRoute</p>
 </td>
     </tr>
     <tr id="vmselect-securitycontext">
@@ -2355,6 +2379,12 @@ Change the values according to the need of the environment in ``victoria-metrics
       <td><a href="#vmstorage-persistentvolume-subpath"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.persistentVolume.subPath</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;&#34;</span></span></span></code></pre>
 </a></td>
       <td><em><code>(string)</code></em><p>Mount subpath</p>
+</td>
+    </tr>
+    <tr id="vmstorage-persistentvolume-volumeattributesclassname">
+      <td><a href="#vmstorage-persistentvolume-volumeattributesclassname"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmstorage.persistentVolume.volumeAttributesClassName</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>VolumeClassAttribute to user for persistent volume</p>
 </td>
     </tr>
     <tr id="vmstorage-podannotations">

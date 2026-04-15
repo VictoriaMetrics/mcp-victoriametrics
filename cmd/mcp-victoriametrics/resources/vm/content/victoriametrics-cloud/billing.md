@@ -12,31 +12,36 @@ tags:
   - enterprise
 ---
 
-VictoriaMetrics Cloud charges for three key components:
+## Pricing model
 
-- **Compute**: The cost of deployment installation.
-- **Storage**: The storage used by the deployment.
-- **Network**: External (egress) network usage.
+VictoriaMetrics Cloud pricing is based on a fixed tier model, where majority of the costs are known
+at deployment time. The cost per deployment consists of:
+- **Compute**: The cost of deployment installation. Users select and deploy a [Capacity Tier](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/#capacity-tiers), with a fixed cost.
+- **Storage**: The storage used by the deployment. Users select their desired storage, with a fixed cost.
+- **Network**: External (egress) network usage. Users are charged $0.09 per GB for egress traffic,
+which matches AWS’ rate. Even for very large deployments, from our experience this amount is
+typically below 0.5% of the total cost. The total cost will be included in your monthly invoice.
 
-This breakdown will help you to better understand and manage your costs. Usage data is sent hourly to the payment provider (AWS or Stripe). Detailed billing information is available via the [Billing Page](https://console.victoriametrics.cloud/billing) of your VictoriaMetrics Cloud account.
+This breakdown is made to help understanding and managing your costs. Usage data is sent hourly to
+the payment provider (AWS or Stripe). Detailed billing information is available via the [Billing Page](https://console.victoriametrics.cloud/billing) of your VictoriaMetrics Cloud account.
 
-Each deployment operates with predefined configurations and limits, protecting you from unexpected overages caused by factors such as:
+### Why is this important?
+Each deployment operates with predefined configurations and limits, **protecting you from unexpected
+overages** caused by factors such as:
 
 * Data ingestion spikes.
 * Cardinality explosions.
 * Accidental heavy queries.
 
-This ensures predictable costs and proactive alerts for workload anomalies.
+> [!TIP]
+> This ensures predictable costs and proactive alerts for workload anomalies.
 
-__Note__: VictoriaMetrics Cloud does not store or process your payment information. We rely on trusted API providers (Stripe, AWS) for secure payment processing.
-
-## Pricing
+### Detailed pricing structure
 
 Pricing begins at ~**$190/month** for the smallest [tiers](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/#capacity-tiers) of VictoriaMetrics and VictoriaLogs.
 To view other tiers and their costs, navigate to the [Create New Deployment](https://console.victoriametrics.cloud/deployments/create) section in the VictoriaMetrics Cloud application.
 
 Our aim is to make pricing information easy to access and understand. If you have any questions or feedback on our pricing, please contact us.
-
 
 ## Usage Reports
 
@@ -61,6 +66,8 @@ VictoriaMetrics Cloud supports the following payment options:
 - ACH Transfers
 
 You can add multiple payment methods and set one as the primary. Backup payment methods are used if the primary fails. More details are available via the [Payment Methods](https://console.victoriametrics.cloud/billing) tab of the Billing Page.
+
+__Note__: VictoriaMetrics Cloud does not store or process your payment information. We rely on trusted API providers (Stripe, AWS) for secure payment processing.
 
 ### Credit Card
 
@@ -92,34 +99,6 @@ For AWS Marketplace billing, check the AWS Portal for invoice information.
 
 ## FAQ
 
-### What billing options does VictoriaMetrics Cloud support?
+Check for pricing or billing Frequently Asked Questions at the [Pricing and Billing part of the VictoriaMetrics Cloud FAQ](https://docs.victoriametrics.com/victoriametrics-cloud/cloud-faq/#pricing--billing)
 
-* Monthly Billing: Pay-as-you-go.
-* Annual/Multi-Year Contracts: Available via AWS or ACH transfers.
-
-For more information, contact sales@victoriametrics.com.
-
-### How is deployment usage metered?
-
-Usage is metered hourly.
-
-### Do you charge for backups?
-
-No, backups are provided at no additional cost.
-
-### How long is the billing cycle?
-
-Although usage is metered hourly, billing is conducted monthly. The billing date corresponds to the registration date. For example, if you registered on December 5, you will be billed on the 5th of each subsequent month.
-
-### Can you help reduce my costs?
-
-We recommend using Enterprise features such as [downsampling](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#downsampling) and [retention filters](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#retention-filters) for cost optimization. Contact [VictoriaMetrics Cloud Support](https://docs.victoriametrics.com/victoriametrics-cloud/support/) for assistance.
-
-### I want to extend my trial or get more credits. What should I do?
-
-Contact [VictoriaMetrics Cloud Support](https://docs.victoriametrics.com/victoriametrics-cloud/support/) , and we’ll help extend your trial or provide additional credits.
-
-### How do you charge for spikes in load?
-
-We don’t charge for spikes. Each deployment has predefined configurations and limits. If a deployment cannot handle a spike, you will receive an alert, allowing you to take proactive measures.
 
