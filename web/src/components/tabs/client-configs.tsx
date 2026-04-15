@@ -99,8 +99,8 @@ export function ClientConfigs() {
       config: `{
   "mcpServers": {
     "victoriametrics": {
-      "type": "http",
-      "url": "${serverUrl}/mcp"
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "${serverUrl}/mcp"]
     }
   }
 }`,
