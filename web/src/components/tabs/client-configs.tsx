@@ -170,7 +170,7 @@ export function ClientConfigs() {
       title: "Gemini CLI",
       description: "Google's AI coding agent for the terminal",
       icon: <Gemini className="h-6 w-6" />,
-      config: `gemini mcp add --name victoriametrics --transport http ${serverUrl}/mcp`,
+      config: `gemini mcp add victoriametrics --transport http ${serverUrl}/mcp`,
     },
     {
       title: "OpenCode",
