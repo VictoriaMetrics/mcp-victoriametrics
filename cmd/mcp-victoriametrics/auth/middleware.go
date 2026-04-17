@@ -80,7 +80,9 @@ func isPublicPath(path string) bool {
 func writeUnauthorized(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"error": message,
-	})
+	}); err != nil {
+		slog.Error("Failed to write unauthorized response", "error", err)
+	}
 }
