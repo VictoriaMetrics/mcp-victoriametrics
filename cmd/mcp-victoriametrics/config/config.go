@@ -30,6 +30,7 @@ type Config struct {
 	customHeaders      map[string]string
 	passthroughHeaders []string
 	defaultTenantID    string
+	authToken          string
 
 	// Logging configuration
 	logFormat string
@@ -134,6 +135,7 @@ func InitConfig() (*Config, error) {
 		disableResources:   disableResources,
 		customHeaders:      customHeadersMap,
 		passthroughHeaders: passthroughHeaders,
+		authToken:          os.Getenv("MCP_AUTH_TOKEN"),
 		logFormat:          logFormat,
 		logLevel:           logLevel,
 		defaultTenantID:    "0",
@@ -272,4 +274,8 @@ func (c *Config) LogLevel() string {
 
 func (c *Config) DefaultTenantID() string {
 	return c.defaultTenantID
+}
+
+func (c *Config) AuthToken() string {
+	return c.authToken
 }
