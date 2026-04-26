@@ -14,8 +14,8 @@ github.com/VictoriaMetrics/metrics v1.43.2 h1:+8pIQEGwchKS5CYFyvv3LKvNXGi7baZ9hm
 github.com/VictoriaMetrics/metrics v1.43.2/go.mod h1:xDM82ULLYCYdFRgQ2JBxi8Uf1+8En1So9YUwlGTOqTc=
 github.com/VictoriaMetrics/metricsql v0.86.0 h1:IFD08amp+nkW6I+pB3+iyamewkIrbEojkQP4cmEbwkU=
 github.com/VictoriaMetrics/metricsql v0.86.0/go.mod h1:d4EisFO6ONP/HIGDYTAtwrejJBBeKGQYiRl095bS4QQ=
-github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.0 h1:xc0Hvta/4l9gzyZfKmGDEgOKUFh3khSFoMJw92QPNFk=
-github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.0/go.mod h1:SN+Cmd0HF9z04ighLWPURG8wJwpwWkqV0Wyx4P/+Opg=
+github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.1 h1:0MiMygzknb4QeeoY5qNLJg+yYAKOrCJLU5jwf4B8JXw=
+github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.1/go.mod h1:SN+Cmd0HF9z04ighLWPURG8wJwpwWkqV0Wyx4P/+Opg=
 github.com/VividCortex/ewma v1.2.0 h1:f58SaIzcDXrSy3kWaHNvuJgJ3Nmz59Zji6XoJR/q1ow=
 github.com/VividCortex/ewma v1.2.0/go.mod h1:nz4BbCtbLyFDeC9SUHbtcT5644juEuWfUAUnGx7j5l4=
 github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156 h1:eMwmnE/GDgah4HI848JfFxHt+iPb26b4zyfspmqY0/8=

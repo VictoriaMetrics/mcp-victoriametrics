@@ -6,7 +6,7 @@ require (
 	github.com/VictoriaMetrics/VictoriaMetrics v1.140.0
 	github.com/VictoriaMetrics/metrics v1.43.2
 	github.com/VictoriaMetrics/metricsql v0.86.0
-	github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.0
+	github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.1
 	github.com/blevesearch/bleve/v2 v2.5.7
 	github.com/mark3labs/mcp-go v0.48.0
 	github.com/tmc/langchaingo v0.1.14

@@ -197,7 +197,7 @@ func (a *VMCloudAPIClient) CreateDeploymentAccessToken(ctx context.Context, depl
 	if token.Type != AccessModeRead && token.Type != AccessModeWrite && token.Type != AccessModeReadWrite {
 		return AccessToken{}, fmt.Errorf("invalid access token type: %s", token.Type)
 	}
-	if isValidTenantID(token.TenantID) {
+	if !isValidTenantID(token.TenantID) {
 		return AccessToken{}, fmt.Errorf("invalid tenant ID format: %s, expected <accountID> or <accountID>:<projectID>", token.TenantID)
 	}
 	body, err := json.Marshal(token)
