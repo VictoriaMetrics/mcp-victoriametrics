@@ -5,36 +5,30 @@ package faiss
 */
 import "C"
 
+// Note: currently we have only one implementation, but we keep the interface for future extensibility
 type Selector interface {
+	ExcludeFilter() bool
 	Get() *C.FaissIDSelector
 	Delete()
 }
 
 // IDSelector represents a set of IDs to remove.
 type IDSelector struct {
-	sel *C.FaissIDSelector
-}
-
-// Delete frees the memory associated with s.
-func (s *IDSelector) Delete() {
-	if s == nil || s.sel == nil {
-		return
-	}
-
-	C.faiss_IDSelector_free(s.sel)
+	exclude bool
+	sel     *C.FaissIDSelector
+	inner   *C.FaissIDSelector
 }
 
 func (s *IDSelector) Get() *C.FaissIDSelector {
 	return s.sel
 }
 
-type IDSelectorNot struct {
-	sel   *C.FaissIDSelector
-	inner *C.FaissIDSelector
+func (s *IDSelector) ExcludeFilter() bool {
+	return s.exclude
 }
 
 // Delete frees the memory associated with s.
-func (s *IDSelectorNot) Delete() {
+func (s *IDSelector) Delete() {
 	if s == nil {
 		return
 	}
@@ -47,10 +41,6 @@ func (s *IDSelectorNot) Delete() {
 	}
 }
 
-func (s *IDSelectorNot) Get() *C.FaissIDSelector {
-	return s.sel
-}
-
 // NewIDSelectorRange creates a selector that removes IDs on [imin, imax).
 func NewIDSelectorRange(imin, imax int64) (Selector, error) {
 	var sel *C.FaissIDSelectorRange
@@ -58,7 +48,7 @@ func NewIDSelectorRange(imin, imax int64) (Selector, error) {
 	if c != 0 {
 		return nil, getLastError()
 	}
-	return &IDSelector{(*C.FaissIDSelector)(sel)}, nil
+	return &IDSelector{sel: (*C.FaissIDSelector)(sel)}, nil
 }
 
 // NewIDSelectorBatch creates a new batch selector.
@@ -71,7 +61,7 @@ func NewIDSelectorBatch(indices []int64) (Selector, error) {
 	); c != 0 {
 		return nil, getLastError()
 	}
-	return &IDSelector{(*C.FaissIDSelector)(sel)}, nil
+	return &IDSelector{sel: (*C.FaissIDSelector)(sel)}, nil
 }
 
 // NewIDSelectorBatchNot creates a new Not selector, wrapped around a
@@ -90,7 +80,8 @@ func NewIDSelectorBatchNot(exclude []int64) (Selector, error) {
 		batchSelector.Delete()
 		return nil, getLastError()
 	}
-	return &IDSelectorNot{sel: (*C.FaissIDSelector)(sel),
+	return &IDSelector{exclude: true,
+		sel:   (*C.FaissIDSelector)(sel),
 		inner: batchSelector.Get()}, nil
 }
 
@@ -109,7 +100,7 @@ func NewIDSelectorBitmap(bitmap []byte) (Selector, error) {
 	); c != 0 {
 		return nil, getLastError()
 	}
-	return &IDSelector{(*C.FaissIDSelector)(sel)}, nil
+	return &IDSelector{sel: (*C.FaissIDSelector)(sel)}, nil
 }
 
 // NewIDSelectorBitmapNot creates a NOT selector using a bitset, where each bit
@@ -131,6 +122,7 @@ func NewIDSelectorBitmapNot(bitmap []byte) (Selector, error) {
 		bitmapSelector.Delete()
 		return nil, getLastError()
 	}
-	return &IDSelectorNot{sel: (*C.FaissIDSelector)(sel),
+	return &IDSelector{exclude: true,
+		sel:   (*C.FaissIDSelector)(sel),
 		inner: bitmapSelector.Get()}, nil
 }

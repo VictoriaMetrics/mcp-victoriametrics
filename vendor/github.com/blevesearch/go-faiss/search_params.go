@@ -3,6 +3,7 @@ package faiss
 /*
 #include <faiss/c_api/Index_c.h>
 #include <faiss/c_api/IndexIVF_c.h>
+#include <faiss/c_api/IndexIVF_c_ex.h>
 #include <faiss/c_api/IndexBinaryIVF_c.h>
 #include <faiss/c_api/impl/AuxIndexStructures_c.h>
 */
@@ -83,12 +84,19 @@ func NewSearchParams(idx Index, params json.RawMessage, selector Selector,
 	nprobe := int(C.faiss_IndexIVF_nprobe(ivfIdx))
 	nvecs := int(C.faiss_Index_ntotal(idx.cPtr()))
 
-	return buildSearchParams(params, defaultParams, nlist, nprobe, nvecs, sel)
+	maxCodes, nprobe, err := resolveSearchParams(params, defaultParams, nlist, nprobe, nvecs)
+	if err != nil {
+		return nil, err
+	}
+
+	if idx.HasRaBitQ() {
+		return buildRaBitQSearchParams(maxCodes, nprobe, sel)
+	}
+	return buildIVFSearchParams(maxCodes, nprobe, sel)
 }
 
-func buildSearchParams(params json.RawMessage, defaultParams *defaultSearchParamsIVF,
-	nlist, nprobe, nvecs int, sel *C.FaissIDSelector) (*SearchParams, error) {
-	sp := &SearchParams{}
+func resolveSearchParams(params json.RawMessage, defaultParams *defaultSearchParamsIVF,
+	nlist, nprobe, nvecs int) (int, int, error) {
 	if defaultParams != nil {
 		if defaultParams.Nlist > 0 {
 			nlist = defaultParams.Nlist
@@ -100,11 +108,11 @@ func buildSearchParams(params json.RawMessage, defaultParams *defaultSearchParam
 	var ivfParams searchParamsIVF
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &ivfParams); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal IVF search params, "+
+			return 0, 0, fmt.Errorf("failed to unmarshal IVF search params, "+
 				"err:%v", err)
 		}
 		if err := ivfParams.Validate(); err != nil {
-			return nil, err
+			return 0, 0, err
 		}
 	}
 	if ivfParams.NprobePct > 0 {
@@ -114,6 +122,11 @@ func buildSearchParams(params json.RawMessage, defaultParams *defaultSearchParam
 	if ivfParams.MaxCodesPct > 0 {
 		maxCodes = int(float32(nvecs) * (ivfParams.MaxCodesPct / 100))
 	} // else, maxCodes will be set to the default value of 0, which means no limit
+	return maxCodes, nprobe, nil
+}
+
+func buildIVFSearchParams(maxCodes, nprobe int, sel *C.FaissIDSelector) (*SearchParams, error) {
+	sp := &SearchParams{}
 	if c := C.faiss_SearchParametersIVF_new_with(
 		&sp.sp,
 		sel,
@@ -121,6 +134,20 @@ func buildSearchParams(params json.RawMessage, defaultParams *defaultSearchParam
 		C.size_t(maxCodes),
 	); c != 0 {
 		return nil, fmt.Errorf("failed to create faiss IVF search params")
+	}
+
+	return sp, nil
+}
+
+func buildRaBitQSearchParams(maxCodes, nprobe int, sel *C.FaissIDSelector) (*SearchParams, error) {
+	sp := &SearchParams{}
+	if c := C.faiss_SearchParametersRaBitQ_new_with(
+		&sp.sp,
+		sel,
+		C.size_t(nprobe),
+		C.size_t(maxCodes),
+	); c != 0 {
+		return nil, fmt.Errorf("failed to create faiss IVF RaBitQ search params")
 	}
 
 	return sp, nil
@@ -143,7 +170,9 @@ func NewStandardSearchParams(selector Selector) (*SearchParams, error) {
 
 func NewBinarySearchParams(idx BinaryIndex, params json.RawMessage, selector Selector,
 	defaultParams *defaultSearchParamsIVF) (*SearchParams, error) {
-
+	// Get the selector C pointer, if any.
+	// A nil selector indicates no ID filtering, and it is valid
+	// to send a nil pointer to Faiss.
 	var sel *C.FaissIDSelector
 	if selector != nil {
 		sel = selector.Get()
@@ -165,5 +194,10 @@ func NewBinarySearchParams(idx BinaryIndex, params json.RawMessage, selector Sel
 	nprobe := int(C.faiss_IndexBinaryIVF_nprobe(ivfPtrBinary))
 	nvecs := int(C.faiss_IndexBinary_ntotal(idx.bPtr()))
 
-	return buildSearchParams(params, defaultParams, nlist, nprobe, nvecs, sel)
+	maxCodes, nprobe, err := resolveSearchParams(params, defaultParams, nlist, nprobe, nvecs)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildIVFSearchParams(maxCodes, nprobe, sel)
 }
