@@ -145,6 +145,10 @@ func (v *vectorIndexWrapper) SearchWithFilter(qVector []float32, k int64,
 	if len(vectorIDsToInclude) == 0 {
 		return rv, nil
 	}
+	// If all vectors are eligible, treat as unfiltered search.
+	if len(vectorIDsToInclude) == len(v.vecDocIDMap) {
+		return v.Search(qVector, k, params)
+	}
 	// If the index is not an IVF index, then the search can be
 	// performed directly, using the Flat index.
 	if !v.vecIndex.IsIVFIndex() {
@@ -419,7 +423,7 @@ func (v *vectorIndexWrapper) searchWithoutIDs(qVector []float32, k int64, exclud
 				}
 				defer sel.Delete()
 			}
-			return v.vecIndex.SearchWithoutIDs(qVector, k, sel, params)
+			return v.vecIndex.SearchWithOptions(qVector, k, sel, params)
 		},
 		func(numIter int, labels []int64) bool {
 			// if this is the first loop iteration and we have < k unique docIDs,
@@ -454,7 +458,8 @@ func (v *vectorIndexWrapper) searchWithIDs(qVector []float32, k int64, include [
 			}
 			// once the main search is done we must free the selector
 			defer selector.Delete()
-			return v.vecIndex.SearchWithIDs(qVector, k, selector, params)
+
+			return v.vecIndex.SearchWithOptions(qVector, k, selector, params)
 		},
 		func(numIter int, labels []int64) bool {
 			// if this is the first loop iteration and we have < k unique docIDs,

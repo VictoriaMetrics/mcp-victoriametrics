@@ -67,6 +67,11 @@ type UpdatableSegment interface {
 	SetUpdatedFields(fieldInfo map[string]*index.UpdateFieldInfo)
 }
 
+type SegmentWithCallbacks interface {
+	Segment
+	CallbackId() string
+}
+
 type TermDictionary interface {
 	PostingsList(term []byte, except *roaring.Bitmap, prealloc PostingsList) (PostingsList, error)
 
@@ -180,6 +185,10 @@ type StatsReporter interface {
 
 type FieldStatsReporter interface {
 	UpdateFieldStats(FieldStats)
+}
+
+type VectorFieldStatsReporter interface {
+	UpdateVectorFieldStats(FieldStats)
 }
 
 type FieldStats interface {

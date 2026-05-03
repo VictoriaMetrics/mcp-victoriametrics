@@ -76,6 +76,11 @@ type VectorIndex interface {
 	ObtainKCentroidCardinalitiesFromIVFIndex(limit int, descending bool) ([]index.CentroidCardinality, error)
 }
 
+type TrainedSegment interface {
+	Segment
+	GetCoarseQuantizer(field string) (interface{}, error)
+}
+
 type VectorSegment interface {
 	Segment
 	InterpretVectorIndex(field string, except *roaring.Bitmap) (VectorIndex, error)
