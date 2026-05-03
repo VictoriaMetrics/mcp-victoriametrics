@@ -6,11 +6,11 @@ cloud.google.com/go/compute/metadata
 github.com/RoaringBitmap/roaring/v2
 github.com/RoaringBitmap/roaring/v2/internal
 github.com/RoaringBitmap/roaring/v2/roaring64
-# github.com/VictoriaMetrics/VictoriaLogs v1.36.2-0.20251008164716-21c0fb3de84d => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032
+# github.com/VictoriaMetrics/VictoriaLogs v1.50.1-0.20260415124154-6b7a6357aec0 => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032
 ## explicit; go 1.26.0
 github.com/VictoriaMetrics/VictoriaLogs/lib/logstorage
 github.com/VictoriaMetrics/VictoriaLogs/lib/prefixfilter
-# github.com/VictoriaMetrics/VictoriaMetrics v1.140.0
+# github.com/VictoriaMetrics/VictoriaMetrics v1.142.0
 ## explicit; go 1.26.2
 github.com/VictoriaMetrics/VictoriaMetrics/app/victoria-metrics/test
 github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert-tool/unittest
@@ -427,7 +427,7 @@ go.etcd.io/bbolt
 go.etcd.io/bbolt/errors
 go.etcd.io/bbolt/internal/common
 go.etcd.io/bbolt/internal/freelist
-# golang.org/x/net v0.52.0
+# golang.org/x/net v0.53.0
 ## explicit; go 1.25.0
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
@@ -450,7 +450,7 @@ golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.35.0
+# golang.org/x/text v0.36.0
 ## explicit; go 1.25.0
 golang.org/x/text/unicode/rangetable
 # google.golang.org/protobuf v1.36.11

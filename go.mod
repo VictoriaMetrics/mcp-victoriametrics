@@ -3,7 +3,7 @@ module github.com/VictoriaMetrics/mcp-victoriametrics
 go 1.26.2
 
 require (
-	github.com/VictoriaMetrics/VictoriaMetrics v1.140.0
+	github.com/VictoriaMetrics/VictoriaMetrics v1.142.0
 	github.com/VictoriaMetrics/metrics v1.43.2
 	github.com/VictoriaMetrics/metricsql v0.87.0
 	github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.0
@@ -16,7 +16,7 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.15.0 // indirect
-	github.com/VictoriaMetrics/VictoriaLogs v1.36.2-0.20251008164716-21c0fb3de84d // indirect
+	github.com/VictoriaMetrics/VictoriaLogs v1.50.1-0.20260415124154-6b7a6357aec0 // indirect
 	github.com/VictoriaMetrics/easyproto v1.2.0 // indirect
 	github.com/VictoriaMetrics/fastcache v1.13.3 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
@@ -71,10 +71,10 @@ require (
 	gitlab.com/golang-commonmark/mdurl v0.0.0-20191124015652-932350d1cb84 // indirect
 	gitlab.com/golang-commonmark/puny v0.0.0-20191124015043-9f83538fa04f // indirect
 	go.etcd.io/bbolt v1.4.3 // indirect
-	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
