@@ -214,6 +214,8 @@ type MCPServer struct {
 	maxConcurrentTasks         *int                 // Optional limit on concurrent running tasks
 	activeTasks                int                  // Current count of running (non-terminal) tasks
 	inflightCancels            sync.Map             // Maps request ID -> context.CancelFunc for in-flight requests
+	inputValidator             *inputSchemaValidator
+	outputValidator            *outputSchemaValidator
 }
 
 // WithPaginationLimit sets the pagination limit for the server.
@@ -385,6 +387,59 @@ func WithRecovery() ServerOption {
 			return next(ctx, request)
 		}
 	})
+}
+
+// WithInputSchemaValidation enables server-side validation of tool call
+// arguments against each tool's declared inputSchema. When validation fails
+// the server returns a tool execution error result (CallToolResult with
+// IsError: true) per [SEP-1303] so that the language model receives the
+// failure details in its context window and can self-correct (for example,
+// when it sends an unknown parameter name).
+//
+// Validation is opt-in to preserve backwards compatibility with servers whose
+// hand-written schemas may not perfectly describe the arguments their handlers
+// actually accept. Enabling it is recommended for new servers and for any
+// server whose schemas are accurate.
+//
+// Tools whose input schemas cannot be compiled (malformed JSON Schema) are
+// silently skipped, so a single broken schema cannot block tool calls.
+//
+// [SEP-1303]: https://modelcontextprotocol.io/seps/1303-input-validation-errors-as-tool-execution-errors
+func WithInputSchemaValidation() ServerOption {
+	return func(s *MCPServer) {
+		if s.inputValidator == nil {
+			s.inputValidator = newInputSchemaValidator()
+		}
+	}
+}
+
+// WithOutputSchemaValidation enables server-side validation of tool call
+// results against each tool's declared outputSchema. When a tool returns a
+// CallToolResult whose StructuredContent does not conform to the schema, the
+// server replaces the result with a tool execution error (CallToolResult with
+// IsError: true) so the client never sees a result that violates the
+// declared contract.
+//
+// The MCP tools specification states that when an outputSchema is provided,
+// the tool result MUST include structuredContent conforming to that schema.
+// Enabling this option enforces that contract at runtime.
+//
+// Validation is skipped for results whose StructuredContent is nil and for
+// error results (IsError: true). Tools whose output schemas cannot be
+// compiled (malformed JSON Schema) are silently skipped, matching the
+// behaviour of WithInputSchemaValidation, so a single broken schema cannot
+// block tool calls.
+//
+// This option is opt-in to preserve backwards compatibility with servers
+// whose hand-written output schemas may not perfectly describe the values
+// their handlers actually return. Enabling it is recommended for any server
+// whose schemas are accurate.
+func WithOutputSchemaValidation() ServerOption {
+	return func(s *MCPServer) {
+		if s.outputValidator == nil {
+			s.outputValidator = newOutputSchemaValidator()
+		}
+	}
 }
 
 // WithHooks allows adding hooks that will be called before or after
@@ -634,6 +689,23 @@ func (s *MCPServer) DeleteResources(uris ...string) {
 	}
 }
 
+// ListResources returns a copy of the registered resources map.
+func (s *MCPServer) ListResources() map[string]ServerResource {
+	s.resourcesMu.RLock()
+	defer s.resourcesMu.RUnlock()
+	if len(s.resources) == 0 {
+		return nil
+	}
+	resourcesCopy := make(map[string]ServerResource, len(s.resources))
+	for uri, entry := range s.resources {
+		resourcesCopy[uri] = ServerResource{
+			Resource: entry.resource,
+			Handler:  entry.handler,
+		}
+	}
+	return resourcesCopy
+}
+
 // RemoveResource removes a resource from the server
 func (s *MCPServer) RemoveResource(uri string) {
 	s.resourcesMu.Lock()
@@ -737,6 +809,23 @@ func (s *MCPServer) DeletePrompts(names ...string) {
 	}
 }
 
+// ListPrompts returns a copy of the registered prompts map.
+func (s *MCPServer) ListPrompts() map[string]ServerPrompt {
+	s.promptsMu.RLock()
+	defer s.promptsMu.RUnlock()
+	if len(s.prompts) == 0 {
+		return nil
+	}
+	promptsCopy := make(map[string]ServerPrompt, len(s.prompts))
+	for name, prompt := range s.prompts {
+		promptsCopy[name] = ServerPrompt{
+			Prompt:  prompt,
+			Handler: s.promptHandlers[name],
+		}
+	}
+	return promptsCopy
+}
+
 // AddTool registers a new tool and its handler
 func (s *MCPServer) AddTool(tool mcp.Tool, handler ToolHandlerFunc) {
 	s.AddTools(ServerTool{Tool: tool, Handler: handler})
@@ -834,10 +923,29 @@ func (s *MCPServer) AddTaskTools(taskTools ...ServerTaskTool) {
 
 // SetTools replaces all existing tools with the provided list
 func (s *MCPServer) SetTools(tools ...ServerTool) {
+	s.implicitlyRegisterToolCapabilities()
+
 	s.toolsMu.Lock()
-	s.tools = make(map[string]ServerTool, len(tools))
+	newTools := make(map[string]ServerTool, len(tools))
+	for _, entry := range tools {
+		name := entry.Tool.Name
+		// Check for collision with task tools
+		if _, exists := s.taskTools[name]; exists {
+			s.toolsMu.Unlock()
+			panic(fmt.Sprintf("tool name '%s' already registered as task tool", name))
+		}
+		newTools[name] = entry
+	}
+	s.tools = newTools
 	s.toolsMu.Unlock()
-	s.AddTools(tools...)
+	s.inputValidator.invalidateAll()
+	s.outputValidator.invalidateAll()
+
+	// When the list of available tools changes, servers that declared the listChanged capability SHOULD send a notification.
+	if s.capabilities.tools.listChanged {
+		// Send notification to all initialized sessions
+		s.SendNotificationToAllClients(mcp.MethodNotificationToolsListChanged, nil)
+	}
 }
 
 // GetTool retrieves the specified tool
@@ -875,6 +983,12 @@ func (s *MCPServer) DeleteTools(names ...string) {
 		}
 	}
 	s.toolsMu.Unlock()
+
+	// Drop any cached compiled input/output schemas for the removed tools so
+	// a tool re-added later under the same name does not reuse a stale
+	// compilation.
+	s.inputValidator.invalidate(names...)
+	s.outputValidator.invalidate(names...)
 
 	// When the list of available tools changes, servers that declared the listChanged capability SHOULD send a notification.
 	if exists && s.capabilities.tools != nil && s.capabilities.tools.listChanged {
@@ -1635,6 +1749,16 @@ func (s *MCPServer) handleToolCall(
 		}
 	}
 
+	// Validate the incoming arguments against the tool's input schema, when
+	// schema validation has been enabled via WithInputSchemaValidation. A
+	// validation failure is returned as a SEP-1303 tool execution error so the
+	// model receives feedback in its context window and can self-correct.
+	if s.inputValidator != nil {
+		if _, err := s.inputValidator.validate(tool.Tool, request.Params.Arguments); err != nil {
+			return validationToolResult(err), nil
+		}
+	}
+
 	finalHandler := tool.Handler
 
 	s.toolMiddlewareMu.RLock()
@@ -1652,6 +1776,17 @@ func (s *MCPServer) handleToolCall(
 			id:   id,
 			code: mcp.INTERNAL_ERROR,
 			err:  err,
+		}
+	}
+
+	// Validate the tool's StructuredContent against its declared output
+	// schema when output schema validation has been enabled via
+	// WithOutputSchemaValidation. A validation failure is surfaced as a
+	// tool execution error so the client cannot silently receive a result
+	// that violates the declared contract.
+	if s.outputValidator != nil {
+		if _, vErr := s.outputValidator.validate(tool.Tool, result); vErr != nil {
+			return validationToolResult(vErr), nil
 		}
 	}
 
@@ -1701,6 +1836,11 @@ func (s *MCPServer) handleTaskAugmentedToolCall(
 			err:  fmt.Errorf("tool '%s' not found", request.Params.Name),
 		}
 	}
+
+	// Note: input schema validation (WithInputSchemaValidation) is currently
+	// only applied on the synchronous tool call path. The task-augmented path
+	// would need to surface validation failures through tasks/result rather
+	// than the create-task response; that's deferred to a follow-up.
 
 	// Generate task ID (UUID v4)
 	taskID := uuid.New().String()
@@ -1818,6 +1958,19 @@ func (s *MCPServer) executeTaskTool(
 
 	// Task succeeded - store the CreateTaskResult
 	// Note: The actual result will be retrieved later via tasks/result
+	//
+	// Validate the StructuredContent against the tool's declared output
+	// schema when WithOutputSchemaValidation is enabled. If validation fails,
+	// persist a tool execution error in place of the bad result so the
+	// client cannot retrieve a result that violates the schema via
+	// tasks/result. handleTaskResult accepts both *CallToolResult and
+	// *CreateTaskResult, so storing a *CallToolResult here is safe.
+	if s.outputValidator != nil {
+		if _, vErr := s.outputValidator.validateCreateTaskResult(taskTool.Tool, result); vErr != nil {
+			s.completeTask(entry, validationToolResult(vErr), nil)
+			return
+		}
+	}
 	s.completeTask(entry, result, nil)
 }
 
@@ -1906,6 +2059,18 @@ func (s *MCPServer) executeRegularToolAsTask(
 
 	// Task succeeded - store the CallToolResult directly
 	// When retrieved via tasks/result, this will be returned to the client
+	//
+	// Mirror the synchronous path: validate the result's StructuredContent
+	// against the tool's declared output schema when
+	// WithOutputSchemaValidation is enabled. A validation failure replaces
+	// the result with a tool execution error so the bad payload never
+	// reaches the client via tasks/result.
+	if s.outputValidator != nil {
+		if _, vErr := s.outputValidator.validate(regularTool.Tool, result); vErr != nil {
+			s.completeTask(entry, validationToolResult(vErr), nil)
+			return
+		}
+	}
 	s.completeTask(entry, result, nil)
 }
 
