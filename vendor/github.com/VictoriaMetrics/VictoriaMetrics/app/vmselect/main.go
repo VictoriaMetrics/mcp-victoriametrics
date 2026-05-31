@@ -69,6 +69,8 @@ func Init() {
 	concurrencyLimitCh = make(chan struct{}, *maxConcurrentRequests)
 	initVMUIConfig()
 	initVMAlertProxy()
+
+	flagutil.RegisterSecretFlag("vmalert.proxyURL")
 }
 
 // Stop stops vmselect
@@ -262,6 +264,7 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	case "/api/v1/export":
 		exportRequests.Inc()
+		httpserver.EnableCORS(w, r)
 		if err := prometheus.ExportHandler(startTime, w, r); err != nil {
 			exportErrors.Inc()
 			httpserver.Errorf(w, r, "%s", err)
@@ -270,6 +273,7 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	case "/api/v1/export/csv":
 		exportCSVRequests.Inc()
+		httpserver.EnableCORS(w, r)
 		if err := prometheus.ExportCSVHandler(startTime, w, r); err != nil {
 			exportCSVErrors.Inc()
 			httpserver.Errorf(w, r, "%s", err)
@@ -278,6 +282,7 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	case "/api/v1/export/native":
 		exportNativeRequests.Inc()
+		httpserver.EnableCORS(w, r)
 		if err := prometheus.ExportNativeHandler(startTime, w, r); err != nil {
 			exportNativeErrors.Inc()
 			httpserver.Errorf(w, r, "%s", err)
