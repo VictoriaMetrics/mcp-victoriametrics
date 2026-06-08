@@ -85,6 +85,7 @@ docker run -d --name mcp-victoriametrics \
   -e VM_INSTANCE_TYPE=cluster \
   -e MCP_SERVER_MODE=sse \
   -e MCP_LISTEN_ADDR=:8080 \
+  -e MCP_AUTH_TOKEN=your-secret-token \
   -p 8080:8080 \
   ghcr.io/victoriametrics/mcp-victoriametrics
 ```
@@ -143,6 +144,7 @@ MCP Server for VictoriaMetrics is configured via environment variables:
 | `MCP_DISABLED_TOOLS`                     | Comma-separated list of tools to disable                                                                                                                                                                                                                            | No                                     | 'export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules' | -                      |
 | `MCP_DISABLE_RESOURCES`                  | Disable all resources (documentation tool will continue to work)                                                                                                                                                                                                    | No                                     | `false`                                                                                           | `false`, `true`        |                   
 | `MCP_HEARTBEAT_INTERVAL`                 | Defines the heartbeat interval for the streamable-http protocol. <br /> It means the MCP server will send a heartbeat to the client through the GET connection, <br /> to keep the connection alive from being closed by the network infrastructure (e.g. gateways) | No                                     | `30s`                                                                                             | -                      |
+| `MCP_AUTH_TOKEN`                         | Bearer token for authenticating incoming MCP requests (only applies in `sse`/`http` modes). Public paths (`/health/*`, `/metrics`, `/`, static assets) are excluded from authentication.                                                                           | No                                     | -                                                                                                 | -                      |
 | `MCP_LOG_FORMAT`                         | Log output format                                                                                                                                                                                                                                                   | No                                     | `text`                                                                                            | `text`, `json`         |
 | `MCP_LOG_LEVEL`                          | Minimum log level                                                                                                                                                                                                                                                   | No                                     | `info`                                                                                            | `debug`, `info`, `warn`, `error` |
 
@@ -184,6 +186,9 @@ export VMC_API_KEY="<you-api-key>"
 # Server mode
 export MCP_SERVER_MODE="sse"
 export MCP_LISTEN_ADDR="0.0.0.0:8080"
+
+# Authentication (optional, only for sse/http modes)
+export MCP_AUTH_TOKEN="your-secret-token"
 
 # Custom headers for authentication (e.g., behind a reverse proxy)
 # Expected syntax is key=value separated by commas
@@ -661,7 +666,7 @@ You can use `MCP_PASSTHROUGH_HEADERS` parameter in the MCP Server together with 
 - [x] Enabling/disabling tools via configuration (done in [`v0.0.8`](https://github.com/VictoriaMetrics/mcp-victoriametrics/releases/tag/v0.0.8))
 - [ ] Tools for Alertmanager APIs [#6](https://github.com/VictoriaMetrics/mcp-victoriametrics/issues/6)
 - [x] Support for [metrics metadata](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2974) in case of implementation in VictoriaMetrics
-- [ ] Support authentication
+- [x] Support authentication
 - [x] Add static index page with description and links to documentation
 
 ## Mentions
