@@ -1,11 +1,11 @@
 module github.com/VictoriaMetrics/mcp-victoriametrics
 
-go 1.26.2
+go 1.26.4
 
 require (
-	github.com/VictoriaMetrics/VictoriaMetrics v1.140.0
-	github.com/VictoriaMetrics/metrics v1.43.2
-	github.com/VictoriaMetrics/metricsql v0.87.0
+	github.com/VictoriaMetrics/VictoriaMetrics v1.147.0
+	github.com/VictoriaMetrics/metrics v1.44.0
+	github.com/VictoriaMetrics/metricsql v0.87.2
 	github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.1.0
 	github.com/blevesearch/bleve/v2 v2.6.0
 	github.com/mark3labs/mcp-go v0.49.0
@@ -16,7 +16,7 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.15.0 // indirect
-	github.com/VictoriaMetrics/VictoriaLogs v1.36.2-0.20251008164716-21c0fb3de84d // indirect
+	github.com/VictoriaMetrics/VictoriaLogs v1.51.1-0.20260624061259-dc94972a8708 // indirect
 	github.com/VictoriaMetrics/easyproto v1.2.0 // indirect
 	github.com/VictoriaMetrics/fastcache v1.13.3 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
@@ -49,10 +49,10 @@ require (
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.21 // indirect
-	github.com/mattn/go-runewidth v0.0.23 // indirect
+	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/mattn/go-colorable v0.1.15 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/mschoch/smat v0.2.0 // indirect
@@ -72,11 +72,11 @@ require (
 	gitlab.com/golang-commonmark/mdurl v0.0.0-20191124015652-932350d1cb84 // indirect
 	gitlab.com/golang-commonmark/puny v0.0.0-20191124015043-9f83538fa04f // indirect
 	go.etcd.io/bbolt v1.4.3 // indirect
-	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 )
 
 replace github.com/VictoriaMetrics/VictoriaLogs => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032

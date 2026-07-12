@@ -6,12 +6,12 @@ cloud.google.com/go/compute/metadata
 github.com/RoaringBitmap/roaring/v2
 github.com/RoaringBitmap/roaring/v2/internal
 github.com/RoaringBitmap/roaring/v2/roaring64
-# github.com/VictoriaMetrics/VictoriaLogs v1.36.2-0.20251008164716-21c0fb3de84d => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032
+# github.com/VictoriaMetrics/VictoriaLogs v1.51.1-0.20260624061259-dc94972a8708 => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032
 ## explicit; go 1.26.0
 github.com/VictoriaMetrics/VictoriaLogs/lib/logstorage
 github.com/VictoriaMetrics/VictoriaLogs/lib/prefixfilter
-# github.com/VictoriaMetrics/VictoriaMetrics v1.140.0
-## explicit; go 1.26.2
+# github.com/VictoriaMetrics/VictoriaMetrics v1.147.0
+## explicit; go 1.26.4
 github.com/VictoriaMetrics/VictoriaMetrics/app/victoria-metrics/test
 github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert-tool/unittest
 github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert/config
@@ -79,6 +79,7 @@ github.com/VictoriaMetrics/VictoriaMetrics/lib/formatutil
 github.com/VictoriaMetrics/VictoriaMetrics/lib/fs
 github.com/VictoriaMetrics/VictoriaMetrics/lib/fs/fscore
 github.com/VictoriaMetrics/VictoriaMetrics/lib/fs/fsutil
+github.com/VictoriaMetrics/VictoriaMetrics/lib/handshake
 github.com/VictoriaMetrics/VictoriaMetrics/lib/htmlcomponents
 github.com/VictoriaMetrics/VictoriaMetrics/lib/httpserver
 github.com/VictoriaMetrics/VictoriaMetrics/lib/httputil
@@ -171,6 +172,9 @@ github.com/VictoriaMetrics/VictoriaMetrics/lib/timerpool
 github.com/VictoriaMetrics/VictoriaMetrics/lib/timeserieslimits
 github.com/VictoriaMetrics/VictoriaMetrics/lib/timeutil
 github.com/VictoriaMetrics/VictoriaMetrics/lib/uint64set
+github.com/VictoriaMetrics/VictoriaMetrics/lib/vmalertproxy
+github.com/VictoriaMetrics/VictoriaMetrics/lib/vminsertapi
+github.com/VictoriaMetrics/VictoriaMetrics/lib/vmselectapi
 github.com/VictoriaMetrics/VictoriaMetrics/lib/workingsetcache
 github.com/VictoriaMetrics/VictoriaMetrics/lib/writeconcurrencylimiter
 # github.com/VictoriaMetrics/easyproto v1.2.0
@@ -179,10 +183,10 @@ github.com/VictoriaMetrics/easyproto
 # github.com/VictoriaMetrics/fastcache v1.13.3
 ## explicit; go 1.24.0
 github.com/VictoriaMetrics/fastcache
-# github.com/VictoriaMetrics/metrics v1.43.2
+# github.com/VictoriaMetrics/metrics v1.44.0
 ## explicit; go 1.24.0
 github.com/VictoriaMetrics/metrics
-# github.com/VictoriaMetrics/metricsql v0.87.0
+# github.com/VictoriaMetrics/metricsql v0.87.2
 ## explicit; go 1.24.2
 github.com/VictoriaMetrics/metricsql
 github.com/VictoriaMetrics/metricsql/binaryop
@@ -332,7 +336,7 @@ github.com/google/uuid
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/klauspost/compress v1.18.5
+# github.com/klauspost/compress v1.18.6
 ## explicit; go 1.24
 github.com/klauspost/compress
 github.com/klauspost/compress/flate
@@ -354,13 +358,13 @@ github.com/klauspost/compress/zstd/internal/xxhash
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
 github.com/mark3labs/mcp-go/util
-# github.com/mattn/go-colorable v0.1.14
+# github.com/mattn/go-colorable v0.1.15
 ## explicit; go 1.18
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.21
+# github.com/mattn/go-isatty v0.0.22
 ## explicit; go 1.21
 github.com/mattn/go-isatty
-# github.com/mattn/go-runewidth v0.0.23
+# github.com/mattn/go-runewidth v0.0.24
 ## explicit; go 1.20
 github.com/mattn/go-runewidth
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
@@ -430,7 +434,7 @@ go.etcd.io/bbolt
 go.etcd.io/bbolt/errors
 go.etcd.io/bbolt/internal/common
 go.etcd.io/bbolt/internal/freelist
-# golang.org/x/net v0.52.0
+# golang.org/x/net v0.56.0
 ## explicit; go 1.25.0
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
@@ -447,16 +451,16 @@ golang.org/x/oauth2/google/internal/stsexchange
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.43.0
+# golang.org/x/sys v0.46.0
 ## explicit; go 1.25.0
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.35.0
+# golang.org/x/text v0.38.0
 ## explicit; go 1.25.0
 golang.org/x/text/unicode/rangetable
-# google.golang.org/protobuf v1.36.11
+# google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 ## explicit; go 1.23
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
