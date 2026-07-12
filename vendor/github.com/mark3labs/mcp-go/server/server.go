@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"slices"
 	"sort"
@@ -15,7 +16,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/tracing"
 )
 
 // resourceEntry holds both a resource and its handler
@@ -69,13 +72,22 @@ type ToolHandlerMiddleware func(ToolHandlerFunc) ToolHandlerFunc
 // ResourceHandlerMiddleware is a middleware function that wraps a ResourceHandlerFunc.
 type ResourceHandlerMiddleware func(ResourceHandlerFunc) ResourceHandlerFunc
 
-// ToolFilterFunc is a function that filters tools based on context, typically using session information.
+// ToolFilterFunc is a function that filters tools based on context, typically
+// using session information. Filters are applied both when listing tools
+// (tools/list) and when calling tools (tools/call), so a filtered-out tool
+// cannot be discovered or invoked. During tools/call, filters receive only the
+// requested tool to keep the call-time access check off the full-list hot path.
 type ToolFilterFunc func(ctx context.Context, tools []mcp.Tool) []mcp.Tool
 
 // PromptHandlerMiddleware is a middleware function that wraps a PromptHandlerFunc.
 type PromptHandlerMiddleware func(PromptHandlerFunc) PromptHandlerFunc
 
-// PromptFilterFunc is a function that filters prompts based on context, typically using session information.
+// PromptFilterFunc is a function that filters prompts based on context,
+// typically using session information. Filters are applied both when listing
+// prompts (prompts/list) and when retrieving prompts (prompts/get), so a
+// filtered-out prompt cannot be discovered or accessed. During prompts/get,
+// filters receive only the requested prompt to keep the get-time access check
+// off the full-list hot path.
 type PromptFilterFunc func(ctx context.Context, prompts []mcp.Prompt) []mcp.Prompt
 
 // ServerTool combines a Tool with its ToolHandlerFunc.
@@ -214,6 +226,13 @@ type MCPServer struct {
 	maxConcurrentTasks         *int                 // Optional limit on concurrent running tasks
 	activeTasks                int                  // Current count of running (non-terminal) tasks
 	inflightCancels            sync.Map             // Maps request ID -> context.CancelFunc for in-flight requests
+	inputValidator             *inputSchemaValidator
+	outputValidator            *outputSchemaValidator
+	strictInputSchemaDefault   bool
+	tracer                     tracing.Tracer
+	propagator                 tracing.Propagator
+	metaPropagator             tracing.MetaPropagator
+	requestLogger              *slog.Logger
 }
 
 // WithPaginationLimit sets the pagination limit for the server.
@@ -335,7 +354,12 @@ func WithResourceRecovery() ServerOption {
 	})
 }
 
-// WithToolFilter adds a filter function that will be applied to tools before they are returned in list_tools
+// WithToolFilter adds a filter function that controls tool visibility and access.
+// The filter is applied both when listing tools (tools/list) and when calling
+// tools (tools/call). A tool that is filtered out cannot be discovered or
+// invoked, ensuring that filters act as an access control boundary rather than
+// just a visibility hint. Call-time checks pass only the requested tool to the
+// filter, while list-time checks pass the full candidate list.
 func WithToolFilter(
 	toolFilter ToolFilterFunc,
 ) ServerOption {
@@ -358,7 +382,11 @@ func WithPromptHandlerMiddleware(
 	}
 }
 
-// WithPromptFilter adds a filter function that will be applied to prompts before they are returned in list_prompts
+// WithPromptFilter adds a filter function that controls prompt visibility and
+// access. The filter is applied both when listing prompts (prompts/list) and
+// when retrieving a prompt (prompts/get). A prompt that is filtered out cannot
+// be discovered or accessed. Get-time checks pass only the requested prompt to
+// the filter, while list-time checks pass the full candidate list.
 func WithPromptFilter(
 	promptFilter PromptFilterFunc,
 ) ServerOption {
@@ -385,6 +413,81 @@ func WithRecovery() ServerOption {
 			return next(ctx, request)
 		}
 	})
+}
+
+// WithInputSchemaValidation enables server-side validation of tool call
+// arguments against each tool's declared inputSchema. When validation fails
+// the server returns a tool execution error result (CallToolResult with
+// IsError: true) per [SEP-1303] so that the language model receives the
+// failure details in its context window and can self-correct (for example,
+// when it sends an unknown parameter name).
+//
+// Validation is opt-in to preserve backwards compatibility with servers whose
+// hand-written schemas may not perfectly describe the arguments their handlers
+// actually accept. Enabling it is recommended for new servers and for any
+// server whose schemas are accurate.
+//
+// Tools whose input schemas cannot be compiled (malformed JSON Schema) are
+// silently skipped, so a single broken schema cannot block tool calls.
+//
+// [SEP-1303]: https://modelcontextprotocol.io/seps/1303-input-validation-errors-as-tool-execution-errors
+func WithInputSchemaValidation() ServerOption {
+	return func(s *MCPServer) {
+		if s.inputValidator == nil {
+			s.inputValidator = newInputSchemaValidator()
+		}
+	}
+}
+
+// WithStrictInputSchemaDefault sets additionalProperties:false on every
+// registered tool's input schema when the tool author has not configured the
+// field explicitly. Tools published by such a server reject unknown property
+// names — at the client (which sees the strict schema in tools/list) and at
+// the server when [WithInputSchemaValidation] is also enabled.
+//
+// Tools that supply [mcp.Tool.RawInputSchema] are not modified: those authors
+// have opted out of the structured-schema helpers and own additionalProperties
+// themselves. Tools that explicitly call
+// [mcp.WithSchemaAdditionalProperties] are left untouched, so a single tool
+// can opt back into permissive behaviour while the server default stays
+// strict.
+//
+// The option is independent of [WithInputSchemaValidation]: setting strict
+// schemas without server-side enforcement still steers schema-aware clients
+// and language models away from unknown arguments.
+func WithStrictInputSchemaDefault() ServerOption {
+	return func(s *MCPServer) {
+		s.strictInputSchemaDefault = true
+	}
+}
+
+// WithOutputSchemaValidation enables server-side validation of tool call
+// results against each tool's declared outputSchema. When a tool returns a
+// CallToolResult whose StructuredContent does not conform to the schema, the
+// server replaces the result with a tool execution error (CallToolResult with
+// IsError: true) so the client never sees a result that violates the
+// declared contract.
+//
+// The MCP tools specification states that when an outputSchema is provided,
+// the tool result MUST include structuredContent conforming to that schema.
+// Enabling this option enforces that contract at runtime.
+//
+// Validation is skipped for results whose StructuredContent is nil and for
+// error results (IsError: true). Tools whose output schemas cannot be
+// compiled (malformed JSON Schema) are silently skipped, matching the
+// behaviour of WithInputSchemaValidation, so a single broken schema cannot
+// block tool calls.
+//
+// This option is opt-in to preserve backwards compatibility with servers
+// whose hand-written output schemas may not perfectly describe the values
+// their handlers actually return. Enabling it is recommended for any server
+// whose schemas are accurate.
+func WithOutputSchemaValidation() ServerOption {
+	return func(s *MCPServer) {
+		if s.outputValidator == nil {
+			s.outputValidator = newOutputSchemaValidator()
+		}
+	}
 }
 
 // WithHooks allows adding hooks that will be called before or after
@@ -566,6 +669,8 @@ func NewMCPServer(
 			tasks:       nil,
 			completions: nil,
 		},
+		tracer:     tracing.NoopTracer(),
+		propagator: tracing.NoopPropagator(),
 	}
 
 	for _, opt := range opts {
@@ -632,6 +737,23 @@ func (s *MCPServer) DeleteResources(uris ...string) {
 	if exists && s.capabilities.resources != nil && s.capabilities.resources.listChanged {
 		s.SendNotificationToAllClients(mcp.MethodNotificationResourcesListChanged, nil)
 	}
+}
+
+// ListResources returns a copy of the registered resources map.
+func (s *MCPServer) ListResources() map[string]*ServerResource {
+	s.resourcesMu.RLock()
+	defer s.resourcesMu.RUnlock()
+	if len(s.resources) == 0 {
+		return nil
+	}
+	resourcesCopy := make(map[string]*ServerResource, len(s.resources))
+	for uri, entry := range s.resources {
+		resourcesCopy[uri] = &ServerResource{
+			Resource: entry.resource,
+			Handler:  entry.handler,
+		}
+	}
+	return resourcesCopy
 }
 
 // RemoveResource removes a resource from the server
@@ -737,6 +859,41 @@ func (s *MCPServer) DeletePrompts(names ...string) {
 	}
 }
 
+// ListPrompts returns a copy of the registered prompts map.
+func (s *MCPServer) ListPrompts() map[string]*ServerPrompt {
+	s.promptsMu.RLock()
+	defer s.promptsMu.RUnlock()
+	if len(s.prompts) == 0 {
+		return nil
+	}
+	promptsCopy := make(map[string]*ServerPrompt, len(s.prompts))
+	for name, prompt := range s.prompts {
+		promptsCopy[name] = &ServerPrompt{
+			Prompt:  prompt,
+			Handler: s.promptHandlers[name],
+		}
+	}
+	return promptsCopy
+}
+
+// applyStrictInputSchemaDefault fills in additionalProperties:false on a
+// registered tool's structured input schema when WithStrictInputSchemaDefault
+// is set and the author has not configured the field. Tools that ship a
+// RawInputSchema are skipped — those bypass the structured-schema helpers
+// and own additionalProperties themselves.
+func (s *MCPServer) applyStrictInputSchemaDefault(tool *mcp.Tool) {
+	if !s.strictInputSchemaDefault {
+		return
+	}
+	if len(tool.RawInputSchema) > 0 {
+		return
+	}
+	if tool.InputSchema.AdditionalProperties != nil {
+		return
+	}
+	tool.InputSchema.AdditionalProperties = false
+}
+
 // AddTool registers a new tool and its handler
 func (s *MCPServer) AddTool(tool mcp.Tool, handler ToolHandlerFunc) {
 	s.AddTools(ServerTool{Tool: tool, Handler: handler})
@@ -798,6 +955,7 @@ func (s *MCPServer) AddTools(tools ...ServerTool) {
 			s.toolsMu.Unlock()
 			panic(fmt.Sprintf("tool name '%s' already registered as task tool", name))
 		}
+		s.applyStrictInputSchemaDefault(&entry.Tool)
 		s.tools[name] = entry
 	}
 	s.toolsMu.Unlock()
@@ -821,6 +979,7 @@ func (s *MCPServer) AddTaskTools(taskTools ...ServerTaskTool) {
 			s.toolsMu.Unlock()
 			panic(fmt.Sprintf("task tool name '%s' already registered as regular tool", name))
 		}
+		s.applyStrictInputSchemaDefault(&entry.Tool)
 		s.taskTools[name] = entry
 	}
 	s.toolsMu.Unlock()
@@ -834,10 +993,30 @@ func (s *MCPServer) AddTaskTools(taskTools ...ServerTaskTool) {
 
 // SetTools replaces all existing tools with the provided list
 func (s *MCPServer) SetTools(tools ...ServerTool) {
+	s.implicitlyRegisterToolCapabilities()
+
 	s.toolsMu.Lock()
-	s.tools = make(map[string]ServerTool, len(tools))
+	newTools := make(map[string]ServerTool, len(tools))
+	for _, entry := range tools {
+		name := entry.Tool.Name
+		// Check for collision with task tools
+		if _, exists := s.taskTools[name]; exists {
+			s.toolsMu.Unlock()
+			panic(fmt.Sprintf("tool name '%s' already registered as task tool", name))
+		}
+		s.applyStrictInputSchemaDefault(&entry.Tool)
+		newTools[name] = entry
+	}
+	s.tools = newTools
 	s.toolsMu.Unlock()
-	s.AddTools(tools...)
+	s.inputValidator.invalidateAll()
+	s.outputValidator.invalidateAll()
+
+	// When the list of available tools changes, servers that declared the listChanged capability SHOULD send a notification.
+	if s.capabilities.tools.listChanged {
+		// Send notification to all initialized sessions
+		s.SendNotificationToAllClients(mcp.MethodNotificationToolsListChanged, nil)
+	}
 }
 
 // GetTool retrieves the specified tool
@@ -859,7 +1038,10 @@ func (s *MCPServer) ListTools() map[string]*ServerTool {
 	// Create a copy to prevent external modification
 	toolsCopy := make(map[string]*ServerTool, len(s.tools))
 	for name, tool := range s.tools {
-		toolsCopy[name] = &tool
+		toolsCopy[name] = &ServerTool{
+			Tool:    tool.Tool,
+			Handler: tool.Handler,
+		}
 	}
 	return toolsCopy
 }
@@ -875,6 +1057,12 @@ func (s *MCPServer) DeleteTools(names ...string) {
 		}
 	}
 	s.toolsMu.Unlock()
+
+	// Drop any cached compiled input/output schemas for the removed tools so
+	// a tool re-added later under the same name does not reuse a stale
+	// compilation.
+	s.inputValidator.invalidate(names...)
+	s.outputValidator.invalidate(names...)
 
 	// When the list of available tools changes, servers that declared the listChanged capability SHOULD send a notification.
 	if exists && s.capabilities.tools != nil && s.capabilities.tools.listChanged {
@@ -934,7 +1122,7 @@ func (s *MCPServer) handleInitialize(
 	}
 
 	if s.capabilities.sampling != nil && *s.capabilities.sampling {
-		capabilities.Sampling = &struct{}{}
+		capabilities.Sampling = &mcp.SamplingCapability{}
 	}
 
 	if s.capabilities.elicitation != nil && *s.capabilities.elicitation {
@@ -1026,6 +1214,77 @@ func (s *MCPServer) handlePing(
 	_ any,
 	_ mcp.PingRequest,
 ) (*mcp.EmptyResult, *requestError) {
+	return &mcp.EmptyResult{}, nil
+}
+
+// handleSubscribe processes a resources/subscribe request. Servers that opt in
+// to the resources.subscribe capability via WithResourceCapabilities must
+// accept this request; otherwise it is rejected as unsupported. The default
+// implementation only validates input and acknowledges the request. Users that
+// need to react to subscriptions (for example to track which sessions should
+// receive notifications/resources/updated) should register Hooks.AddBeforeSubscribe
+// or Hooks.AddAfterSubscribe, or implement an optional SessionWithResourceSubscriptions
+// interface on their ClientSession.
+func (s *MCPServer) handleSubscribe(
+	ctx context.Context,
+	id any,
+	request mcp.SubscribeRequest,
+) (*mcp.EmptyResult, *requestError) {
+	if s.capabilities.resources == nil || !s.capabilities.resources.subscribe {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.METHOD_NOT_FOUND,
+			err:  fmt.Errorf("resources subscribe %w", ErrUnsupported),
+		}
+	}
+	if request.Params.URI == "" {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.INVALID_PARAMS,
+			err:  errors.New("uri is required"),
+		}
+	}
+
+	if session := ClientSessionFromContext(ctx); session != nil {
+		if subs, ok := session.(SessionWithResourceSubscriptions); ok {
+			subs.SubscribeToResource(request.Params.URI)
+		}
+	}
+
+	return &mcp.EmptyResult{}, nil
+}
+
+// handleUnsubscribe processes a resources/unsubscribe request. The default
+// implementation validates input, removes any tracked subscription on the
+// current session if it implements SessionWithResourceSubscriptions, and
+// acknowledges the request. Unsubscribing a URI that was never subscribed to
+// is treated as a no-op for spec compatibility.
+func (s *MCPServer) handleUnsubscribe(
+	ctx context.Context,
+	id any,
+	request mcp.UnsubscribeRequest,
+) (*mcp.EmptyResult, *requestError) {
+	if s.capabilities.resources == nil || !s.capabilities.resources.subscribe {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.METHOD_NOT_FOUND,
+			err:  fmt.Errorf("resources unsubscribe %w", ErrUnsupported),
+		}
+	}
+	if request.Params.URI == "" {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.INVALID_PARAMS,
+			err:  errors.New("uri is required"),
+		}
+	}
+
+	if session := ClientSessionFromContext(ctx); session != nil {
+		if subs, ok := session.(SessionWithResourceSubscriptions); ok {
+			subs.UnsubscribeFromResource(request.Params.URI)
+		}
+	}
+
 	return &mcp.EmptyResult{}, nil
 }
 
@@ -1368,11 +1627,11 @@ func matchesTemplate(uri string, template *mcp.URITemplate) bool {
 	return template.Regexp().MatchString(uri)
 }
 
-func (s *MCPServer) handleListPrompts(
-	ctx context.Context,
-	id any,
-	request mcp.ListPromptsRequest,
-) (*mcp.ListPromptsResult, *requestError) {
+// filteredPrompts builds the full prompt candidate set and applies all
+// registered prompt filters. This is the single source of truth for which
+// prompts are visible in a given context, used by both handleListPrompts
+// and handleGetPrompt to guarantee consistent behavior.
+func (s *MCPServer) filteredPrompts(ctx context.Context) []mcp.Prompt {
 	s.promptsMu.RLock()
 	prompts := make([]mcp.Prompt, 0, len(s.prompts))
 	for _, prompt := range s.prompts {
@@ -1393,6 +1652,39 @@ func (s *MCPServer) handleListPrompts(
 		}
 	}
 	s.promptFiltersMu.RUnlock()
+
+	return prompts
+}
+
+func (s *MCPServer) passesPromptFilters(ctx context.Context, prompt mcp.Prompt) bool {
+	s.promptFiltersMu.RLock()
+	defer s.promptFiltersMu.RUnlock()
+	if len(s.promptFilters) == 0 {
+		return true
+	}
+
+	prompts := []mcp.Prompt{prompt}
+	for _, filter := range s.promptFilters {
+		prompts = filter(ctx, prompts)
+		if len(prompts) == 0 {
+			return false
+		}
+	}
+
+	for _, candidate := range prompts {
+		if candidate.Name == prompt.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *MCPServer) handleListPrompts(
+	ctx context.Context,
+	id any,
+	request mcp.ListPromptsRequest,
+) (*mcp.ListPromptsResult, *requestError) {
+	prompts := s.filteredPrompts(ctx)
 
 	promptsToReturn, nextCursor, err := listByPagination(
 		ctx,
@@ -1423,9 +1715,21 @@ func (s *MCPServer) handleGetPrompt(
 ) (*mcp.GetPromptResult, *requestError) {
 	s.promptsMu.RLock()
 	handler, ok := s.promptHandlers[request.Params.Name]
+	prompt := s.prompts[request.Params.Name]
 	s.promptsMu.RUnlock()
 
 	if !ok {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.INVALID_PARAMS,
+			err:  fmt.Errorf("prompt '%s' not found: %w", request.Params.Name, ErrPromptNotFound),
+		}
+	}
+
+	// Enforce prompt filters at get time to prevent access to filtered-out
+	// prompts. Only the requested prompt is passed through the filter chain so
+	// this access check does not rebuild and filter the full prompt list.
+	if !s.passesPromptFilters(ctx, prompt) {
 		return nil, &requestError{
 			id:   id,
 			code: mcp.INVALID_PARAMS,
@@ -1456,11 +1760,11 @@ func (s *MCPServer) handleGetPrompt(
 	return result, nil
 }
 
-func (s *MCPServer) handleListTools(
-	ctx context.Context,
-	id any,
-	request mcp.ListToolsRequest,
-) (*mcp.ListToolsResult, *requestError) {
+// filteredTools builds the full tool candidate set (global + task + session)
+// and applies all registered tool filters. This is the single source of truth
+// for which tools are visible in a given context, used by both handleListTools
+// and handleToolCall to guarantee consistent behavior.
+func (s *MCPServer) filteredTools(ctx context.Context) []mcp.Tool {
 	// Get the base tools from the server (both regular and task tools)
 	s.toolsMu.RLock()
 	tools := make([]mcp.Tool, 0, len(s.tools)+len(s.taskTools))
@@ -1528,6 +1832,39 @@ func (s *MCPServer) handleListTools(
 		}
 	}
 	s.toolFiltersMu.RUnlock()
+
+	return tools
+}
+
+func (s *MCPServer) passesToolFilters(ctx context.Context, tool mcp.Tool) bool {
+	s.toolFiltersMu.RLock()
+	defer s.toolFiltersMu.RUnlock()
+	if len(s.toolFilters) == 0 {
+		return true
+	}
+
+	tools := []mcp.Tool{tool}
+	for _, filter := range s.toolFilters {
+		tools = filter(ctx, tools)
+		if len(tools) == 0 {
+			return false
+		}
+	}
+
+	for _, candidate := range tools {
+		if candidate.Name == tool.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *MCPServer) handleListTools(
+	ctx context.Context,
+	id any,
+	request mcp.ListToolsRequest,
+) (*mcp.ListToolsResult, *requestError) {
+	tools := s.filteredTools(ctx)
 
 	// Apply pagination
 	toolsToReturn, nextCursor, err := listByPagination(
@@ -1604,6 +1941,17 @@ func (s *MCPServer) handleToolCall(
 		}
 	}
 
+	// Enforce tool filters at call time to prevent access to filtered-out
+	// tools. Only the requested tool is passed through the filter chain so this
+	// access check does not rebuild and filter the full tool list.
+	if !s.passesToolFilters(ctx, tool.Tool) {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.INVALID_PARAMS,
+			err:  fmt.Errorf("tool '%s' not found: %w", request.Params.Name, ErrToolNotFound),
+		}
+	}
+
 	// Validate task support requirements
 	if tool.Tool.Execution != nil && tool.Tool.Execution.TaskSupport == mcp.TaskSupportRequired {
 		if request.Params.Task == nil {
@@ -1635,6 +1983,16 @@ func (s *MCPServer) handleToolCall(
 		}
 	}
 
+	// Validate the incoming arguments against the tool's input schema, when
+	// schema validation has been enabled via WithInputSchemaValidation. A
+	// validation failure is returned as a SEP-1303 tool execution error so the
+	// model receives feedback in its context window and can self-correct.
+	if s.inputValidator != nil {
+		if _, err := s.inputValidator.validate(tool.Tool, request.Params.Arguments); err != nil {
+			return validationToolResult(err), nil
+		}
+	}
+
 	finalHandler := tool.Handler
 
 	s.toolMiddlewareMu.RLock()
@@ -1652,6 +2010,17 @@ func (s *MCPServer) handleToolCall(
 			id:   id,
 			code: mcp.INTERNAL_ERROR,
 			err:  err,
+		}
+	}
+
+	// Validate the tool's StructuredContent against its declared output
+	// schema when output schema validation has been enabled via
+	// WithOutputSchemaValidation. A validation failure is surfaced as a
+	// tool execution error so the client cannot silently receive a result
+	// that violates the declared contract.
+	if s.outputValidator != nil {
+		if _, vErr := s.outputValidator.validate(tool.Tool, result); vErr != nil {
+			return validationToolResult(vErr), nil
 		}
 	}
 
@@ -1702,6 +2071,11 @@ func (s *MCPServer) handleTaskAugmentedToolCall(
 		}
 	}
 
+	// Note: input schema validation (WithInputSchemaValidation) is currently
+	// only applied on the synchronous tool call path. The task-augmented path
+	// would need to surface validation failures through tasks/result rather
+	// than the create-task response; that's deferred to a follow-up.
+
 	// Generate task ID (UUID v4)
 	taskID := uuid.New().String()
 
@@ -1750,6 +2124,12 @@ func (s *MCPServer) executeTaskTool(
 	taskTool ServerTaskTool,
 	request mcp.CallToolRequest,
 ) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.completeTask(entry, nil, fmt.Errorf("panic in task tool handler %s: %v", request.Params.Name, r))
+		}
+	}()
+
 	// Create cancellable context for this task execution
 	taskCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -1818,6 +2198,19 @@ func (s *MCPServer) executeTaskTool(
 
 	// Task succeeded - store the CreateTaskResult
 	// Note: The actual result will be retrieved later via tasks/result
+	//
+	// Validate the StructuredContent against the tool's declared output
+	// schema when WithOutputSchemaValidation is enabled. If validation fails,
+	// persist a tool execution error in place of the bad result so the
+	// client cannot retrieve a result that violates the schema via
+	// tasks/result. handleTaskResult accepts both *CallToolResult and
+	// *CreateTaskResult, so storing a *CallToolResult here is safe.
+	if s.outputValidator != nil {
+		if _, vErr := s.outputValidator.validateCreateTaskResult(taskTool.Tool, result); vErr != nil {
+			s.completeTask(entry, validationToolResult(vErr), nil)
+			return
+		}
+	}
 	s.completeTask(entry, result, nil)
 }
 
@@ -1906,6 +2299,18 @@ func (s *MCPServer) executeRegularToolAsTask(
 
 	// Task succeeded - store the CallToolResult directly
 	// When retrieved via tasks/result, this will be returned to the client
+	//
+	// Mirror the synchronous path: validate the result's StructuredContent
+	// against the tool's declared output schema when
+	// WithOutputSchemaValidation is enabled. A validation failure replaces
+	// the result with a tool execution error so the bad payload never
+	// reaches the client via tasks/result.
+	if s.outputValidator != nil {
+		if _, vErr := s.outputValidator.validate(regularTool.Tool, result); vErr != nil {
+			s.completeTask(entry, validationToolResult(vErr), nil)
+			return
+		}
+	}
 	s.completeTask(entry, result, nil)
 }
 
@@ -1914,7 +2319,7 @@ func (s *MCPServer) handleNotification(
 	notification mcp.JSONRPCNotification,
 ) mcp.JSONRPCMessage {
 	// Handle cancellation notifications per MCP spec
-	if notification.Method == "notifications/cancelled" {
+	if notification.Method == string(mcp.MethodNotificationCancelled) {
 		if reqID, ok := notification.Params.AdditionalFields["requestId"]; ok {
 			key := inflightKey(ctx, reqID)
 			if cancel, loaded := s.inflightCancels.LoadAndDelete(key); loaded {
@@ -2438,25 +2843,22 @@ func (s *MCPServer) cancelTask(ctx context.Context, taskID string) error {
 	return nil
 }
 
-// scheduleTaskCleanup schedules a task for cleanup after its TTL expires.
+// scheduleTaskCleanup removes the task from storage after its TTL expires so
+// clients have the full TTL window to retrieve results.
 func (s *MCPServer) scheduleTaskCleanup(taskID string, ttlMs int64) {
 	time.Sleep(time.Duration(ttlMs) * time.Millisecond)
 
 	s.tasksMu.Lock()
 	delete(s.tasks, taskID)
-	// Record that this task expired for better error messages
-	// Keep the tombstone for 5 minutes to allow clients to distinguish
-	// between "not found" and "expired"
 	s.expiredTasks[taskID] = time.Now()
 	s.tasksMu.Unlock()
 
-	// Clean up the tombstone after 5 minutes
-	go func() {
-		time.Sleep(5 * time.Minute)
+	// Remove tombstone after 5 minutes.
+	time.AfterFunc(5*time.Minute, func() {
 		s.tasksMu.Lock()
 		delete(s.expiredTasks, taskID)
 		s.tasksMu.Unlock()
-	}()
+	})
 }
 
 // sendTaskStatusNotification sends a notification when a task's status changes.

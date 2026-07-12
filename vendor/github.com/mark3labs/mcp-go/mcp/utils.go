@@ -177,7 +177,7 @@ func NewProgressNotification(
 ) ProgressNotification {
 	notification := ProgressNotification{
 		Notification: Notification{
-			Method: "notifications/progress",
+			Method: string(MethodNotificationProgress),
 		},
 		Params: struct {
 			ProgressToken ProgressToken `json:"progressToken"`
@@ -207,7 +207,7 @@ func NewLoggingMessageNotification(
 ) LoggingMessageNotification {
 	return LoggingMessageNotification{
 		Notification: Notification{
-			Method: "notifications/message",
+			Method: string(MethodNotificationMessage),
 		},
 		Params: struct {
 			Level  LoggingLevel `json:"level"`
@@ -666,6 +666,12 @@ func ParseContent(contentMap map[string]any) (Content, error) {
 			return nil, fmt.Errorf("resource_link uri or name is missing")
 		}
 		c := NewResourceLink(uri, name, description, mimeType)
+		c.Title = ExtractString(contentMap, "title")
+		if value, ok := contentMap["size"]; ok && value != nil {
+			if size, err := cast.ToInt64E(value); err == nil && size >= 0 {
+				c.Size = &size
+			}
+		}
 		c.Annotations = annotations
 		return c, nil
 
@@ -800,57 +806,19 @@ func ParseCallToolResult(rawMessage *json.RawMessage) (*CallToolResult, error) {
 		return nil, fmt.Errorf("response is nil")
 	}
 
-	var jsonContent map[string]any
-	if err := json.Unmarshal(*rawMessage, &jsonContent); err != nil {
+	var probe struct {
+		Content json.RawMessage `json:"content"`
+	}
+	if err := json.Unmarshal(*rawMessage, &probe); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-
-	var result CallToolResult
-
-	meta, ok := jsonContent["_meta"]
-	if ok {
-		if metaMap, ok := meta.(map[string]any); ok {
-			result.Meta = NewMetaFromMap(metaMap)
-		}
-	}
-
-	isError, ok := jsonContent["isError"]
-	if ok {
-		if isErrorBool, ok := isError.(bool); ok {
-			result.IsError = isErrorBool
-		}
-	}
-
-	contents, ok := jsonContent["content"]
-	if !ok {
+	if probe.Content == nil {
 		return nil, fmt.Errorf("content is missing")
 	}
 
-	contentArr, ok := contents.([]any)
-	if !ok {
-		return nil, fmt.Errorf("content is not an array")
-	}
-
-	for _, content := range contentArr {
-		// Extract content
-		contentMap, ok := content.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("content is not an object")
-		}
-
-		// Process content
-		content, err := ParseContent(contentMap)
-		if err != nil {
-			return nil, err
-		}
-
-		result.Content = append(result.Content, content)
-	}
-
-	// Handle structured content
-	structuredContent, ok := jsonContent["structuredContent"]
-	if ok {
-		result.StructuredContent = structuredContent
+	var result CallToolResult
+	if err := json.Unmarshal(*rawMessage, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
