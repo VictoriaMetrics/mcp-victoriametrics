@@ -54,9 +54,6 @@ func validateCommonDeploymentParams(
 	if storageSizeUnit != StorageUnitGB && storageSizeUnit != StorageUnitTB {
 		return fmt.Errorf("invalid storage size unit: %s", storageSizeUnit)
 	}
-	if storageSizeUnit == StorageUnitGB && storageSize < 10 {
-		return fmt.Errorf("deployment storage size must be at least 10 GB")
-	}
 	if retention == 0 {
 		return fmt.Errorf("deployment retention cannot be zero")
 	}
