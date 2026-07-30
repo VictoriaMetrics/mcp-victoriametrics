@@ -265,6 +265,15 @@ func GetTextBodyForRequest(req *http.Request, _ *config.Config, f ...func(s stri
 	return mcp.NewToolResultText(result)
 }
 
+// withTenantParam adds the tenant property to the tool input schema.
+func withTenantParam(description string) mcp.ToolOption {
+	return mcp.WithString("tenant",
+		mcp.Title("Tenant name"),
+		mcp.Description(description),
+		mcp.DefaultString("0"),
+		mcp.Pattern(`^([0-9]+)(:[0-9]+)?$`))
+}
+
 type ToolReqParamType interface {
 	string | float64 | bool | []string | []any
 }
