@@ -300,6 +300,30 @@ codex mcp add victoriametrics --url http://localhost:8080/mcp
 
 See [Codex MCP docs](https://developers.openai.com/codex/mcp) for more info.
 
+### OpenCode
+
+Add the following to your OpenCode config file in `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "mcp": {
+    "victoriametrics": {
+      "type": "local",
+      "command": ["/path/to/mcp-victoriametrics"],
+      "enabled": true,
+      "environment": {
+        "VM_INSTANCE_ENTRYPOINT": "<YOUR_VM_INSTANCE>",
+        "VM_INSTANCE_TYPE": "<YOUR_VM_INSTANCE_TYPE>",
+        "VM_INSTANCE_BEARER_TOKEN": "<YOUR_VM_BEARER_TOKEN>",
+        "VM_INSTANCE_HEADERS": "<HEADER>=<HEADER_VALUE>,<HEADER>=<HEADER_VALUE>"
+      }
+    }
+  }
+}
+```
+
+See [OpenCode MCP docs](https://opencode.ai/docs/mcp-servers/) for more info.
+
 ### Visual Studio Code
 
 Add this to your VS Code MCP config file:
