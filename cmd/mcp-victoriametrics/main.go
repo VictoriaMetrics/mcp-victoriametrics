@@ -133,7 +133,7 @@ Try not to second guess information - if you don't know something or lack inform
 	prompts.RegisterPromptRarelyUsedCardinalMetrics(s, c)
 
 	if c.IsStdio() {
-		if err := server.ServeStdio(s, server.WithErrorLogger(logger.Logger)); err != nil {
+		if err := server.ServeStdio(s, server.WithErrorLogger(logger.StdLogger())); err != nil {
 			slog.Error("failed to start server in stdio mode", "addr", c.ListenAddr(), "error", err)
 			os.Exit(1)
 		}
@@ -175,7 +175,7 @@ Try not to second guess information - if you don't know something or lack inform
 	case "http":
 		slog.Info("Starting server in HTTP mode", "addr", c.ListenAddr())
 		heartBeatOption := server.WithHeartbeatInterval(c.HeartbeatInterval())
-		loggerOption := server.WithLogger(logger)
+		loggerOption := server.WithStreamableHTTPLogger(logger.SlogLogger())
 		srv := server.NewStreamableHTTPServer(s, heartBeatOption, loggerOption)
 		mux.Handle("/mcp", srv)
 		mux.Handle("/", spaHandler())

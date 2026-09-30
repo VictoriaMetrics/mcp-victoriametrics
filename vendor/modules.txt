@@ -6,12 +6,12 @@ cloud.google.com/go/compute/metadata
 github.com/RoaringBitmap/roaring/v2
 github.com/RoaringBitmap/roaring/v2/internal
 github.com/RoaringBitmap/roaring/v2/roaring64
-# github.com/VictoriaMetrics/VictoriaLogs v1.36.2-0.20251008164716-21c0fb3de84d => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032
-## explicit; go 1.26.0
+# github.com/VictoriaMetrics/VictoriaLogs v1.51.1-0.20260624061259-dc94972a8708
+## explicit; go 1.26.4
 github.com/VictoriaMetrics/VictoriaLogs/lib/logstorage
 github.com/VictoriaMetrics/VictoriaLogs/lib/prefixfilter
-# github.com/VictoriaMetrics/VictoriaMetrics v1.140.0
-## explicit; go 1.26.2
+# github.com/VictoriaMetrics/VictoriaMetrics v1.153.0
+## explicit; go 1.27.1
 github.com/VictoriaMetrics/VictoriaMetrics/app/victoria-metrics/test
 github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert-tool/unittest
 github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert/config
@@ -79,6 +79,7 @@ github.com/VictoriaMetrics/VictoriaMetrics/lib/formatutil
 github.com/VictoriaMetrics/VictoriaMetrics/lib/fs
 github.com/VictoriaMetrics/VictoriaMetrics/lib/fs/fscore
 github.com/VictoriaMetrics/VictoriaMetrics/lib/fs/fsutil
+github.com/VictoriaMetrics/VictoriaMetrics/lib/handshake
 github.com/VictoriaMetrics/VictoriaMetrics/lib/htmlcomponents
 github.com/VictoriaMetrics/VictoriaMetrics/lib/httpserver
 github.com/VictoriaMetrics/VictoriaMetrics/lib/httputil
@@ -115,6 +116,7 @@ github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/hetzner
 github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/http
 github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/kubernetes
 github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/kuma
+github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/linode
 github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/marathon
 github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/nomad
 github.com/VictoriaMetrics/VictoriaMetrics/lib/promscrape/discovery/openstack
@@ -171,6 +173,9 @@ github.com/VictoriaMetrics/VictoriaMetrics/lib/timerpool
 github.com/VictoriaMetrics/VictoriaMetrics/lib/timeserieslimits
 github.com/VictoriaMetrics/VictoriaMetrics/lib/timeutil
 github.com/VictoriaMetrics/VictoriaMetrics/lib/uint64set
+github.com/VictoriaMetrics/VictoriaMetrics/lib/vmalertproxy
+github.com/VictoriaMetrics/VictoriaMetrics/lib/vminsertapi
+github.com/VictoriaMetrics/VictoriaMetrics/lib/vmselectapi
 github.com/VictoriaMetrics/VictoriaMetrics/lib/workingsetcache
 github.com/VictoriaMetrics/VictoriaMetrics/lib/writeconcurrencylimiter
 # github.com/VictoriaMetrics/easyproto v1.2.0
@@ -182,7 +187,7 @@ github.com/VictoriaMetrics/fastcache
 # github.com/VictoriaMetrics/metrics v1.44.0
 ## explicit; go 1.24.0
 github.com/VictoriaMetrics/metrics
-# github.com/VictoriaMetrics/metricsql v0.87.0
+# github.com/VictoriaMetrics/metricsql v0.87.4
 ## explicit; go 1.24.2
 github.com/VictoriaMetrics/metricsql
 github.com/VictoriaMetrics/metricsql/binaryop
@@ -306,8 +311,8 @@ github.com/bmatcuk/doublestar/v4
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/cheggaaa/pb/v3 v3.1.7
-## explicit; go 1.18
+# github.com/cheggaaa/pb/v3 v3.2.1
+## explicit; go 1.25.0
 github.com/cheggaaa/pb/v3
 github.com/cheggaaa/pb/v3/termutil
 # github.com/clipperhouse/uax29/v2 v2.7.0
@@ -332,8 +337,8 @@ github.com/google/uuid
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/klauspost/compress v1.18.5
-## explicit; go 1.24
+# github.com/klauspost/compress v1.20.0
+## explicit; go 1.25
 github.com/klauspost/compress
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
@@ -345,23 +350,24 @@ github.com/klauspost/compress/gzip
 github.com/klauspost/compress/huff0
 github.com/klauspost/compress/internal/cpuinfo
 github.com/klauspost/compress/internal/le
+github.com/klauspost/compress/internal/regmask
 github.com/klauspost/compress/internal/snapref
 github.com/klauspost/compress/zlib
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
-# github.com/mark3labs/mcp-go v0.49.0
+# github.com/mark3labs/mcp-go v1.1.1
 ## explicit; go 1.25.5
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
-github.com/mark3labs/mcp-go/util
-# github.com/mattn/go-colorable v0.1.14
+github.com/mark3labs/mcp-go/tracing
+# github.com/mattn/go-colorable v0.1.15
 ## explicit; go 1.18
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.21
-## explicit; go 1.21
-github.com/mattn/go-isatty
-# github.com/mattn/go-runewidth v0.0.23
+# github.com/mattn/go-isatty v0.0.24
 ## explicit; go 1.20
+github.com/mattn/go-isatty
+# github.com/mattn/go-runewidth v0.0.30
+## explicit; go 1.23
 github.com/mattn/go-runewidth
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 ## explicit
@@ -375,6 +381,10 @@ github.com/mschoch/smat
 # github.com/pkoukk/tiktoken-go v0.1.8
 ## explicit; go 1.19
 github.com/pkoukk/tiktoken-go
+# github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
+## explicit; go 1.21
+github.com/santhosh-tekuri/jsonschema/v6
+github.com/santhosh-tekuri/jsonschema/v6/kind
 # github.com/spf13/cast v1.10.0
 ## explicit; go 1.21.0
 github.com/spf13/cast
@@ -397,7 +407,7 @@ github.com/valyala/fastrand
 # github.com/valyala/fasttemplate v1.2.2
 ## explicit; go 1.12
 github.com/valyala/fasttemplate
-# github.com/valyala/gozstd v1.24.0
+# github.com/valyala/gozstd v1.26.0
 ## explicit; go 1.12
 github.com/valyala/gozstd
 # github.com/valyala/histogram v1.2.0
@@ -430,12 +440,12 @@ go.etcd.io/bbolt
 go.etcd.io/bbolt/errors
 go.etcd.io/bbolt/internal/common
 go.etcd.io/bbolt/internal/freelist
-# golang.org/x/net v0.52.0
-## explicit; go 1.25.0
+# golang.org/x/net v0.59.0
+## explicit; go 1.26.0
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
-# golang.org/x/oauth2 v0.36.0
-## explicit; go 1.25.0
+# golang.org/x/oauth2 v0.37.0
+## explicit; go 1.26.0
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
 golang.org/x/oauth2/clientcredentials
@@ -447,16 +457,28 @@ golang.org/x/oauth2/google/internal/stsexchange
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.43.0
-## explicit; go 1.25.0
+# golang.org/x/sys v0.48.0
+## explicit; go 1.26.0
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.35.0
-## explicit; go 1.25.0
+# golang.org/x/text v0.42.0
+## explicit; go 1.26.0
+golang.org/x/text/feature/plural
+golang.org/x/text/internal
+golang.org/x/text/internal/catmsg
+golang.org/x/text/internal/format
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
+golang.org/x/text/internal/number
+golang.org/x/text/internal/stringset
+golang.org/x/text/internal/tag
+golang.org/x/text/language
+golang.org/x/text/message
+golang.org/x/text/message/catalog
 golang.org/x/text/unicode/rangetable
-# google.golang.org/protobuf v1.36.11
+# google.golang.org/protobuf v1.36.12
 ## explicit; go 1.23
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
@@ -488,4 +510,3 @@ google.golang.org/protobuf/runtime/protoimpl
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
-# github.com/VictoriaMetrics/VictoriaLogs => github.com/VictoriaMetrics/VictoriaLogs v0.0.0-20260218111324-95b48d57d032

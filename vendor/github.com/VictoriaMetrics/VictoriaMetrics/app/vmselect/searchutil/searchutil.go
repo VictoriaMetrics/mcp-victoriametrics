@@ -132,9 +132,25 @@ func (d *Deadline) String() string {
 //
 //	{env="prod",team="devops",t1="v1",t2="v2"}
 //	{env=~"dev|staging",team!="devops",t1="v1",t2="v2"}
+//
+//	Query args from URL path have precedence over post form args.
+//
+// Empty values are ignored. See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/11618
 func GetExtraTagFilters(r *http.Request) ([][]storage.TagFilter, error) {
 	var tagFilters []storage.TagFilter
-	for _, match := range r.Form["extra_label"] {
+	urlQueryValues := r.URL.Query()
+	getRequestParam := func(key string) []string {
+		// query request param must always take precedence over form values
+		// in order to simplify security enforcement policy for extra_label and extra_filters
+		if uv, ok := urlQueryValues[key]; ok {
+			return uv
+		}
+		return r.Form[key]
+	}
+	for _, match := range getRequestParam("extra_label") {
+		if match == "" {
+			continue
+		}
 		tmp := strings.SplitN(match, "=", 2)
 		if len(tmp) != 2 {
 			return nil, fmt.Errorf("`extra_label` query arg must have the format `name=value`; got %q", match)
@@ -148,16 +164,13 @@ func GetExtraTagFilters(r *http.Request) ([][]storage.TagFilter, error) {
 			Value: []byte(tmp[1]),
 		})
 	}
-	extraFilters := append([]string{}, r.Form["extra_filters"]...)
-	extraFilters = append(extraFilters, r.Form["extra_filters[]"]...)
-	if len(extraFilters) == 0 {
-		if len(tagFilters) == 0 {
-			return nil, nil
-		}
-		return [][]storage.TagFilter{tagFilters}, nil
-	}
+	extraFilters := append([]string{}, getRequestParam("extra_filters")...)
+	extraFilters = append(extraFilters, getRequestParam("extra_filters[]")...)
 	var etfs [][]storage.TagFilter
 	for _, extraFilter := range extraFilters {
+		if extraFilter == "" {
+			continue
+		}
 		tfss, err := ParseMetricSelector(extraFilter)
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse extra_filters=%s: %w", extraFilter, err)
@@ -166,6 +179,12 @@ func GetExtraTagFilters(r *http.Request) ([][]storage.TagFilter, error) {
 			tfss[i] = append(tfss[i], tagFilters...)
 		}
 		etfs = append(etfs, tfss...)
+	}
+	if len(etfs) == 0 {
+		if len(tagFilters) == 0 {
+			return nil, nil
+		}
+		return [][]storage.TagFilter{tagFilters}, nil
 	}
 	return etfs, nil
 }

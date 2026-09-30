@@ -15,7 +15,7 @@ import (
 func (s *MCPServer) HandleMessage(
 	ctx context.Context,
 	message json.RawMessage,
-) mcp.JSONRPCMessage {
+) (resp mcp.JSONRPCMessage) {
 	// Add server to context
 	ctx = context.WithValue(ctx, serverKey{}, s)
 	var err *requestError
@@ -80,6 +80,34 @@ func (s *MCPServer) HandleMessage(
 		headers = make(http.Header)
 	}
 
+	// Determine which protocol era this request belongs to. Protocol version
+	// 2026-07-28 removed the initialize handshake: a modern request carries
+	// its protocol version, client identity, and client capabilities in _meta
+	// (SEP-2575). Anything else is served through the legacy path.
+	protocolInfo, protocolErr := extractRequestProtocolInfo(message)
+	if protocolErr != nil {
+		return errorResponseForProtocolError(baseMessage.ID, protocolErr)
+	}
+	ctx = WithRequestProtocolInfo(ctx, protocolInfo)
+
+	if protocolInfo.Modern {
+		if !mcp.IsValidProtocolVersion(protocolInfo.ProtocolVersion) {
+			return errorResponseForProtocolError(baseMessage.ID, mcp.UnsupportedProtocolVersionError{
+				Version:   protocolInfo.ProtocolVersion,
+				Supported: SupportedProtocolVersionsFromContext(ctx),
+			})
+		}
+		if err := s.validateStandardHeadersForMessage(ctx, headers, protocolInfo.ProtocolVersion, baseMessage.Method, message); err != nil {
+			return errorResponseForProtocolError(baseMessage.ID, err)
+		}
+		// Synthesize the session state the handshake used to establish, so
+		// that hooks and handlers observing the session behave identically in
+		// both eras.
+		if session := ClientSessionFromContext(ctx); session != nil {
+			applyRequestProtocolInfoToSession(session, protocolInfo)
+		}
+	}
+
 	// Wrap context with cancel for in-flight request cancellation (MCP spec: notifications/cancelled)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -92,11 +120,40 @@ func (s *MCPServer) HandleMessage(
 		defer s.inflightCancels.Delete(key)
 	}
 
+	// Extract trace context from _meta before opening the server span so the span
+	// inherits the correct parent (SEP-414, transport-agnostic propagation).
+	{
+		var metaWrapper struct {
+			Params struct {
+				Meta *mcp.Meta `json:"_meta"`
+			} `json:"params"`
+		}
+		if json.Unmarshal(message, &metaWrapper) == nil {
+			ctx = s.extractMeta(ctx, metaWrapper.Params.Meta)
+		}
+	}
+
+	ctx, endSpan := s.startMessageSpan(ctx, headers, string(baseMessage.Method))
+	defer func() { endSpan(resp) }()
+
+	endLog := s.startMessageLog(ctx, headers, string(baseMessage.Method))
+	defer func() { endLog(resp) }()
+
+	// Decorate outgoing results with the metadata required by protocol version
+	// 2026-07-28: resultType, serverInfo, and caching hints.
+	defer func() { resp = s.decorateResponse(ctx, protocolInfo, baseMessage.Method, resp) }()
+
 	switch baseMessage.Method {
 	case mcp.MethodInitialize:
 		var request mcp.InitializeRequest
 		var result *mcp.InitializeResult
-		if unmarshalErr := json.Unmarshal(message, &request); unmarshalErr != nil {
+		if protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRemovedInProtocolVersion),
+			}
+		} else if unmarshalErr := json.Unmarshal(message, &request); unmarshalErr != nil {
 			err = &requestError{
 				id:   baseMessage.ID,
 				code: mcp.INVALID_REQUEST,
@@ -116,7 +173,13 @@ func (s *MCPServer) HandleMessage(
 	case mcp.MethodPing:
 		var request mcp.PingRequest
 		var result *mcp.EmptyResult
-		if unmarshalErr := json.Unmarshal(message, &request); unmarshalErr != nil {
+		if protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRemovedInProtocolVersion),
+			}
+		} else if unmarshalErr := json.Unmarshal(message, &request); unmarshalErr != nil {
 			err = &requestError{
 				id:   baseMessage.ID,
 				code: mcp.INVALID_REQUEST,
@@ -133,10 +196,68 @@ func (s *MCPServer) HandleMessage(
 		}
 		s.hooks.afterPing(ctx, baseMessage.ID, &request, result)
 		return createResponse(baseMessage.ID, *result)
+	case mcp.MethodServerDiscover:
+		var request mcp.DiscoverRequest
+		var result *mcp.DiscoverResult
+		if !protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRequiresModernProtocol),
+			}
+		} else if unmarshalErr := json.Unmarshal(message, &request); unmarshalErr != nil {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.INVALID_REQUEST,
+				err:  &UnparsableMessageError{message: message, err: unmarshalErr, method: baseMessage.Method},
+			}
+		} else {
+			request.Header = headers
+			s.hooks.beforeDiscover(ctx, baseMessage.ID, &request)
+			result, err = s.handleDiscover(ctx, baseMessage.ID, request)
+		}
+		if err != nil {
+			s.hooks.onError(ctx, baseMessage.ID, baseMessage.Method, &request, err)
+			return err.ToJSONRPCError()
+		}
+		s.hooks.afterDiscover(ctx, baseMessage.ID, &request, result)
+		return createResponse(baseMessage.ID, *result)
+	case mcp.MethodSubscriptionsListen:
+		var request mcp.SubscriptionsListenRequest
+		var result *mcp.SubscriptionsListenResult
+		if !protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRequiresModernProtocol),
+			}
+		} else if unmarshalErr := json.Unmarshal(message, &request); unmarshalErr != nil {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.INVALID_REQUEST,
+				err:  &UnparsableMessageError{message: message, err: unmarshalErr, method: baseMessage.Method},
+			}
+		} else {
+			request.Header = headers
+			s.hooks.beforeSubscriptionsListen(ctx, baseMessage.ID, &request)
+			result, err = s.handleSubscriptionsListen(ctx, baseMessage.ID, request)
+		}
+		if err != nil {
+			s.hooks.onError(ctx, baseMessage.ID, baseMessage.Method, &request, err)
+			return err.ToJSONRPCError()
+		}
+		s.hooks.afterSubscriptionsListen(ctx, baseMessage.ID, &request, result)
+		return createResponse(baseMessage.ID, *result)
 	case mcp.MethodSetLogLevel:
 		var request mcp.SetLevelRequest
 		var result *mcp.EmptyResult
-		if s.capabilities.logging == nil {
+		if protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRemovedInProtocolVersion),
+			}
+		} else if s.capabilities.logging == nil {
 			err = &requestError{
 				id:   baseMessage.ID,
 				code: mcp.METHOD_NOT_FOUND,
@@ -236,6 +357,70 @@ func (s *MCPServer) HandleMessage(
 			return err.ToJSONRPCError()
 		}
 		s.hooks.afterReadResource(ctx, baseMessage.ID, &request, result)
+		return createResponse(baseMessage.ID, *result)
+	case mcp.MethodResourcesSubscribe:
+		var request mcp.SubscribeRequest
+		var result *mcp.EmptyResult
+		if protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRemovedInProtocolVersion),
+			}
+		} else if s.capabilities.resources == nil {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("resources %w", ErrUnsupported),
+			}
+		} else if unmarshalErr := json.Unmarshal(message, &request); unmarshalErr != nil {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.INVALID_REQUEST,
+				err:  &UnparsableMessageError{message: message, err: unmarshalErr, method: baseMessage.Method},
+			}
+		} else {
+			request.Header = headers
+			s.hooks.beforeSubscribe(ctx, baseMessage.ID, &request)
+			result, err = s.handleSubscribe(ctx, baseMessage.ID, request)
+		}
+		if err != nil {
+			s.hooks.onError(ctx, baseMessage.ID, baseMessage.Method, &request, err)
+			return err.ToJSONRPCError()
+		}
+		s.hooks.afterSubscribe(ctx, baseMessage.ID, &request, result)
+		return createResponse(baseMessage.ID, *result)
+	case mcp.MethodResourcesUnsubscribe:
+		var request mcp.UnsubscribeRequest
+		var result *mcp.EmptyResult
+		if protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRemovedInProtocolVersion),
+			}
+		} else if s.capabilities.resources == nil {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("resources %w", ErrUnsupported),
+			}
+		} else if unmarshalErr := json.Unmarshal(message, &request); unmarshalErr != nil {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.INVALID_REQUEST,
+				err:  &UnparsableMessageError{message: message, err: unmarshalErr, method: baseMessage.Method},
+			}
+		} else {
+			request.Header = headers
+			s.hooks.beforeUnsubscribe(ctx, baseMessage.ID, &request)
+			result, err = s.handleUnsubscribe(ctx, baseMessage.ID, request)
+		}
+		if err != nil {
+			s.hooks.onError(ctx, baseMessage.ID, baseMessage.Method, &request, err)
+			return err.ToJSONRPCError()
+		}
+		s.hooks.afterUnsubscribe(ctx, baseMessage.ID, &request, result)
 		return createResponse(baseMessage.ID, *result)
 	case mcp.MethodPromptsList:
 		var request mcp.ListPromptsRequest
@@ -370,7 +555,13 @@ func (s *MCPServer) HandleMessage(
 	case mcp.MethodTasksList:
 		var request mcp.ListTasksRequest
 		var result *mcp.ListTasksResult
-		if s.capabilities.tasks == nil {
+		if protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRemovedInProtocolVersion),
+			}
+		} else if s.capabilities.tasks == nil {
 			err = &requestError{
 				id:   baseMessage.ID,
 				code: mcp.METHOD_NOT_FOUND,
@@ -396,7 +587,13 @@ func (s *MCPServer) HandleMessage(
 	case mcp.MethodTasksResult:
 		var request mcp.TaskResultRequest
 		var result *mcp.TaskResultResult
-		if s.capabilities.tasks == nil {
+		if protocolInfo.Modern {
+			err = &requestError{
+				id:   baseMessage.ID,
+				code: mcp.METHOD_NOT_FOUND,
+				err:  fmt.Errorf("%q %w", baseMessage.Method, ErrRemovedInProtocolVersion),
+			}
+		} else if s.capabilities.tasks == nil {
 			err = &requestError{
 				id:   baseMessage.ID,
 				code: mcp.METHOD_NOT_FOUND,
