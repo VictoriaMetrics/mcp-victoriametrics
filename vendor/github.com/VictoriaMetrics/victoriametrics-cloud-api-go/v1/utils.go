@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 type apiKeyContextKeyType string
@@ -17,8 +18,16 @@ func ContextWithDynamicAPIKey(ctx context.Context, apiKey string) context.Contex
 }
 
 func requestAPI[R any](ctx context.Context, a *VMCloudAPIClient, method string, body io.Reader, path ...string) (R, error) {
+	return requestAPIWithQuery[R](ctx, a, method, body, nil, path...)
+}
+
+func requestAPIWithQuery[R any](ctx context.Context, a *VMCloudAPIClient, method string, body io.Reader, query url.Values, path ...string) (R, error) {
 	var result R
-	reqURL := a.parsedURL.JoinPath(path...).String()
+	u := a.parsedURL.JoinPath(path...)
+	if len(query) > 0 {
+		u.RawQuery = query.Encode()
+	}
+	reqURL := u.String()
 	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
 	if err != nil {
 		return result, fmt.Errorf("failed to create request: %w", err)
