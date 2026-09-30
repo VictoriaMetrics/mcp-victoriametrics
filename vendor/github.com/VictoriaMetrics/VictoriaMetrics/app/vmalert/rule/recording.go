@@ -184,7 +184,7 @@ func (rr *RecordingRule) execRange(ctx context.Context, start, end time.Time) ([
 }
 
 // exec executes RecordingRule expression via the given Querier.
-func (rr *RecordingRule) exec(ctx context.Context, ts time.Time, limit int) ([]prompb.TimeSeries, error) {
+func (rr *RecordingRule) exec(ctx context.Context, ts time.Time, limit int, _ func(enableDebug bool) datasource.Querier) ([]prompb.TimeSeries, error) {
 	start := time.Now()
 	res, req, err := rr.q.Query(ctx, rr.Expr, ts)
 	curState := StateEntry{
@@ -208,7 +208,11 @@ func (rr *RecordingRule) exec(ctx context.Context, ts time.Time, limit int) ([]p
 		return nil, curState.Err
 	}
 
-	rr.logDebugf(ts, "query returned %d samples (elapsed: %s, isPartial: %t)", curState.Samples, curState.Duration, isPartialResponse(res))
+	seriesFetched := 0
+	if res.SeriesFetched != nil {
+		seriesFetched = *res.SeriesFetched
+	}
+	rr.logDebugf(ts, "query returned %d samples (series_fetched: %d, elapsed: %s, isPartial: %t)", curState.Samples, seriesFetched, curState.Duration, isPartialResponse(res))
 
 	qMetrics := res.Data
 	numSeries := len(qMetrics)
@@ -293,9 +297,11 @@ func (rr *RecordingRule) toTimeSeries(m datasource.Metric) prompb.TimeSeries {
 	}
 	// add extra labels configured by user
 	for k := range rr.Labels {
-		// do not add label with empty value, since it has no meaning.
-		// see https://github.com/VictoriaMetrics/VictoriaMetrics/issues/9984
+		// do not add label with empty value to the result, as it has no meaning:
+		// if the label already exists in the original query result, remove it to preserve compatibility with relabeling, see https://github.com/VictoriaMetrics/VictoriaMetrics/issues/10766.
+		// otherwise, ignore the label, see https://github.com/VictoriaMetrics/VictoriaMetrics/issues/9984.
 		if rr.Labels[k] == "" {
+			m.DelLabel(k)
 			continue
 		}
 		existingLabel := promrelabel.GetLabelByName(m.Labels, k)

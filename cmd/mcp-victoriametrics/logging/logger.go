@@ -9,9 +9,10 @@ import (
 	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
-// Logger wraps log.Logger and implements util.Logger interface
+// Logger wraps slog.Logger and provides a log.Logger adapter for APIs that require it
 type Logger struct {
-	*log.Logger
+	slogLogger *slog.Logger
+	stdLogger  *log.Logger
 }
 
 // New creates a new Logger based on the provided configuration
@@ -32,20 +33,22 @@ func New(cfg *config.Config) (*Logger, error) {
 	}
 
 	slogger := slog.New(logHandler)
-	logger := slog.NewLogLogger(logHandler, level.Level())
 	slog.SetDefault(slogger)
 
-	return &Logger{Logger: logger}, nil
+	return &Logger{
+		slogLogger: slogger,
+		stdLogger:  slog.NewLogLogger(logHandler, slog.LevelError),
+	}, nil
 }
 
-// Infof implements util.Logger interface
-func (l *Logger) Infof(format string, v ...any) {
-	slog.Info(fmt.Sprintf(format, v...))
+// SlogLogger returns the underlying slog.Logger
+func (l *Logger) SlogLogger() *slog.Logger {
+	return l.slogLogger
 }
 
-// Errorf implements util.Logger interface
-func (l *Logger) Errorf(format string, v ...any) {
-	slog.Error(fmt.Sprintf(format, v...))
+// StdLogger returns a log.Logger that writes to the underlying slog handler
+func (l *Logger) StdLogger() *log.Logger {
+	return l.stdLogger
 }
 
 // parseLevel converts string level to slog.Level

@@ -11,6 +11,7 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert/vmalertutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/flagutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httputil"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/promauth"
 )
 
@@ -27,6 +28,7 @@ var (
 		"Multiple headers must be delimited by '^^': -datasource.headers='header1:value1^^header2:value2'")
 
 	basicAuthUsername     = flag.String("datasource.basicAuth.username", "", "Optional basic auth username for -datasource.url")
+	basicAuthUsernameFile = flag.String("datasource.basicAuth.usernameFile", "", "Optional path to basic auth username to use for -datasource.url")
 	basicAuthPassword     = flag.String("datasource.basicAuth.password", "", "Optional basic auth password for -datasource.url")
 	basicAuthPasswordFile = flag.String("datasource.basicAuth.passwordFile", "", "Optional path to basic auth password to use for -datasource.url")
 
@@ -58,11 +60,13 @@ var (
 		`Only valid for VictoriaMetrics as the datasource.`)
 )
 
-// InitSecretFlags must be called after flag.Parse and before any logging
+// InitSecretFlags manages the secret flags for this pkg and must be called by app-level initSecretFlags.
+// It should run before logger initialization and package Init() (if exists).
 func InitSecretFlags() {
 	if !*showDatasourceURL {
 		flagutil.RegisterSecretFlag("datasource.url")
 	}
+	flagutil.RegisterSecretFlag("datasource.headers")
 }
 
 // ShowDatasourceURL whether to show -datasource.url with sensitive information
@@ -92,6 +96,12 @@ func Init(extraParams url.Values) (QuerierBuilder, error) {
 		tr.MaxIdleConns = tr.MaxIdleConnsPerHost
 	}
 	tr.IdleConnTimeout = *idleConnectionTimeout
+	hc := &http.Client{Transport: tr}
+	datasourceURL, err := url.Parse(*addr)
+	if err != nil {
+		logger.Fatalf("BUG: cannot parse already parsed -datasource.url=%q: %s", *addr, err)
+	}
+	hc.Transport, datasourceURL = httputil.NewLoadBalancerTransport(tr, datasourceURL)
 
 	if extraParams == nil {
 		extraParams = url.Values{}
@@ -105,7 +115,7 @@ func Init(extraParams url.Values) (QuerierBuilder, error) {
 		return nil, fmt.Errorf("cannot parse JSON for -datasource.oauth2.endpointParams=%s: %w", *oauth2EndpointParams, err)
 	}
 	authCfg, err := vmalertutil.AuthConfig(
-		vmalertutil.WithBasicAuth(*basicAuthUsername, *basicAuthPassword, *basicAuthPasswordFile),
+		vmalertutil.WithBasicAuth(*basicAuthUsername, *basicAuthUsernameFile, *basicAuthPassword, *basicAuthPasswordFile),
 		vmalertutil.WithBearer(*bearerToken, *bearerTokenFile),
 		vmalertutil.WithOAuth(*oauth2ClientID, *oauth2ClientSecret, *oauth2ClientSecretFile, *oauth2TokenURL, *oauth2Scopes, endpointParams),
 		vmalertutil.WithHeaders(*headers))
@@ -118,9 +128,9 @@ func Init(extraParams url.Values) (QuerierBuilder, error) {
 	}
 
 	return &Client{
-		c:                &http.Client{Transport: tr},
+		c:                hc,
 		authCfg:          authCfg,
-		datasourceURL:    strings.TrimSuffix(*addr, "/"),
+		datasourceURL:    strings.TrimSuffix(datasourceURL.String(), "/"),
 		appendTypePrefix: *appendTypePrefix,
 		queryStep:        *queryStep,
 		extraParams:      extraParams,

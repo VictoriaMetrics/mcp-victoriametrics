@@ -33,6 +33,7 @@ import (
 )
 
 const (
+	retention2Days  = 2 * 24 * time.Hour
 	retention31Days = 31 * 24 * time.Hour
 	retentionMax    = 100 * 12 * retention31Days
 	idbPrefilStart  = time.Hour
@@ -60,9 +61,12 @@ type Storage struct {
 	// indexdb rotation.
 	legacyNextRotationTimestamp atomic.Int64
 
-	path           string
-	cachePath      string
-	retentionMsecs int64
+	path                        string
+	cachePath                   string
+	retentionMsecs              int64
+	futureRetentionMsecs        int64
+	maxBackfillAgeMsecs         int64
+	denyQueriesOutsideRetention bool
 
 	// lock file for exclusive access to the storage on the given path.
 	flockF *os.File
@@ -159,13 +163,16 @@ type Storage struct {
 
 // OpenOptions optional args for MustOpenStorage
 type OpenOptions struct {
-	Retention             time.Duration
-	MaxHourlySeries       int
-	MaxDailySeries        int
-	DisablePerDayIndex    bool
-	TrackMetricNamesStats bool
-	IDBPrefillStart       time.Duration
-	LogNewSeries          bool
+	Retention                   time.Duration
+	FutureRetention             time.Duration
+	MaxBackfillAge              time.Duration
+	DenyQueriesOutsideRetention bool
+	MaxHourlySeries             int
+	MaxDailySeries              int
+	DisablePerDayIndex          bool
+	TrackMetricNamesStats       bool
+	IDBPrefillStart             time.Duration
+	LogNewSeries                bool
 }
 
 // MustOpenStorage opens storage on the given path with the given retentionMsecs.
@@ -181,16 +188,24 @@ func MustOpenStorage(path string, opts OpenOptions) *Storage {
 	if retention <= 0 || retention > retentionMax {
 		retention = retentionMax
 	}
+	futureRetention := max(opts.FutureRetention, retention2Days)
+	maxBackfillAge := opts.MaxBackfillAge
+	if maxBackfillAge <= 0 || maxBackfillAge > retention {
+		maxBackfillAge = retention
+	}
 	idbPrefillStart := opts.IDBPrefillStart
 	if idbPrefillStart <= 0 {
 		idbPrefillStart = time.Hour
 	}
 	s := &Storage{
-		path:                   path,
-		cachePath:              filepath.Join(path, cacheDirname),
-		retentionMsecs:         retention.Milliseconds(),
-		stopCh:                 make(chan struct{}),
-		idbPrefillStartSeconds: idbPrefillStart.Milliseconds() / 1000,
+		path:                        path,
+		cachePath:                   filepath.Join(path, cacheDirname),
+		retentionMsecs:              retention.Milliseconds(),
+		futureRetentionMsecs:        futureRetention.Milliseconds(),
+		maxBackfillAgeMsecs:         maxBackfillAge.Milliseconds(),
+		denyQueriesOutsideRetention: opts.DenyQueriesOutsideRetention,
+		stopCh:                      make(chan struct{}),
+		idbPrefillStartSeconds:      idbPrefillStart.Milliseconds() / 1000,
 	}
 	s.logNewSeries.Store(opts.LogNewSeries)
 
@@ -1103,6 +1118,14 @@ func searchAndMerge[T any](qt *querytracer.Tracer, s *Storage, tr TimeRange, sea
 	qt = qt.NewChild("search indexDBs: timeRange=%v", &tr)
 	defer qt.Done()
 
+	var zeroValue T
+	if tr.MinTimestamp < minUnixMilli {
+		tr.MinTimestamp = minUnixMilli
+	}
+	if tr.MaxTimestamp < tr.MinTimestamp {
+		return zeroValue, nil
+	}
+
 	var idbts []indexDBWithType
 
 	ptws := s.tb.GetPartitions(tr)
@@ -1220,6 +1243,25 @@ func searchAndMergeUniq(qt *querytracer.Tracer, s *Storage, tr TimeRange, search
 	return res, nil
 }
 
+// checkTimeRange returns an error if time range is outside the allowed
+// -retentionPeriod or -futureRetention window when
+// -denyQueriesOutsideRetention flag is set
+func (s *Storage) checkTimeRange(tr TimeRange) error {
+	if !s.denyQueriesOutsideRetention {
+		return nil
+	}
+
+	minTimestamp, maxTimestamp := s.tb.getMinMaxRetentionTimestamps()
+	if minTimestamp <= tr.MinTimestamp && tr.MaxTimestamp <= maxTimestamp {
+		return nil
+	}
+
+	retention := time.Duration(s.retentionMsecs) * time.Millisecond
+	futureRetention := time.Duration(s.futureRetentionMsecs) * time.Millisecond
+	return fmt.Errorf("the given time range %s is outside the allowed -retentionPeriod=%s, -futureRetention=%s "+
+		"according to -denyQueriesOutsideRetention", &tr, retention, futureRetention)
+}
+
 // SearchTSIDs searches the TSIDs that correspond to filters within the given
 // time range.
 //
@@ -1230,6 +1272,10 @@ func searchAndMergeUniq(qt *querytracer.Tracer, s *Storage, tr TimeRange, search
 func (s *Storage) SearchTSIDs(qt *querytracer.Tracer, tfss []*TagFilters, tr TimeRange, maxMetrics int, deadline uint64) ([]TSID, error) {
 	qt = qt.NewChild("search TSIDs: filters=%s, timeRange=%s, maxMetrics=%d", tfss, &tr, maxMetrics)
 	defer qt.Done()
+
+	if err := s.checkTimeRange(tr); err != nil {
+		return nil, err
+	}
 
 	search := func(qt *querytracer.Tracer, idb *indexDB, tr TimeRange) ([]TSID, error) {
 		return idb.SearchTSIDs(qt, tfss, tr, maxMetrics, deadline)
@@ -1266,6 +1312,9 @@ func (s *Storage) SearchTSIDs(qt *querytracer.Tracer, tfss []*TagFilters, tr Tim
 // MetricName.UnmarshalString().
 func (s *Storage) SearchMetricNames(qt *querytracer.Tracer, tfss []*TagFilters, tr TimeRange, maxMetrics int, deadline uint64) ([]string, error) {
 	qt = qt.NewChild("search metric names: filters=%s, timeRange=%s, maxMetrics: %d", tfss, &tr, maxMetrics)
+	if err := s.checkTimeRange(tr); err != nil {
+		return nil, err
+	}
 	search := func(qt *querytracer.Tracer, idb *indexDB, tr TimeRange) ([]string, error) {
 		return idb.SearchMetricNames(qt, tfss, tr, maxMetrics, deadline)
 	}
@@ -1862,7 +1911,7 @@ func (s *Storage) add(rows []rawRow, dstMrs []*MetricRow, mrs []MetricRow, preci
 	var newSeriesCount uint64
 	var seriesRepopulated uint64
 
-	minTimestamp, maxTimestamp := s.tb.getMinMaxTimestamps()
+	minTimestamp, maxTimestamp := s.tb.getMinMaxIngestionTimestamps()
 
 	var lTSID legacyTSID
 	var ptw *partitionWrapper
@@ -1884,11 +1933,11 @@ func (s *Storage) add(rows []rawRow, dstMrs []*MetricRow, mrs []MetricRow, preci
 			}
 		}
 		if mr.Timestamp < minTimestamp {
-			// Skip rows with too small timestamps outside the retention.
+			// Skip rows with too small timestamps outside the retention or -maxBackfillAge.
 			if firstWarn == nil {
 				metricName := getUserReadableMetricName(mr.MetricNameRaw)
-				firstWarn = fmt.Errorf("cannot insert row with too small timestamp %d outside the retention; minimum allowed timestamp is %d; "+
-					"probably you need updating -retentionPeriod command-line flag; metricName: %s",
+				firstWarn = fmt.Errorf("cannot insert row with too small timestamp %d; minimum allowed timestamp is %d; "+
+					"probably you need updating -retentionPeriod or -maxBackfillAge command-line flags; metricName: %s",
 					mr.Timestamp, minTimestamp, metricName)
 			}
 			s.tooSmallTimestampRows.Add(1)
