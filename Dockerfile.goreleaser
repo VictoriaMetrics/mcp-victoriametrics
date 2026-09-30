@@ -1,4 +1,4 @@
-FROM alpine:3.23
+FROM alpine:3.24
 RUN addgroup -g 1000 -S mcp && adduser -u 1000 -S mcp -G mcp
 ARG TARGETPLATFORM
 COPY --chown=mcp:mcp $TARGETPLATFORM/mcp-victoriametrics /usr/local/bin/mcp-victoriametrics
