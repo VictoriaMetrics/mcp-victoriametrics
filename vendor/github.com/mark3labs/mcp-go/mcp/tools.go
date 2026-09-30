@@ -1,14 +1,16 @@
 package mcp
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"reflect"
+	"slices"
 	"strconv"
-
-	"github.com/google/jsonschema-go/jsonschema"
+	"strings"
 )
 
 var errToolSchemaConflict = errors.New("provide either InputSchema or RawInputSchema, not both")
@@ -39,11 +41,15 @@ type ListToolsResult struct {
 // should be reported as an MCP error response.
 type CallToolResult struct {
 	Result
+	MultiRoundTripResult
 	Content []Content `json:"content"` // Can be TextContent, ImageContent, AudioContent, or EmbeddedResource
 	// Structured content returned as a JSON object in the structuredContent field of a result.
 	// For backwards compatibility, a tool that returns structured content SHOULD also return
 	// functionally equivalent unstructured content.
 	StructuredContent any `json:"structuredContent,omitempty"`
+	// RawStructuredContent preserves the original JSON bytes for structuredContent when
+	// unmarshaled from a wire message.
+	RawStructuredContent json.RawMessage `json:"-"`
 	// Whether the tool call ended in an error.
 	//
 	// If not set, this is assumed to be false (the call was successful).
@@ -62,6 +68,10 @@ type CallToolParams struct {
 	Arguments any         `json:"arguments,omitempty"`
 	Meta      *Meta       `json:"_meta,omitempty"`
 	Task      *TaskParams `json:"task,omitempty"`
+	MultiRoundTripParams
+	// RawArguments preserves the original JSON bytes for arguments when unmarshaled
+	// from a wire message. This avoids precision loss for integers above 2^53.
+	RawArguments json.RawMessage `json:"-"`
 }
 
 // GetArguments returns the Arguments as map[string]any for backward compatibility
@@ -73,17 +83,24 @@ func (r CallToolRequest) GetArguments() map[string]any {
 	return nil
 }
 
-// GetRawArguments returns the Arguments as-is without type conversion
-// This allows users to access the raw arguments in any format
+// GetRawArguments returns the original arguments payload when available.
+// For JSON-RPC requests this is json.RawMessage; otherwise it falls back to Arguments.
 func (r CallToolRequest) GetRawArguments() any {
+	if len(r.Params.RawArguments) > 0 {
+		return r.Params.RawArguments
+	}
 	return r.Params.Arguments
 }
 
 // BindArguments unmarshals the Arguments into the provided struct
 // This is useful for working with strongly-typed arguments
 func (r CallToolRequest) BindArguments(target any) error {
-	if target == nil || reflect.ValueOf(target).Kind() != reflect.Ptr {
+	if target == nil || reflect.ValueOf(target).Kind() != reflect.Pointer {
 		return fmt.Errorf("target must be a non-nil pointer")
+	}
+
+	if len(r.Params.RawArguments) > 0 {
+		return json.Unmarshal(r.Params.RawArguments, target)
 	}
 
 	// Fast-path: already raw JSON
@@ -108,6 +125,57 @@ func (r CallToolRequest) GetString(key string, defaultValue string) string {
 		}
 	}
 	return defaultValue
+}
+
+// UnmarshalJSON preserves the original arguments JSON while also populating Arguments.
+func (p *CallToolParams) UnmarshalJSON(data []byte) error {
+	type params struct {
+		Name      string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+		Meta      *Meta           `json:"_meta,omitempty"`
+		Task      *TaskParams     `json:"task,omitempty"`
+		MultiRoundTripParams
+	}
+
+	var raw params
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	p.Name = raw.Name
+	p.Meta = raw.Meta
+	p.Task = raw.Task
+	p.MultiRoundTripParams = raw.MultiRoundTripParams
+
+	if len(raw.Arguments) == 0 {
+		return nil
+	}
+
+	p.RawArguments = append(json.RawMessage(nil), raw.Arguments...)
+	return json.Unmarshal(raw.Arguments, &p.Arguments)
+}
+
+// MarshalJSON re-emits preserved raw arguments when available.
+func (p CallToolParams) MarshalJSON() ([]byte, error) {
+	if len(p.RawArguments) > 0 {
+		type params struct {
+			Name      string          `json:"name"`
+			Arguments json.RawMessage `json:"arguments,omitempty"`
+			Meta      *Meta           `json:"_meta,omitempty"`
+			Task      *TaskParams     `json:"task,omitempty"`
+			MultiRoundTripParams
+		}
+		return json.Marshal(params{
+			Name:                 p.Name,
+			Arguments:            p.RawArguments,
+			Meta:                 p.Meta,
+			Task:                 p.Task,
+			MultiRoundTripParams: p.MultiRoundTripParams,
+		})
+	}
+
+	type alias CallToolParams
+	return json.Marshal(alias(p))
 }
 
 // RequireString returns a string argument by key, or an error if not found or not a string
@@ -330,8 +398,8 @@ func (r CallToolRequest) RequireIntSlice(key string) ([]int, error) {
 				case float64:
 					result = append(result, int(num))
 				case string:
-					if i, err := strconv.Atoi(num); err == nil {
-						result = append(result, i)
+					if n, err := strconv.Atoi(num); err == nil {
+						result = append(result, n)
 					} else {
 						return nil, fmt.Errorf("item %d in argument %q cannot be converted to int", i, key)
 					}
@@ -480,6 +548,12 @@ func (r CallToolResult) MarshalJSON() ([]byte, error) {
 		m["_meta"] = r.Meta
 	}
 
+	// resultType is required from protocol version 2026-07-28 onward, and
+	// omitted when replying to a client using an earlier version.
+	if r.ResultType != "" {
+		m["resultType"] = r.ResultType
+	}
+
 	// Marshal Content array
 	content := make([]any, len(r.Content))
 	for i, c := range r.Content {
@@ -488,7 +562,9 @@ func (r CallToolResult) MarshalJSON() ([]byte, error) {
 	m["content"] = content
 
 	// Marshal StructuredContent if present
-	if r.StructuredContent != nil {
+	if len(r.RawStructuredContent) > 0 {
+		m["structuredContent"] = json.RawMessage(r.RawStructuredContent)
+	} else if r.StructuredContent != nil {
 		m["structuredContent"] = r.StructuredContent
 	}
 
@@ -497,50 +573,56 @@ func (r CallToolResult) MarshalJSON() ([]byte, error) {
 		m["isError"] = r.IsError
 	}
 
+	// Multi round-trip fields, present only when the server is asking the
+	// client for more input before it can complete the call (SEP-2322).
+	if len(r.InputRequests) > 0 {
+		m["inputRequests"] = r.InputRequests
+	}
+	if r.RequestState != "" {
+		m["requestState"] = r.RequestState
+	}
+
 	return json.Marshal(m)
 }
 
 // UnmarshalJSON implements custom JSON unmarshaling for CallToolResult
 func (r *CallToolResult) UnmarshalJSON(data []byte) error {
-	var raw map[string]any
+	type result struct {
+		Meta              *Meta             `json:"_meta,omitempty"`
+		ResultType        ResultType        `json:"resultType,omitempty"`
+		Content           []json.RawMessage `json:"content"`
+		StructuredContent json.RawMessage   `json:"structuredContent,omitempty"`
+		IsError           bool              `json:"isError,omitempty"`
+		InputRequests     InputRequests     `json:"inputRequests,omitempty"`
+		RequestState      string            `json:"requestState,omitempty"`
+	}
+
+	var raw result
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 
-	// Unmarshal Meta
-	if meta, ok := raw["_meta"]; ok {
-		if metaMap, ok := meta.(map[string]any); ok {
-			r.Meta = NewMetaFromMap(metaMap)
-		}
-	}
+	r.Meta = raw.Meta
+	r.ResultType = raw.ResultType
+	r.IsError = raw.IsError
+	r.InputRequests = raw.InputRequests
+	r.RequestState = raw.RequestState
 
-	// Unmarshal Content array
-	if contentRaw, ok := raw["content"]; ok {
-		if contentArray, ok := contentRaw.([]any); ok {
-			r.Content = make([]Content, len(contentArray))
-			for i, item := range contentArray {
-				itemBytes, err := json.Marshal(item)
-				if err != nil {
-					return err
-				}
-				content, err := UnmarshalContent(itemBytes)
-				if err != nil {
-					return err
-				}
-				r.Content[i] = content
+	if len(raw.Content) > 0 {
+		r.Content = make([]Content, len(raw.Content))
+		for i, item := range raw.Content {
+			content, err := UnmarshalContent(item)
+			if err != nil {
+				return err
 			}
+			r.Content[i] = content
 		}
 	}
 
-	// Unmarshal StructuredContent if present
-	if structured, ok := raw["structuredContent"]; ok {
-		r.StructuredContent = structured
-	}
-
-	// Unmarshal IsError
-	if isError, ok := raw["isError"]; ok {
-		if isErrorBool, ok := isError.(bool); ok {
-			r.IsError = isErrorBool
+	if len(raw.StructuredContent) > 0 {
+		r.RawStructuredContent = append(json.RawMessage(nil), raw.StructuredContent...)
+		if err := json.Unmarshal(raw.StructuredContent, &r.StructuredContent); err != nil {
+			return err
 		}
 	}
 
@@ -578,6 +660,9 @@ type Tool struct {
 	Meta *Meta `json:"_meta,omitempty"`
 	// The name of the tool.
 	Name string `json:"name"`
+	// Title is an optional human-readable, UI-friendly display name for the tool.
+	// If not provided, clients should use Annotations.Title (if set) and fall back to Name.
+	Title string `json:"title,omitempty"`
 	// A human-readable description of the tool.
 	Description string `json:"description,omitempty"`
 	// A JSON Schema object defining the expected parameters for the tool.
@@ -611,6 +696,9 @@ func (t Tool) MarshalJSON() ([]byte, error) {
 
 	// Add the name and description
 	m["name"] = t.Name
+	if t.Title != "" {
+		m["title"] = t.Title
+	}
 	if t.Description != "" {
 		m["description"] = t.Description
 	}
@@ -665,19 +753,27 @@ type ToolArgumentsSchema struct {
 	Properties           map[string]any `json:"properties"`
 	Required             []string       `json:"required,omitempty"`
 	AdditionalProperties any            `json:"additionalProperties,omitempty"`
+	// PropertyOrder is the marshal order of the top-level Properties keys.
+	// UnmarshalJSON sets it from the "properties" object. Names that are not
+	// in Properties are skipped, and keys that are not listed follow in
+	// sorted order. A nil PropertyOrder marshals all keys in sorted order.
+	PropertyOrder []string `json:"-"`
 }
 
-type ToolInputSchema ToolArgumentsSchema // For retro-compatibility
+// ToolInputSchema remains a named type for retro-compatibility, so its JSON
+// methods explicitly forward to ToolArgumentsSchema.
+type ToolInputSchema ToolArgumentsSchema
+
 type ToolOutputSchema ToolArgumentsSchema
 
 // MarshalJSON implements the json.Marshaler interface for ToolInputSchema.
 func (tis ToolInputSchema) MarshalJSON() ([]byte, error) {
-	return toolArgumentsSchemaMarshalJSON(ToolArgumentsSchema(tis))
+	return ToolArgumentsSchema(tis).MarshalJSON()
 }
 
 // MarshalJSON implements the json.Marshaler interface for ToolOutputSchema.
 func (tis ToolOutputSchema) MarshalJSON() ([]byte, error) {
-	return toolArgumentsSchemaMarshalJSON(ToolArgumentsSchema(tis))
+	return ToolArgumentsSchema(tis).MarshalJSON()
 }
 
 // MarshalJSON implements the json.Marshaler interface for ToolArgumentsSchema.
@@ -687,12 +783,12 @@ func (tis ToolArgumentsSchema) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements the json.Unmarshaler interface for ToolInputSchema.
 func (tis *ToolInputSchema) UnmarshalJSON(data []byte) error {
-	return toolArgumentsSchemaUnmarshalJSON(data, (*ToolArgumentsSchema)(tis))
+	return (*ToolArgumentsSchema)(tis).UnmarshalJSON(data)
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for ToolOutputSchema.
 func (tis *ToolOutputSchema) UnmarshalJSON(data []byte) error {
-	return toolArgumentsSchemaUnmarshalJSON(data, (*ToolArgumentsSchema)(tis))
+	return (*ToolArgumentsSchema)(tis).UnmarshalJSON(data)
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for ToolArgumentsSchema.
@@ -710,9 +806,16 @@ func toolArgumentsSchemaMarshalJSON(tis ToolArgumentsSchema) ([]byte, error) {
 	}
 
 	// Marshal Properties to '{}' rather than `nil` when its length equals zero
-	if tis.Properties != nil {
+	switch {
+	case tis.PropertyOrder != nil:
+		properties, err := marshalOrderedProperties(tis.Properties, tis.PropertyOrder)
+		if err != nil {
+			return nil, err
+		}
+		m["properties"] = properties
+	case tis.Properties != nil:
 		m["properties"] = tis.Properties
-	} else {
+	default:
 		m["properties"] = map[string]any{}
 	}
 
@@ -730,6 +833,94 @@ func toolArgumentsSchemaMarshalJSON(tis ToolArgumentsSchema) ([]byte, error) {
 	return json.Marshal(m)
 }
 
+// marshalOrderedProperties encodes properties as a JSON object. Keys listed in
+// order come first, names not in properties are skipped, and the remaining
+// keys follow in sorted order. Keys and values go through json.Marshal, so
+// escaping matches the encoding of a map.
+func marshalOrderedProperties(properties map[string]any, order []string) (json.RawMessage, error) {
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	written := make(map[string]bool, len(properties))
+	writeProperty := func(name string) error {
+		key, err := json.Marshal(name)
+		if err != nil {
+			return err
+		}
+		value, err := json.Marshal(properties[name])
+		if err != nil {
+			return err
+		}
+		if len(written) > 0 {
+			buf.WriteByte(',')
+		}
+		written[name] = true
+		buf.Write(key)
+		buf.WriteByte(':')
+		buf.Write(value)
+		return nil
+	}
+
+	for _, name := range order {
+		if _, ok := properties[name]; !ok || written[name] {
+			continue
+		}
+		if err := writeProperty(name); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(written) < len(properties) {
+		rest := make([]string, 0, len(properties)-len(written))
+		for name := range properties {
+			if !written[name] {
+				rest = append(rest, name)
+			}
+		}
+		slices.Sort(rest)
+		for _, name := range rest {
+			if err := writeProperty(name); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+
+// propertyOrder returns the keys of the JSON object raw in the order they
+// appear, keeping the first position of a duplicate key. It returns nil when
+// raw is not an object or has no keys.
+func propertyOrder(raw json.RawMessage) []string {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		return nil
+	}
+
+	var order []string
+	seen := make(map[string]bool)
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			return nil
+		}
+		name, ok := tok.(string)
+		if !ok {
+			return nil
+		}
+		if !seen[name] {
+			seen[name] = true
+			order = append(order, name)
+		}
+
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
+			return nil
+		}
+	}
+	return order
+}
+
 // It handles both "$defs" (JSON Schema 2019-09+) and "definitions" (JSON Schema draft-07)
 // by reading either field and storing it in the Defs field.
 func toolArgumentsSchemaUnmarshalJSON(data []byte, tis *ToolArgumentsSchema) error {
@@ -737,6 +928,8 @@ func toolArgumentsSchemaUnmarshalJSON(data []byte, tis *ToolArgumentsSchema) err
 	type Alias ToolArgumentsSchema
 	aux := &struct {
 		Definitions map[string]any `json:"definitions,omitempty"`
+		// Properties shadows Alias.Properties so the raw bytes keep the key order.
+		Properties json.RawMessage `json:"properties"`
 		*Alias
 	}{
 		Alias: (*Alias)(tis),
@@ -746,12 +939,45 @@ func toolArgumentsSchemaUnmarshalJSON(data []byte, tis *ToolArgumentsSchema) err
 		return err
 	}
 
-	// If $defs wasn't provided but definitions was, use definitions
+	if aux.Properties != nil {
+		if err := json.Unmarshal(aux.Properties, &tis.Properties); err != nil {
+			return err
+		}
+		tis.PropertyOrder = propertyOrder(aux.Properties)
+	}
+
+	// If $defs wasn't provided but definitions was, use definitions.
+	// Marshaling re-emits Defs as "$defs", so local "#/definitions/..." $ref
+	// pointers must be rewritten to "#/$defs/..." or the round-tripped schema
+	// carries dangling references that strict validators reject.
 	if tis.Defs == nil && aux.Definitions != nil {
 		tis.Defs = aux.Definitions
+		rewriteDraft07LocalRefs(tis.Defs)
+		rewriteDraft07LocalRefs(tis.Properties)
+		rewriteDraft07LocalRefs(tis.AdditionalProperties)
 	}
 
 	return nil
+}
+
+// rewriteDraft07LocalRefs rewrites local draft-07 "#/definitions/..." $ref
+// pointers to their 2019-09+ "#/$defs/..." equivalent in place. It walks
+// nested maps and slices; non-local refs are left untouched.
+func rewriteDraft07LocalRefs(node any) {
+	const draft07Prefix = "#/definitions/"
+	switch v := node.(type) {
+	case map[string]any:
+		if ref, ok := v["$ref"].(string); ok && strings.HasPrefix(ref, draft07Prefix) {
+			v["$ref"] = "#/$defs/" + ref[len(draft07Prefix):]
+		}
+		for _, child := range v {
+			rewriteDraft07LocalRefs(child)
+		}
+	case []any:
+		for _, child := range v {
+			rewriteDraft07LocalRefs(child)
+		}
+	}
 }
 
 type ToolAnnotation struct {
@@ -831,6 +1057,14 @@ func WithDescription(description string) ToolOption {
 	}
 }
 
+// WithToolTitle sets the optional human-readable display title for the Tool.
+// Per the MCP spec, clients should prefer Title over Annotations.Title and Name for display.
+func WithToolTitle(title string) ToolOption {
+	return func(t *Tool) {
+		t.Title = title
+	}
+}
+
 // WithDeferLoading sets the defer_loading flag for the tool.
 // This is used to implement dynamic tool loading/searching patterns.
 func WithDeferLoading(deferLoading bool) ToolOption {
@@ -843,8 +1077,9 @@ func WithDeferLoading(deferLoading bool) ToolOption {
 // It accepts any Go type, usually a struct, and automatically generates a JSON schema from it.
 func WithInputSchema[T any]() ToolOption {
 	return func(t *Tool) {
-		schema, err := jsonschema.For[T](&jsonschema.ForOptions{IgnoreInvalidTypes: true})
+		schema, err := schemaFor[T]()
 		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			return
 		}
 
@@ -893,8 +1128,9 @@ func WithRawInputSchema(schema json.RawMessage) ToolOption {
 // It accepts any Go type, usually a struct, and automatically generates a JSON schema from it.
 func WithOutputSchema[T any]() ToolOption {
 	return func(t *Tool) {
-		schema, err := jsonschema.For[T](&jsonschema.ForOptions{IgnoreInvalidTypes: true})
+		schema, err := schemaFor[T]()
 		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			return
 		}
 
@@ -910,6 +1146,9 @@ func WithOutputSchema[T any]() ToolOption {
 		// Always set the type to "object" as of the current MCP spec
 		// https://modelcontextprotocol.io/specification/2025-06-18/server/tools#output-schema
 		t.OutputSchema.Type = "object"
+		// Decoding the generated schema recorded struct field order. Clear it
+		// so these tools keep emitting properties sorted by name.
+		t.OutputSchema.PropertyOrder = nil
 	}
 }
 
@@ -1056,33 +1295,33 @@ func Pattern(pattern string) PropertyOption {
 // Number Property Options
 //
 
-// DefaultNumber sets the default value for a number property.
+// DefaultNumber sets the default value for a number or integer property.
 // This value will be used if the property is not explicitly provided.
-func DefaultNumber(value float64) PropertyOption {
+func DefaultNumber[T int | int64 | float64](value T) PropertyOption {
 	return func(schema map[string]any) {
 		schema["default"] = value
 	}
 }
 
-// Max sets the maximum value for a number property.
+// Max sets the maximum value for a number or integer property.
 // The number value must not exceed this maximum.
-func Max(max float64) PropertyOption {
+func Max[T int | int64 | float64](max T) PropertyOption {
 	return func(schema map[string]any) {
 		schema["maximum"] = max
 	}
 }
 
-// Min sets the minimum value for a number property.
+// Min sets the minimum value for a number or integer property.
 // The number value must not be less than this minimum.
-func Min(min float64) PropertyOption {
+func Min[T int | int64 | float64](min T) PropertyOption {
 	return func(schema map[string]any) {
 		schema["minimum"] = min
 	}
 }
 
-// MultipleOf specifies that a number must be a multiple of the given value.
+// MultipleOf specifies that a number or integer must be a multiple of the given value.
 // The number value must be divisible by this value.
-func MultipleOf(value float64) PropertyOption {
+func MultipleOf[T int | int64 | float64](value T) PropertyOption {
 	return func(schema map[string]any) {
 		schema["multipleOf"] = value
 	}
@@ -1115,6 +1354,28 @@ func DefaultArray[T any](value []T) PropertyOption {
 //
 // Property Type Helpers
 //
+
+// WithInteger adds an integer property to the tool schema.
+// It accepts property options to configure the integer property's behavior and constraints.
+func WithInteger(name string, opts ...PropertyOption) ToolOption {
+	return func(t *Tool) {
+		schema := map[string]any{
+			"type": "integer",
+		}
+
+		for _, opt := range opts {
+			opt(schema)
+		}
+
+		// Remove required from property schema and add to InputSchema.required
+		if required, ok := schema["required"].(bool); ok && required {
+			delete(schema, "required")
+			t.InputSchema.Required = append(t.InputSchema.Required, name)
+		}
+
+		t.InputSchema.Properties[name] = schema
+	}
+}
 
 // WithBoolean adds a boolean property to the tool schema.
 // It accepts property options to configure the boolean property's behavior and constraints.
@@ -1388,6 +1649,35 @@ func WithNumberItems(opts ...PropertyOption) PropertyOption {
 
 		for _, opt := range opts {
 			opt(itemSchema)
+		}
+
+		schema["items"] = itemSchema
+	}
+}
+
+// WithIntegerItems configures an array's items to be of type integer.
+//
+// Supported options: Description(), DefaultNumber(), Min(), Max(), MultipleOf()
+// Note: Options like Required() are not valid for item schemas and will be ignored.
+//
+// Examples:
+//
+//	mcp.WithArray("ids", mcp.WithIntegerItems())
+//	mcp.WithArray("scores", mcp.WithIntegerItems(mcp.Min(0), mcp.Max(100)))
+//
+// Limitations: Only supports simple integer arrays. Use Items() for complex objects.
+func WithIntegerItems(opts ...PropertyOption) PropertyOption {
+	return func(schema map[string]any) {
+		itemSchema := map[string]any{
+			"type": "integer",
+		}
+
+		for _, opt := range opts {
+			opt(itemSchema)
+		}
+
+		if required, ok := itemSchema["required"].(bool); ok && required {
+			delete(itemSchema, "required")
 		}
 
 		schema["items"] = itemSchema

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 	"maps"
 	"net/url"
 
@@ -50,6 +51,49 @@ type SessionWithResources interface {
 	// SetSessionResources sets resources specific to this session
 	// This method must be thread-safe for concurrent access
 	SetSessionResources(resources map[string]ServerResource)
+}
+
+// SessionWithResourceSubscriptions is an optional extension of ClientSession
+// implemented by sessions that track resources/subscribe state. When the
+// default subscribe/unsubscribe handlers in MCPServer service a request, they
+// will invoke SubscribeToResource or UnsubscribeFromResource on the active
+// session if it implements this interface, allowing servers to later target
+// notifications/resources/updated only at sessions that asked for updates.
+//
+// Implementations must be safe for concurrent use because requests and
+// notifications may run on independent goroutines.
+type SessionWithResourceSubscriptions interface {
+	ClientSession
+	// SubscribeToResource records that this session has subscribed to updates
+	// for the given resource URI. Subscribing the same URI twice is a no-op.
+	SubscribeToResource(uri string)
+	// UnsubscribeFromResource removes a previously recorded subscription for
+	// the given resource URI. Unsubscribing a URI that was never subscribed
+	// to is a no-op.
+	UnsubscribeFromResource(uri string)
+	// SubscribedResources returns a snapshot of the URIs this session is
+	// currently subscribed to. The returned slice is owned by the caller and
+	// safe to mutate.
+	SubscribedResources() []string
+	// IsSubscribedToResource reports whether the session is currently
+	// subscribed to updates for the given resource URI.
+	IsSubscribedToResource(uri string) bool
+}
+
+// SessionWithResourceSubscriptionsErr is an optional extension of
+// SessionWithResourceSubscriptions whose SubscribeToResourceErr method can
+// reject a subscription. When a session implements this interface, MCPServer
+// uses SubscribeToResourceErr in preference to SubscribeToResource and returns
+// RESOURCE_NOT_FOUND if it reports an error.
+//
+// Implementations must be safe for concurrent use because requests and
+// notifications may run on independent goroutines.
+type SessionWithResourceSubscriptionsErr interface {
+	SessionWithResourceSubscriptions
+	// SubscribeToResourceErr records that this session has subscribed to updates
+	// for the given resource URI, or returns an error if the URI cannot be
+	// subscribed to.
+	SubscribeToResourceErr(uri string) error
 }
 
 // SessionWithResourceTemplates is an extension of ClientSession that can store session-specific resource template data
@@ -159,6 +203,19 @@ func (s *MCPServer) SendLogMessageToClient(ctx context.Context, notification mcp
 	if session == nil || !session.Initialized() {
 		return ErrNotificationNotInitialized
 	}
+	// Protocol version 2026-07-28 removed logging/setLevel: the level is
+	// declared per request, and a server MUST NOT emit log notifications for a
+	// request that did not ask for them (SEP-2575).
+	if info := RequestProtocolInfoFromContext(ctx); info != nil && info.Modern {
+		if info.LogLevel == "" {
+			return nil
+		}
+		if !notification.Params.Level.ShouldSendTo(info.LogLevel) {
+			return nil
+		}
+		return s.sendNotificationCore(ctx, session, s.buildLogNotification(notification))
+	}
+
 	sessionLogging, ok := session.(SessionWithLogging)
 	if !ok {
 		return ErrSessionDoesNotSupportLogging
@@ -172,6 +229,13 @@ func (s *MCPServer) SendLogMessageToClient(ctx context.Context, notification mcp
 func (s *MCPServer) sendNotificationToAllClients(notification mcp.JSONRPCNotification) {
 	s.sessions.Range(func(k, v any) bool {
 		if session, ok := v.(ClientSession); ok && session.Initialized() {
+			// From protocol version 2026-07-28 every server-to-client
+			// notification is opt-in: a session that opened a
+			// subscriptions/listen stream receives only the types it asked
+			// for (SEP-2575). Sessions that never opened one are unaffected.
+			if !subscriptionAllowsNotification(session, notification.Method) {
+				return true
+			}
 			if sessionWithStreamableHTTPConfig, ok := session.(SessionWithStreamableHTTPConfig); ok {
 				sessionWithStreamableHTTPConfig.UpgradeToSSEWhenReceiveNotification()
 			}
@@ -185,6 +249,11 @@ func (s *MCPServer) sendNotificationToAllClients(notification mcp.JSONRPCNotific
 					// Copy hooks pointer to local variable to avoid race condition
 					hooks := s.hooks
 					go func(sessionID string, hooks *Hooks) {
+						defer func() {
+							if r := recover(); r != nil {
+								log.Printf("mcp-go: panic in OnError hook (notification blocked, session %s): %v", sessionID, r)
+							}
+						}()
 						ctx := context.Background()
 						// Use the error hook to report the blocked channel
 						hooks.onError(ctx, nil, "notification", map[string]any{
@@ -215,6 +284,11 @@ func (s *MCPServer) sendNotificationToSpecificClient(session ClientSession, noti
 			// Copy hooks pointer to local variable to avoid race condition
 			hooks := s.hooks
 			go func(sID string, hooks *Hooks) {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("mcp-go: panic in OnError hook (notification blocked, session %s): %v", sID, r)
+					}
+				}()
 				// Use the error hook to report the blocked channel
 				hooks.onError(ctx, nil, "notification", map[string]any{
 					"method":    notification.Method,
@@ -297,6 +371,11 @@ func (s *MCPServer) sendNotificationCore(
 			// Copy hooks pointer to local variable to avoid race condition
 			hooks := s.hooks
 			go func(sessionID string, hooks *Hooks) {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("mcp-go: panic in OnError hook (notification blocked, session %s): %v", sessionID, r)
+					}
+				}()
 				// Use the error hook to report the blocked channel
 				hooks.onError(ctx, nil, "notification", map[string]any{
 					"method":    method,
@@ -386,6 +465,10 @@ func (s *MCPServer) AddSessionTools(sessionID string, tools ...ServerTool) error
 
 	// Add new tools
 	for _, tool := range tools {
+		s.applyStrictInputSchemaDefault(&tool.Tool)
+		if err := validateToolHeaderAnnotations(&tool.Tool); err != nil {
+			return err
+		}
 		newSessionTools[tool.Tool.Name] = tool
 	}
 
@@ -407,6 +490,11 @@ func (s *MCPServer) AddSessionTools(sessionID string, tools ...ServerTool) error
 			if s.hooks != nil && len(s.hooks.OnError) > 0 {
 				hooks := s.hooks
 				go func(sID string, hooks *Hooks) {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("mcp-go: panic in OnError hook (tools added, session %s): %v", sID, r)
+						}
+					}()
 					ctx := context.Background()
 					hooks.onError(ctx, nil, "notification", map[string]any{
 						"method":    "notifications/tools/list_changed",
@@ -467,6 +555,11 @@ func (s *MCPServer) DeleteSessionTools(sessionID string, names ...string) error 
 			if s.hooks != nil && len(s.hooks.OnError) > 0 {
 				hooks := s.hooks
 				go func(sID string, hooks *Hooks) {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("mcp-go: panic in OnError hook (tools deleted, session %s): %v", sID, r)
+						}
+					}()
 					ctx := context.Background()
 					hooks.onError(ctx, nil, "notification", map[string]any{
 						"method":    "notifications/tools/list_changed",
@@ -545,6 +638,11 @@ func (s *MCPServer) AddSessionResources(sessionID string, resources ...ServerRes
 			if s.hooks != nil && len(s.hooks.OnError) > 0 {
 				hooks := s.hooks
 				go func(sID string, hooks *Hooks) {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("mcp-go: panic in OnError hook (resources added, session %s): %v", sID, r)
+						}
+					}()
 					ctx := context.Background()
 					hooks.onError(ctx, nil, "notification", map[string]any{
 						"method":    "notifications/resources/list_changed",
@@ -615,6 +713,11 @@ func (s *MCPServer) DeleteSessionResources(sessionID string, uris ...string) err
 			if s.hooks != nil && len(s.hooks.OnError) > 0 {
 				hooks := s.hooks
 				go func(sID string, hooks *Hooks) {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("mcp-go: panic in OnError hook (resources deleted, session %s): %v", sID, r)
+						}
+					}()
 					ctx := context.Background()
 					hooks.onError(ctx, nil, "notification", map[string]any{
 						"method":    "notifications/resources/list_changed",
@@ -689,6 +792,11 @@ func (s *MCPServer) AddSessionResourceTemplates(sessionID string, templates ...S
 			if s.hooks != nil && len(s.hooks.OnError) > 0 {
 				hooks := s.hooks
 				go func(sID string, hooks *Hooks) {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("mcp-go: panic in OnError hook (resource templates added, session %s): %v", sID, r)
+						}
+					}()
 					ctx := context.Background()
 					hooks.onError(ctx, nil, "notification", map[string]any{
 						"method":    "notifications/resources/list_changed",
@@ -744,6 +852,11 @@ func (s *MCPServer) DeleteSessionResourceTemplates(sessionID string, uriTemplate
 				if s.hooks != nil && len(s.hooks.OnError) > 0 {
 					hooks := s.hooks
 					go func(sID string, hooks *Hooks) {
+						defer func() {
+							if r := recover(); r != nil {
+								log.Printf("mcp-go: panic in OnError hook (resource templates deleted, session %s): %v", sID, r)
+							}
+						}()
 						ctx := context.Background()
 						hooks.onError(ctx, nil, "notification", map[string]any{
 							"method":    "notifications/resources/list_changed",

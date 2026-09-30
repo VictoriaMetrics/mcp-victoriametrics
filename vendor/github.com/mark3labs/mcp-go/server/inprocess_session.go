@@ -26,12 +26,12 @@ type RootsHandler interface {
 }
 
 type InProcessSession struct {
+	clientInfoStore // provides Get/SetClientInfo and Get/SetClientCapabilities via method promotion
+
 	sessionID          string
 	notifications      chan mcp.JSONRPCNotification
 	initialized        atomic.Bool
 	loggingLevel       atomic.Value
-	clientInfo         atomic.Value
-	clientCapabilities atomic.Value
 	samplingHandler    SamplingHandler
 	elicitationHandler ElicitationHandler
 	rootsHandler       RootsHandler
@@ -56,11 +56,26 @@ func NewInProcessSessionWithHandlers(sessionID string, samplingHandler SamplingH
 	}
 }
 
+// isInProcess marks this session as dispatching server-initiated requests as
+// direct in-process function calls rather than protocol messages, which is why
+// they remain available on connections using protocol version 2026-07-28 or
+// later.
+func (s *InProcessSession) isInProcess() {}
+
 func (s *InProcessSession) SessionID() string {
 	return s.sessionID
 }
 
 func (s *InProcessSession) NotificationChannel() chan<- mcp.JSONRPCNotification {
+	return s.notifications
+}
+
+// ClientNotifications returns the receive-only endpoint of the session's
+// notification channel. In-process transports use this to drain
+// server-to-client notifications (progress, list-changed, resource
+// updates, etc.) queued via NotificationChannel and forward them to the
+// client's registered notification handler.
+func (s *InProcessSession) ClientNotifications() <-chan mcp.JSONRPCNotification {
 	return s.notifications
 }
 
@@ -71,32 +86,6 @@ func (s *InProcessSession) Initialize() {
 
 func (s *InProcessSession) Initialized() bool {
 	return s.initialized.Load()
-}
-
-func (s *InProcessSession) GetClientInfo() mcp.Implementation {
-	if value := s.clientInfo.Load(); value != nil {
-		if clientInfo, ok := value.(mcp.Implementation); ok {
-			return clientInfo
-		}
-	}
-	return mcp.Implementation{}
-}
-
-func (s *InProcessSession) SetClientInfo(clientInfo mcp.Implementation) {
-	s.clientInfo.Store(clientInfo)
-}
-
-func (s *InProcessSession) GetClientCapabilities() mcp.ClientCapabilities {
-	if value := s.clientCapabilities.Load(); value != nil {
-		if clientCapabilities, ok := value.(mcp.ClientCapabilities); ok {
-			return clientCapabilities
-		}
-	}
-	return mcp.ClientCapabilities{}
-}
-
-func (s *InProcessSession) SetClientCapabilities(clientCapabilities mcp.ClientCapabilities) {
-	s.clientCapabilities.Store(clientCapabilities)
 }
 
 func (s *InProcessSession) SetLogLevel(level mcp.LoggingLevel) {
