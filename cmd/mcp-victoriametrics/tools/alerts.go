@@ -160,7 +160,15 @@ func toolAlertsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallTool
 			return strings.Compare(aID, bID)
 		})
 		if limit > 0 {
-			filteredAlerts = filteredAlerts[int(offset):int(offset+limit)]
+			start := int(offset)
+			if start > len(filteredAlerts) {
+				start = len(filteredAlerts)
+			}
+			end := start + int(limit)
+			if end > len(filteredAlerts) {
+				end = len(filteredAlerts)
+			}
+			filteredAlerts = filteredAlerts[start:end]
 		}
 		data["alerts"] = filteredAlerts // Update the alerts field with filtered alerts
 		result["data"] = data           // Update the data field with the modified alerts
