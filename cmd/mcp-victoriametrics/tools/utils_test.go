@@ -324,3 +324,61 @@ func TestGetSelectURLWithDefaultTenant(t *testing.T) {
 		})
 	}
 }
+
+func TestGetToolReqTenantParam(t *testing.T) {
+	tests := []struct {
+		name          string
+		args          map[string]any
+		required      bool
+		expectedValue string
+		expectError   bool
+	}{
+		{
+			name:          "string tenant",
+			args:          map[string]any{"tenant": "100:200"},
+			expectedValue: "100:200",
+		},
+		{
+			name:          "numeric tenant",
+			args:          map[string]any{"tenant": float64(123)},
+			expectedValue: "123",
+		},
+		{
+			name:          "numeric tenant",
+			args:          map[string]any{"tenant": float64(0)},
+			expectedValue: "0",
+		},
+		{
+			name:          "numeric tenant",
+			args:          map[string]any{"tenant": float64(421598)},
+			expectedValue: "421598",
+		},
+		{
+			name:          "missing optional tenant",
+			expectedValue: "",
+		},
+		{
+			name:        "invalid tenant type",
+			args:        map[string]any{"tenant": true},
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tcr := mcp.CallToolRequest{}
+			tcr.Params.Arguments = test.args
+
+			value, err := GetToolReqTenantParam(tcr)
+			if test.expectError && err == nil {
+				t.Fatal("Expected an error, got nil")
+			}
+			if !test.expectError && err != nil {
+				t.Fatalf("Expected no error, got: %v", err)
+			}
+			if value != test.expectedValue {
+				t.Errorf("Expected %q, got %q", test.expectedValue, value)
+			}
+		})
+	}
+}

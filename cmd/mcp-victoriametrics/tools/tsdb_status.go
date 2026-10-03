@@ -44,12 +44,7 @@ This tool returns TSDB stats from "/api/v1/status/tsdb" endpoint of VictoriaMetr
 	if c.IsCluster() || c.IsCloud() {
 		options = append(
 			options,
-			mcp.WithString("tenant",
-				mcp.Title("Tenant name"),
-				mcp.Description("Name of the tenant for which the TSDB stats will be displayed"),
-				mcp.DefaultString("0"),
-				mcp.Pattern(`^([0-9]+)(:[0-9]+)?$`),
-			),
+			withTenantParam("Name of the tenant for which the TSDB stats will be displayed"),
 		)
 	}
 	options = append(

@@ -36,12 +36,7 @@ This information is obtained from the "/api/v1/status/active_queries" HTTP endpo
 	}
 	if c.IsCluster() || c.IsCloud() {
 		options = append(options,
-			mcp.WithString("tenant",
-				mcp.Title("Tenant name"),
-				mcp.Description("Name of the tenant for which the active queries will be displayed"),
-				mcp.DefaultString("0"),
-				mcp.Pattern(`^([0-9]+)(:[0-9]+)?$`),
-			),
+			withTenantParam("Name of the tenant for which the active queries will be displayed"),
 		)
 	}
 	return mcp.NewTool(toolNameActiveQueries, options...)

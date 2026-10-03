@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -232,7 +233,7 @@ func getSelectURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReque
 	}
 
 	// Cluster mode
-	tenant, err := GetToolReqParam[string](tcr, "tenant", false)
+	tenant, err := GetToolReqTenantParam(tcr)
 	if err != nil {
 		return "", fmt.Errorf("failed to get tenant parameter: %v", err)
 	}
@@ -265,6 +266,28 @@ func GetTextBodyForRequest(req *http.Request, _ *config.Config, f ...func(s stri
 	return mcp.NewToolResultText(result)
 }
 
+// withTenantParam adds the tenant property to the tool input schema.
+// Allows both a string and an integer. Integers are coerced to strings
+func withTenantParam(description string) mcp.ToolOption {
+	return func(t *mcp.Tool) {
+		t.InputSchema.Properties["tenant"] = map[string]any{
+			"title":       "Tenant name",
+			"description": description,
+			"default":     "0",
+			"anyOf": []map[string]any{
+				{
+					"type":    "string",
+					"pattern": `^([0-9]+)(:[0-9]+)?$`,
+				},
+				{
+					"type":    "integer",
+					"minimum": 0,
+				},
+			},
+		}
+	}
+}
+
 type ToolReqParamType interface {
 	string | float64 | bool | []string | []any
 }
@@ -281,6 +304,21 @@ func GetToolReqParam[T ToolReqParamType](tcr mcp.CallToolRequest, param string, 
 		return value, fmt.Errorf("%s param is required", param)
 	}
 	return value, nil
+}
+
+// GetToolReqTenantParam gets the tenant parameter as string or float. If it's a float,
+// it's coerced to a string.
+func GetToolReqTenantParam(tcr mcp.CallToolRequest) (string, error) {
+	tenant, err := GetToolReqParam[string](tcr, "tenant", false)
+	if err == nil {
+		return tenant, nil
+	}
+
+	tenantNumber, numberErr := GetToolReqParam[float64](tcr, "tenant", false)
+	if numberErr == nil {
+		return strconv.FormatFloat(tenantNumber, 'f', -1, 64), nil
+	}
+	return "", err
 }
 
 func withCloudAccessKey(ctx context.Context, tcr mcp.CallToolRequest) context.Context {
