@@ -86,23 +86,25 @@ func (a *VMCloudAPIClient) ListRegions(ctx context.Context) (RegionInfoList, err
 
 // listOptions holds the filters of a list request.
 type listOptions struct {
-	deploymentType DeploymentType
+	deploymentTypes []DeploymentType
 }
 
 // ListOption defines a functional option that filters the result of a list request.
 type ListOption func(*listOptions)
 
-// WithDeploymentType restricts a list request to a single deployment type.
+// WithDeploymentType restricts a list request to the given deployment types, e.g.
+// WithDeploymentType(DeploymentTypeSingleNode, DeploymentTypeCluster) for every
+// VictoriaMetrics deployment. Repeated options add up.
 // Without it the API returns entries of every deployment type.
-func WithDeploymentType(deploymentType DeploymentType) ListOption {
+func WithDeploymentType(deploymentTypes ...DeploymentType) ListOption {
 	return func(o *listOptions) {
-		o.deploymentType = deploymentType
+		o.deploymentTypes = append(o.deploymentTypes, deploymentTypes...)
 	}
 }
 
 // listQuery turns the options into query parameters.
 //
-// The deployment type is forwarded as given rather than checked against the types this
+// The deployment types are forwarded as given rather than checked against the types this
 // build knows: filtering is a question for the API, and vetting it here would mean a
 // caller could not filter on a type added after this SDK was released. A type the API does
 // not know comes back as an API error.
@@ -112,8 +114,8 @@ func listQuery(options []ListOption) url.Values {
 		option(&o)
 	}
 	query := url.Values{}
-	if o.deploymentType != "" {
-		query.Set("type", o.deploymentType.String())
+	for _, deploymentType := range o.deploymentTypes {
+		query.Add("type", deploymentType.String())
 	}
 	return query
 }

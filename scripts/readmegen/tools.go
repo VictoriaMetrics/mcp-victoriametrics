@@ -38,6 +38,16 @@ var backends = []backend{
 			{name: "cluster", env: []string{"VM_INSTANCE_ENTRYPOINT=http://localhost:8481", "VM_INSTANCE_TYPE=cluster"}},
 		},
 	},
+	{
+		id:      "logs",
+		product: "VictoriaLogs",
+		modes:   []mode{{name: "single", env: []string{"VM_INSTANCE_ENTRYPOINT=http://localhost:9428"}}},
+	},
+	{
+		id:      "traces",
+		product: "VictoriaTraces",
+		modes:   []mode{{name: "single", env: []string{"VM_INSTANCE_ENTRYPOINT=http://localhost:10428"}}},
+	},
 }
 
 type toolInfo struct {

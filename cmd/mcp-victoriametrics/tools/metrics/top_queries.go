@@ -1,0 +1,104 @@
+package metrics
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/tools"
+)
+
+const toolNameTopQueries = "top_queries"
+
+func toolTopQueries(c *config.Config) mcp.Tool {
+	options := []mcp.ToolOption{
+		mcp.WithDescription(`Top queries.
+This tool can determine top queries of the following query types:
+- the most frequently executed queries;
+- queries with the biggest average execution duration;
+- queries that took the most summary time for execution.
+This information is obtained from the "/api/v1/status/top_queries" HTTP endpoint of VictoriaMetrics API.
+`),
+		mcp.WithToolAnnotation(mcp.ToolAnnotation{
+			Title:           "Top queries",
+			ReadOnlyHint:    ptr(true),
+			DestructiveHint: ptr(false),
+			OpenWorldHint:   ptr(true),
+		}),
+	}
+	if c.IsCloud() {
+		options = append(
+			options,
+			mcp.WithString("deployment_id",
+				mcp.Required(),
+				mcp.Title("Deployment ID"),
+				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
+				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
+			),
+		)
+	}
+	if c.IsCluster() || c.IsCloud() {
+		options = append(
+			options,
+			tools.WithTenantParam("Name of the tenant for which the top queries will be displayed"),
+		)
+	}
+	options = append(
+		options,
+		mcp.WithNumber("topN",
+			mcp.Required(),
+			mcp.Title("Top N"),
+			mcp.Description("The number of top entries to return in the response. By default is 20."),
+			mcp.DefaultNumber(20),
+			mcp.Min(1),
+		),
+		mcp.WithString("maxLifetime",
+			mcp.Title("Max lifetime"),
+			mcp.Description("Max lifetime of the queries to be taken into account during stats calculation. By default is 10m."),
+			mcp.DefaultString("10m"),
+			mcp.Pattern(`^([0-9]+)([a-z]+)$`),
+		),
+	)
+	return mcp.NewTool(toolNameTopQueries, options...)
+}
+
+func toolTopQueriesHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	topN, err := tools.GetToolReqParam[float64](tcr, "topN", true)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if topN < 1 {
+		topN = 20
+	}
+
+	maxLifetime, err := tools.GetToolReqParam[string](tcr, "maxLifetime", false)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	req, err := CreateSelectRequest(ctx, cfg, tcr, "api", "v1", "status", "top_queries")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to create request: %v", err)), nil
+	}
+
+	query := req.URL.Query()
+	query.Set("topN", fmt.Sprintf("%d", int(topN)))
+	if maxLifetime != "" {
+		query.Set("focusLabel", maxLifetime)
+	}
+	req.URL.RawQuery = query.Encode()
+
+	return tools.GetTextBodyForRequest(req, cfg), nil
+}
+
+func registerToolTopQueries(s *server.MCPServer, c *config.Config) {
+	if c.IsToolDisabled(toolNameTopQueries) {
+		return
+	}
+	s.AddTool(toolTopQueries(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return toolTopQueriesHandler(ctx, c, request)
+	})
+}
