@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	output := flag.String("output", "cmd/mcp-victoriametrics/resources/docsindex/docs-index.tar.gz", "path to the docs search index archive embedded into the server")
+	outputDir := flag.String("outputDir", "cmd/mcp-victoriametrics/resources/docsindex", "directory for the docs search index archives embedded into the server")
 	flag.Parse()
 
-	if err := resources.BuildDocsIndex(*output); err != nil {
-		log.Fatalf("cannot build docs index: %v", err)
+	if err := resources.BuildDocsIndexes(*outputDir); err != nil {
+		log.Fatalf("cannot build docs indexes: %v", err)
 	}
 }

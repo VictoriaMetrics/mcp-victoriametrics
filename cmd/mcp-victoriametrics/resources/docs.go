@@ -31,8 +31,8 @@ var (
 	contents    map[string]mcp.ResourceContents
 )
 
-func RegisterDocsResources(s *server.MCPServer, cfg *config.Config) {
-	docFiles, err := ListDocFiles()
+func Register(s *server.MCPServer, cfg *config.Config) {
+	docFiles, err := ListDocFiles(cfg.Backend())
 	if err != nil {
 		log.Fatal(fmt.Errorf("error listing docs files: %w", err))
 	}
@@ -56,7 +56,7 @@ func RegisterDocsResources(s *server.MCPServer, cfg *config.Config) {
 			Text:     docFile.Content,
 		}
 	}
-	searchIndex = openDocsIndex(docFiles)
+	searchIndex = openDocsIndex(cfg.Backend(), docFiles)
 }
 
 func docResourceURI(docFile DocFileInfo) string {
@@ -117,11 +117,59 @@ type DocFileInfo struct {
 	Name     string `json:"name"`
 }
 
-func ListDocFiles() ([]DocFileInfo, error) {
+var (
+	productDocsDirs = map[config.Backend][]string{
+		config.BackendLogs:   {"victorialogs", "victorialogs-grafana-datasource", "helm/victoria-logs-"},
+		config.BackendTraces: {"victoriatraces", "helm/victoria-traces-"},
+	}
+	productBlogKeywords = map[config.Backend][]string{
+		config.BackendLogs:   {"logs"},
+		config.BackendTraces: {"tracing", "traces"},
+	}
+)
+
+func isBackendDoc(backend config.Backend, path string) bool {
+	if rel, ok := strings.CutPrefix(path, "vm/content/"); ok {
+		if dirs, ok := productDocsDirs[backend]; ok {
+			return hasAnyPrefix(rel, dirs)
+		}
+		for _, dirs := range productDocsDirs {
+			if hasAnyPrefix(rel, dirs) {
+				return false
+			}
+		}
+		return true
+	}
+	if rel, ok := strings.CutPrefix(path, "vmsite/content/blog/"); ok {
+		keywords, ok := productBlogKeywords[backend]
+		if !ok {
+			return true
+		}
+		entry, _, _ := strings.Cut(rel, "/")
+		for _, keyword := range keywords {
+			if strings.Contains(entry, keyword) {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
+
+func hasAnyPrefix(path string, prefixes []string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(path, prefix) && (strings.HasSuffix(prefix, "-") || len(path) == len(prefix) || path[len(prefix)] == '/') {
+			return true
+		}
+	}
+	return false
+}
+
+func ListDocFiles(backend config.Backend) ([]DocFileInfo, error) {
 	docs := make([]DocFileInfo, 0)
 	for _, rootDir := range []string{"vm", "vmsite"} {
 		docFiles, err := utils.Glob(DocsDir, rootDir, func(s string) bool {
-			return strings.ToLower(filepath.Ext(s)) == ".md"
+			return strings.ToLower(filepath.Ext(s)) == ".md" && isBackendDoc(backend, s)
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error reading docs directory: %w", err)

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -14,11 +15,11 @@ import (
 const ToolNameDocumentation = "documentation"
 const defaultDocSearchLimit = 30
 
-var (
-	toolDocumentation = mcp.NewTool(ToolNameDocumentation,
-		mcp.WithDescription("Search the embedded VictoriaMetrics documentation and blog posts, returning the matching documents sorted by relevance. Use only for questions about VictoriaMetrics products, not for other software."),
+func toolDocumentation(c *config.Config) mcp.Tool {
+	return mcp.NewTool(ToolNameDocumentation,
+		mcp.WithDescription(fmt.Sprintf("Search the embedded %[1]s documentation and blog posts, returning the matching documents sorted by relevance. Use only for questions about %[1]s, not for other software.", c.Backend().ProductName())),
 		mcp.WithToolAnnotation(mcp.ToolAnnotation{
-			Title:           "Search VictoriaMetrics documentation",
+			Title:           fmt.Sprintf("Search %s documentation", c.Backend().ProductName()),
 			ReadOnlyHint:    ptr(true),
 			DestructiveHint: ptr(false),
 			OpenWorldHint:   ptr(false),
@@ -35,7 +36,7 @@ var (
 			mcp.Min(1),
 		),
 	)
-)
+}
 
 func toolDocumentationHandler(_ context.Context, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	query, err := GetToolReqParam[string](tcr, "query", true)
@@ -72,5 +73,5 @@ func registerToolDocumentation(s *server.MCPServer, c *config.Config) {
 	if c.IsToolDisabled(ToolNameDocumentation) {
 		return
 	}
-	s.AddTool(toolDocumentation, toolDocumentationHandler)
+	s.AddTool(toolDocumentation(c), toolDocumentationHandler)
 }

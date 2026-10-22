@@ -24,9 +24,16 @@
           "isSecret": false
         },
         {
+          "name": "VM_INSTANCE_BACKEND",
+          "description": "Backend the server works with (metrics / logs / traces), default is metrics",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
           "name": "VM_INSTANCE_TYPE",
-          "description": "Type of VictoriaMetrics instance (single / cluster)",
-          "isRequired": true,
+          "description": "Type of VictoriaMetrics instance (single / cluster), required for metrics backend",
+          "isRequired": false,
           "format": "string",
           "isSecret": false
         },

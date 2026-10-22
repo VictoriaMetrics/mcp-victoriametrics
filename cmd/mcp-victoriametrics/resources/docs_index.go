@@ -14,24 +14,41 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/blevesearch/bleve/v2"
+
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 //go:embed all:docsindex
 var docsIndexDir embed.FS
 
 const (
-	embeddedDocsIndexArchive = "docsindex/docs-index.tar.gz"
-	docsIndexDirPrefix       = "mcp-victoriametrics-docs-index-"
-	docsHashKey              = "docs_hash"
-	docsIndexBatchSize       = 64
-	docsIndexFormat          = "v1"
+	docsIndexDirPrefix = "mcp-victoriametrics-docs-index-"
+	docsHashKey        = "docs_hash"
+	docsIndexBatchSize = 64
+	docsIndexFormat    = "v1"
 )
 
-func BuildDocsIndex(archivePath string) error {
-	docFiles, err := ListDocFiles()
+var docsIndexBackends = []config.Backend{config.BackendMetrics, config.BackendLogs, config.BackendTraces}
+
+func BuildDocsIndexes(outputDir string) error {
+	for _, backend := range docsIndexBackends {
+		if err := buildDocsIndexArchive(backend, filepath.Join(outputDir, docsIndexArchiveName(backend))); err != nil {
+			return fmt.Errorf("error building %s docs index: %w", backend, err)
+		}
+	}
+	return nil
+}
+
+func docsIndexArchiveName(backend config.Backend) string {
+	return fmt.Sprintf("docs-index-%s.tar.gz", backend)
+}
+
+func buildDocsIndexArchive(backend config.Backend, archivePath string) error {
+	docFiles, err := ListDocFiles(backend)
 	if err != nil {
 		return fmt.Errorf("error listing docs files: %w", err)
 	}
@@ -64,9 +81,9 @@ func buildDocsIndex(path string, docFiles []DocFileInfo) error {
 	return index.Close()
 }
 
-func openDocsIndex(docFiles []DocFileInfo) bleve.Index {
+func openDocsIndex(backend config.Backend, docFiles []DocFileInfo) bleve.Index {
 	hash := docsHash(docFiles)
-	archive, err := docsIndexDir.ReadFile(embeddedDocsIndexArchive)
+	archive, err := docsIndexDir.ReadFile(path.Join("docsindex", docsIndexArchiveName(backend)))
 	if err == nil {
 		dir := filepath.Join(os.TempDir(), docsIndexDirPrefix+hash[:16])
 		index, err := openArchivedDocsIndex(archive, dir, hash)

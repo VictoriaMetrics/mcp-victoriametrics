@@ -13,7 +13,7 @@ coverage.txt
 *~
 bin/
 /mcp-victoriametrics
-/cmd/mcp-victoriametrics/resources/docsindex/docs-index.tar.gz
+/cmd/mcp-victoriametrics/resources/docsindex/*.tar.gz
 /web/dist/*
 !/web/dist/.gitkeep
 /web/node_modules/
