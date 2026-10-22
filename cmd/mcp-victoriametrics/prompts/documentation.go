@@ -10,17 +10,17 @@ import (
 	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
-var (
-	promptDocumentation = mcp.NewPrompt("documentation",
-		mcp.WithPromptDescription("Search by VictoriaMetrics documentation or give context for answering questions"),
+func promptDocumentation(product string) mcp.Prompt {
+	return mcp.NewPrompt("documentation",
+		mcp.WithPromptDescription(fmt.Sprintf("Search by %s documentation or give context for answering questions", product)),
 		mcp.WithArgument("query",
 			mcp.RequiredArgument(),
-			mcp.ArgumentDescription("What do you want to search in the VictoriaMetrics documentation?"),
+			mcp.ArgumentDescription(fmt.Sprintf("What do you want to search in the %s documentation?", product)),
 		),
 	)
-)
+}
 
-func promptDocumentationHandler(_ context.Context, gpr mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+func promptDocumentationHandler(_ context.Context, product string, gpr mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 	query, err := GetPromptReqParam(gpr, "query", true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %v", err)
@@ -30,12 +30,15 @@ func promptDocumentationHandler(_ context.Context, gpr mcp.GetPromptRequest) (*m
 		[]mcp.PromptMessage{
 			{
 				Role:    mcp.RoleUser,
-				Content: mcp.NewTextContent(fmt.Sprintf(`Please tell me about "%v" by VictoriaMetrics documentation`, query)),
+				Content: mcp.NewTextContent(fmt.Sprintf(`Please tell me about "%v" by %s documentation`, query, product)),
 			},
 		},
 	), nil
 }
 
-func registerPromptDocumentation(s *server.MCPServer, _ *config.Config) {
-	s.AddPrompt(promptDocumentation, promptDocumentationHandler)
+func registerPromptDocumentation(s *server.MCPServer, c *config.Config) {
+	product := c.Backend().ProductName()
+	s.AddPrompt(promptDocumentation(product), func(ctx context.Context, gpr mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		return promptDocumentationHandler(ctx, product, gpr)
+	})
 }

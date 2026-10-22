@@ -3,6 +3,7 @@ module github.com/VictoriaMetrics/mcp-victoriametrics
 go 1.27.3
 
 require (
+	github.com/VictoriaMetrics/VictoriaLogs v1.51.1-0.20260624061259-dc94972a8708
 	github.com/VictoriaMetrics/VictoriaMetrics v1.155.0
 	github.com/VictoriaMetrics/metrics v1.44.1
 	github.com/VictoriaMetrics/metricsql v0.87.5
@@ -16,7 +17,6 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.10.0 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.15.0 // indirect
-	github.com/VictoriaMetrics/VictoriaLogs v1.51.1-0.20260624061259-dc94972a8708 // indirect
 	github.com/VictoriaMetrics/easyproto v1.2.0 // indirect
 	github.com/VictoriaMetrics/fastcache v1.13.3 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect

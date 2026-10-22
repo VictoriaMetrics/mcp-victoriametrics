@@ -1,22 +1,40 @@
 package config
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/VictoriaMetrics/VictoriaLogs/lib/logstorage"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/auth"
 	vmcloud "github.com/VictoriaMetrics/victoriametrics-cloud-api-go/v1"
 )
 
+type Backend string
+
 const (
-	toolsDisabledByDefault = "export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules"
+	BackendMetrics Backend = "metrics"
+	BackendLogs    Backend = "logs"
+	BackendTraces  Backend = "traces"
+)
+
+var (
+	toolsDisabledByDefault = map[Backend]string{
+		BackendMetrics: "export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules",
+	}
+	legacyEnvPrefixes = map[Backend]string{
+		BackendLogs:   "VL_",
+		BackendTraces: "VT_",
+	}
 )
 
 type Config struct {
+	backend            Backend
 	serverMode         string
 	listenAddr         string
 	entrypoint         string
@@ -30,6 +48,7 @@ type Config struct {
 	customHeaders      map[string]string
 	passthroughHeaders []string
 	defaultTenantID    string
+	defaultLogsTenant  logstorage.TenantID
 	authToken          string
 
 	// Logging configuration
@@ -38,12 +57,31 @@ type Config struct {
 
 	entryPointURL *url.URL
 	vmc           *vmcloud.VMCloudAPIClient
+	httpClient    *http.Client
 }
 
 func InitConfig() (*Config, error) {
+	backend := Backend(strings.ToLower(os.Getenv("VM_INSTANCE_BACKEND")))
+	switch backend {
+	case "":
+		backend = BackendMetrics
+	case BackendMetrics, BackendLogs, BackendTraces:
+	default:
+		return nil, fmt.Errorf("VM_INSTANCE_BACKEND must be '%s', '%s' or '%s'", BackendMetrics, BackendLogs, BackendTraces)
+	}
+	getEnv := func(name string) string {
+		if v := os.Getenv("VM_" + name); v != "" {
+			return v
+		}
+		if prefix, ok := legacyEnvPrefixes[backend]; ok {
+			return os.Getenv(prefix + name)
+		}
+		return ""
+	}
+
 	disabledTools, isDisabledToolsSet := os.LookupEnv("MCP_DISABLED_TOOLS")
 	if disabledTools == "" && !isDisabledToolsSet {
-		disabledTools = toolsDisabledByDefault
+		disabledTools = toolsDisabledByDefault[backend]
 	}
 	disabledToolsMap := make(map[string]bool)
 	if disabledTools != "" {
@@ -55,7 +93,7 @@ func InitConfig() (*Config, error) {
 		}
 	}
 
-	customHeaders := os.Getenv("VM_INSTANCE_HEADERS")
+	customHeaders := getEnv("INSTANCE_HEADERS")
 	customHeadersMap := make(map[string]string)
 	if customHeaders != "" {
 		for _, header := range strings.Split(customHeaders, ",") {
@@ -107,6 +145,20 @@ func InitConfig() (*Config, error) {
 		}
 	}
 
+	httpClient := http.DefaultClient
+	insecureSkipVerifyStr := os.Getenv("VM_TLS_INSECURE_SKIP_VERIFY")
+	if insecureSkipVerifyStr != "" {
+		insecureSkipVerify, err := strconv.ParseBool(insecureSkipVerifyStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse VM_TLS_INSECURE_SKIP_VERIFY: %w", err)
+		}
+		if insecureSkipVerify {
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+			httpClient = &http.Client{Transport: transport}
+		}
+	}
+
 	logFormat := strings.ToLower(os.Getenv("MCP_LOG_FORMAT"))
 	if logFormat == "" {
 		logFormat = "text"
@@ -123,11 +175,12 @@ func InitConfig() (*Config, error) {
 		return nil, fmt.Errorf("MCP_LOG_LEVEL must be 'debug', 'info', 'warn' or 'error'")
 	}
 	result := &Config{
+		backend:            backend,
 		serverMode:         strings.ToLower(os.Getenv("MCP_SERVER_MODE")),
 		listenAddr:         os.Getenv("MCP_LISTEN_ADDR"),
-		entrypoint:         os.Getenv("VM_INSTANCE_ENTRYPOINT"),
+		entrypoint:         getEnv("INSTANCE_ENTRYPOINT"),
 		instanceType:       os.Getenv("VM_INSTANCE_TYPE"),
-		bearerToken:        os.Getenv("VM_INSTANCE_BEARER_TOKEN"),
+		bearerToken:        getEnv("INSTANCE_BEARER_TOKEN"),
 		disabledTools:      disabledToolsMap,
 		apiKey:             os.Getenv("VMC_API_KEY"),
 		apiBaseURL:         os.Getenv("VMC_API_BASE_URL"),
@@ -139,6 +192,7 @@ func InitConfig() (*Config, error) {
 		logFormat:          logFormat,
 		logLevel:           logLevel,
 		defaultTenantID:    "0",
+		httpClient:         httpClient,
 	}
 	// Left for backward compatibility
 	if result.listenAddr == "" {
@@ -150,11 +204,13 @@ func InitConfig() (*Config, error) {
 	if result.entrypoint != "" && result.apiKey != "" {
 		return nil, fmt.Errorf("VM_INSTANCE_ENTRYPOINT and VMC_API_KEY cannot be set at the same time")
 	}
-	if result.entrypoint != "" && result.instanceType == "" {
-		return nil, fmt.Errorf("VM_INSTANCE_TYPE is not set")
-	}
-	if result.entrypoint != "" && result.instanceType != "cluster" && result.instanceType != "single" {
-		return nil, fmt.Errorf("VM_INSTANCE_TYPE must be 'single' or 'cluster'")
+	if backend == BackendMetrics {
+		if result.entrypoint != "" && result.instanceType == "" {
+			return nil, fmt.Errorf("VM_INSTANCE_TYPE is not set")
+		}
+		if result.entrypoint != "" && result.instanceType != "cluster" && result.instanceType != "single" {
+			return nil, fmt.Errorf("VM_INSTANCE_TYPE must be 'single' or 'cluster'")
+		}
 	}
 	if result.serverMode != "" && result.serverMode != "stdio" && result.serverMode != "sse" && result.serverMode != "http" {
 		return nil, fmt.Errorf("MCP_SERVER_MODE must be 'stdio', 'sse' or 'http'")
@@ -174,7 +230,7 @@ func InitConfig() (*Config, error) {
 		}
 	}
 	if result.apiKey != "" {
-		vmcOptions := []vmcloud.VMCloudAPIClientOption{}
+		vmcOptions := []vmcloud.VMCloudAPIClientOption{vmcloud.WithHTTPClient(result.httpClient)}
 		if result.apiBaseURL != "" {
 			vmcOptions = append(vmcOptions, vmcloud.WithBaseURL(result.apiBaseURL))
 		}
@@ -184,16 +240,28 @@ func InitConfig() (*Config, error) {
 		}
 	}
 
-	defaultTenantID := strings.ToLower(os.Getenv("VM_DEFAULT_TENANT_ID"))
+	defaultTenantID := strings.ToLower(getEnv("DEFAULT_TENANT_ID"))
 	if defaultTenantID != "" {
-		tenantID, err := auth.NewToken(defaultTenantID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse VM_DEFAULT_TENANT_ID %q: %w", defaultTenantID, err)
+		if backend == BackendMetrics {
+			tenantID, err := auth.NewToken(defaultTenantID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse VM_DEFAULT_TENANT_ID %q: %w", defaultTenantID, err)
+			}
+			result.defaultTenantID = tenantID.String()
+		} else {
+			tenantID, err := logstorage.ParseTenantID(defaultTenantID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse VM_DEFAULT_TENANT_ID %q: %w", defaultTenantID, err)
+			}
+			result.defaultLogsTenant = tenantID
 		}
-		result.defaultTenantID = tenantID.String()
 	}
 
 	return result, nil
+}
+
+func (c *Config) Backend() Backend {
+	return c.backend
 }
 
 func (c *Config) IsCluster() bool {
@@ -276,6 +344,28 @@ func (c *Config) DefaultTenantID() string {
 	return c.defaultTenantID
 }
 
+func (c *Config) DefaultLogsTenantID() logstorage.TenantID {
+	return c.defaultLogsTenant
+}
+
 func (c *Config) AuthToken() string {
 	return c.authToken
+}
+
+func (c *Config) HTTPClient() *http.Client {
+	if c == nil || c.httpClient == nil {
+		return http.DefaultClient
+	}
+	return c.httpClient
+}
+
+func (b Backend) ProductName() string {
+	switch b {
+	case BackendLogs:
+		return "VictoriaLogs"
+	case BackendTraces:
+		return "VictoriaTraces"
+	default:
+		return "VictoriaMetrics"
+	}
 }
