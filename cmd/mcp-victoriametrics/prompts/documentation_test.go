@@ -38,7 +38,7 @@ func TestPromptDocumentationHandler(t *testing.T) {
 			}
 
 			// Call the handler
-			result, err := promptDocumentationHandler(context.Background(), gpr)
+			result, err := promptDocumentationHandler(context.Background(), "VictoriaMetrics", gpr)
 
 			// Check for errors
 			if tc.expectError {
