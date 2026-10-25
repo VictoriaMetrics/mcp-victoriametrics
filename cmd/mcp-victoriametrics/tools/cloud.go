@@ -22,6 +22,7 @@ var CloudDeploymentTypes = map[config.Backend][]vmcloud.DeploymentType{
 }
 
 type CloudDeploymentInfo struct {
+	ID             string
 	AccessEndpoint string
 	DeploymentType vmcloud.DeploymentType
 }
@@ -33,8 +34,10 @@ var (
 	cloudDeploymentInfoCache      = make(map[string]CloudDeploymentInfo)
 )
 
+const DeploymentIDParam = "deployment_id"
+
 func GetCloudDeploymentID(tcr mcp.CallToolRequest) (string, error) {
-	deploymentID, err := GetToolReqParam[string](tcr, "deployment_id", true)
+	deploymentID, err := GetToolReqParam[string](tcr, DeploymentIDParam, true)
 	if err != nil {
 		return "", fmt.Errorf("failed to get deployment_id parameter: %v", err)
 	}
@@ -45,6 +48,17 @@ func GetCloudDeploymentID(tcr mcp.CallToolRequest) (string, error) {
 }
 
 func GetCloudDeploymentInfo(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (CloudDeploymentInfo, error) {
+	info, err := LookupCloudDeploymentInfo(ctx, cfg, tcr)
+	if err != nil {
+		return CloudDeploymentInfo{}, err
+	}
+	if !slices.Contains(CloudDeploymentTypes[cfg.Backend()], info.DeploymentType) {
+		return CloudDeploymentInfo{}, fmt.Errorf("unsupported deployment type %s for deployment %s", info.DeploymentType, info.ID)
+	}
+	return info, nil
+}
+
+func LookupCloudDeploymentInfo(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (CloudDeploymentInfo, error) {
 	deploymentID, err := GetCloudDeploymentID(tcr)
 	if err != nil {
 		return CloudDeploymentInfo{}, err
@@ -68,11 +82,8 @@ func GetCloudDeploymentInfo(ctx context.Context, cfg *config.Config, tcr mcp.Cal
 		return CloudDeploymentInfo{}, fmt.Errorf("failed to get deployment details: %v", err)
 	}
 
-	if !slices.Contains(CloudDeploymentTypes[cfg.Backend()], dd.Type) {
-		return CloudDeploymentInfo{}, fmt.Errorf("unsupported deployment type %s for deployment %s", dd.Type, deploymentID)
-	}
-
 	info = CloudDeploymentInfo{
+		ID:             deploymentID,
 		AccessEndpoint: dd.AccessEndpoint,
 		DeploymentType: dd.Type,
 	}

@@ -37,7 +37,7 @@ func promptDocumentationHandler(_ context.Context, product string, gpr mcp.GetPr
 }
 
 func registerPromptDocumentation(s *server.MCPServer, c *config.Config) {
-	product := c.Backend().ProductName()
+	product := c.ProductName()
 	s.AddPrompt(promptDocumentation(product), func(ctx context.Context, gpr mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 		return promptDocumentationHandler(ctx, product, gpr)
 	})

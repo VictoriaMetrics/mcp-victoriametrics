@@ -11,7 +11,7 @@ import (
 	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/tools"
 )
 
-const toolNameQueryRange = "query_range"
+const toolNameQueryRange = "metrics_query_range"
 
 func toolQueryRange(c *config.Config) mcp.Tool {
 	options := []mcp.ToolOption{

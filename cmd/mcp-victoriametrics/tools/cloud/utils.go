@@ -8,7 +8,11 @@ import (
 )
 
 func listOptions(cfg *config.Config) []vmcloud.ListOption {
-	return []vmcloud.ListOption{vmcloud.WithDeploymentType(tools.CloudDeploymentTypes[cfg.Backend()]...)}
+	var types []vmcloud.DeploymentType
+	for _, backend := range cfg.CloudBackendTypes() {
+		types = append(types, tools.CloudDeploymentTypes[backend]...)
+	}
+	return []vmcloud.ListOption{vmcloud.WithDeploymentType(types...)}
 }
 
 func ptr[T any](v T) *T {

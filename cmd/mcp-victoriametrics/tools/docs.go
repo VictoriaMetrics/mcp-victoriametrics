@@ -17,7 +17,7 @@ const defaultDocSearchLimit = 30
 
 func toolDocumentation(c *config.Config) mcp.Tool {
 	return mcp.NewTool(ToolNameDocumentation,
-		mcp.WithDescription(fmt.Sprintf("Search documentation resources for the given search query, returning the URIs of the resources that match the search criteria sorted by relevance. This tool can help to get context for any %s related question.", c.Backend().ProductName())),
+		mcp.WithDescription(fmt.Sprintf("Search documentation resources for the given search query, returning the URIs of the resources that match the search criteria sorted by relevance. This tool can help to get context for any %s related question.", c.ProductName())),
 		mcp.WithToolAnnotation(mcp.ToolAnnotation{
 			Title:           "Search documentation resources",
 			ReadOnlyHint:    ptr(true),

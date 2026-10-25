@@ -12,7 +12,7 @@ func clearBackendEnv(t *testing.T) {
 		"VM_INSTANCE_BACKEND", "VM_INSTANCE_ENTRYPOINT", "VM_INSTANCE_TYPE", "VM_INSTANCE_BEARER_TOKEN", "VM_INSTANCE_HEADERS", "VM_DEFAULT_TENANT_ID", "VMC_API_KEY",
 		"VL_INSTANCE_ENTRYPOINT", "VL_INSTANCE_BEARER_TOKEN", "VL_INSTANCE_HEADERS", "VL_DEFAULT_TENANT_ID",
 		"VT_INSTANCE_ENTRYPOINT", "VT_INSTANCE_BEARER_TOKEN", "VT_INSTANCE_HEADERS", "VT_DEFAULT_TENANT_ID",
-		"MCP_DISABLED_TOOLS", "MCP_LISTEN_ADDR", "MCP_SSE_ADDR", "MCP_SERVER_MODE",
+		"MCP_DISABLED_TOOLS", "MCP_LISTEN_ADDR", "MCP_SSE_ADDR", "MCP_SERVER_MODE", "MCP_CONFIG_FILE", "VMC_BACKEND_TYPES", "MCP_TOOLSETS_ADMIN",
 	} {
 		t.Setenv(name, "")
 	}
@@ -167,5 +167,75 @@ func TestInitConfigDisabledToolsDefaults(t *testing.T) {
 	}
 	if cfg.IsToolDisabled("flags") {
 		t.Error("Expected flags tool to be enabled by default for logs backend")
+	}
+}
+
+func TestInitConfigDisabledToolsLegacyNames(t *testing.T) {
+	testCases := []struct {
+		name           string
+		env            map[string]string
+		disabledTools  string
+		expectDisabled []string
+		expectEnabled  []string
+		expectLegacy   map[string]string
+	}{
+		{
+			name:           "Metrics legacy query names",
+			env:            map[string]string{"VM_INSTANCE_ENTRYPOINT": "http://vm", "VM_INSTANCE_TYPE": "single"},
+			disabledTools:  "query, query_range",
+			expectDisabled: []string{"metrics_query", "metrics_query_range"},
+			expectEnabled:  []string{"query", "query_range"},
+			expectLegacy:   map[string]string{"query": "metrics_query", "query_range": "metrics_query_range"},
+		},
+		{
+			name:           "Logs legacy query name",
+			env:            map[string]string{"VM_INSTANCE_BACKEND": "logs", "VM_INSTANCE_ENTRYPOINT": "http://vl"},
+			disabledTools:  "query",
+			expectDisabled: []string{"logs_query"},
+			expectEnabled:  []string{"query"},
+			expectLegacy:   map[string]string{"query": "logs_query"},
+		},
+		{
+			name:           "New names are not reported as legacy",
+			env:            map[string]string{"VM_INSTANCE_ENTRYPOINT": "http://vm", "VM_INSTANCE_TYPE": "single"},
+			disabledTools:  "metrics_query",
+			expectDisabled: []string{"metrics_query"},
+			expectEnabled:  []string{"metrics_query_range"},
+			expectLegacy:   map[string]string{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			clearBackendEnv(t)
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			t.Setenv("MCP_DISABLED_TOOLS", tc.disabledTools)
+
+			cfg, err := InitConfig()
+			if err != nil {
+				t.Fatalf("Expected no error, got: %v", err)
+			}
+			for _, name := range tc.expectDisabled {
+				if !cfg.IsToolDisabled(name) {
+					t.Errorf("Expected %s to be disabled", name)
+				}
+			}
+			for _, name := range tc.expectEnabled {
+				if cfg.IsToolDisabled(name) {
+					t.Errorf("Expected %s to be enabled", name)
+				}
+			}
+			legacy := cfg.LegacyToolNames()
+			if len(legacy) != len(tc.expectLegacy) {
+				t.Fatalf("Expected legacy names %v, got %v", tc.expectLegacy, legacy)
+			}
+			for oldName, newName := range tc.expectLegacy {
+				if legacy[oldName] != newName {
+					t.Errorf("Expected legacy %s -> %s, got %s", oldName, newName, legacy[oldName])
+				}
+			}
+		})
 	}
 }

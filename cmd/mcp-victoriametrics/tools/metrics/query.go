@@ -11,7 +11,7 @@ import (
 	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/tools"
 )
 
-const toolNameQuery = "query"
+const toolNameQuery = "metrics_query"
 
 func toolQuery(c *config.Config) mcp.Tool {
 	options := []mcp.ToolOption{

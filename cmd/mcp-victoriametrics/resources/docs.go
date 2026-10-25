@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/blevesearch/bleve/v2"
@@ -38,7 +39,7 @@ func Register(s *server.MCPServer, cfg *config.Config) {
 		log.Fatal(fmt.Errorf("error creating index: %w", err))
 	}
 
-	docFiles, err := ListDocFiles(cfg.Backend())
+	docFiles, err := ListDocFiles(cfg.BackendTypes()...)
 	if err != nil {
 		log.Fatal(fmt.Errorf("error listing docs files: %w", err))
 	}
@@ -169,11 +170,13 @@ func hasAnyPrefix(path string, prefixes []string) bool {
 	return false
 }
 
-func ListDocFiles(backend config.Backend) ([]DocFileInfo, error) {
+func ListDocFiles(backends ...config.Backend) ([]DocFileInfo, error) {
 	docs := make([]DocFileInfo, 0)
 	for _, rootDir := range []string{"vm", "vmsite"} {
 		docFiles, err := utils.Glob(DocsDir, rootDir, func(s string) bool {
-			return strings.ToLower(filepath.Ext(s)) == ".md" && isBackendDoc(backend, s)
+			return strings.ToLower(filepath.Ext(s)) == ".md" && slices.ContainsFunc(backends, func(backend config.Backend) bool {
+				return isBackendDoc(backend, s)
+			})
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error reading docs directory: %w", err)
