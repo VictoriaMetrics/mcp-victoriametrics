@@ -132,16 +132,20 @@ MCP Server for VictoriaMetrics is configured via environment variables:
 
 | Variable                                 | Description                                                                                                                                                                                                                                                         | Required                               | Default                                                                                           | Allowed values         |
 |------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|---------------------------------------------------------------------------------------------------|------------------------|
+| `VM_INSTANCE_BACKEND`                    | Backend the server works with. Selects the set of tools, prompts and documentation                                                                                                                                                                                  | No                                     | `metrics`                                                                                         | `metrics`, `logs`, `traces` |
 | `VM_INSTANCE_ENTRYPOINT` / `VMC_API_KEY` | URL to VictoriaMetrics instance (it should be root `/` URL of vmsingle or vmselect)                                                                                                                                                                                 | Yes (if you don't use `VMC_API_KEY`)   | -                                                                                                 | -                      |
-| `VM_INSTANCE_TYPE`                       | Type of VictoriaMetrics instance                                                                                                                                                                                                                                    | Yes (if you don't use ``VMC_API_KEY``) | -                                                                                                 | `single`, `cluster`    |
+| `VM_INSTANCE_TYPE`                       | Type of VictoriaMetrics instance                                                                                                                                                                                                                                    | Yes (`metrics` backend without `VMC_API_KEY`) | -                                                                                          | `single`, `cluster`    |
 | `VM_INSTANCE_BEARER_TOKEN`               | Authentication token for VictoriaMetrics API                                                                                                                                                                                                                        | No                                     | -                                                                                                 | -                      |
 | `VM_INSTANCE_HEADERS`                    | Custom HTTP headers to send with requests (comma-separated key=value pairs)                                                                                                                                                                                         | No       | -                                                                                                 | -                      |
 | `MCP_PASSTHROUGH_HEADERS`                | HTTP header names to forward from incoming MCP requests to VictoriaMetrics (comma-separated list). Overrides `VM_INSTANCE_HEADERS` on collision. Only applies in `sse`/`http` modes.                                                                                | No | - | - |
 | `VM_DEFAULT_TENANT_ID`                   | Default tenant ID for cluster mode. Format: `accountID` or `accountID:projectID` (32-bit integers). See [VictoriaMetrics cluster docs](https://docs.victoriametrics.com/cluster-victoriametrics/#multitenancy)                                                      | No                                     | `0`                                                                                               | -                      |
 | `VMC_API_KEY`                            | [API key from VictoriaMetrics Cloud Console](https://docs.victoriametrics.com/victoriametrics-cloud/api/)                                                                                                                                                           | No                                     | -                                                                                                 | -                      |
+| `VMC_BACKEND_TYPES`                      | Comma-separated list of backend types to work with in VictoriaMetrics Cloud. See [Multiple backends](#multiple-backends). Cannot be used with `VM_INSTANCE_BACKEND`                                                                                         | No                                     | value of `VM_INSTANCE_BACKEND`                                                                    | `metrics`, `logs`, `traces` |
+| `MCP_CONFIG_FILE`                        | Path to a YAML file with self-hosted backends and VictoriaMetrics Cloud settings. See [Multiple backends](#multiple-backends). Cannot be used with `VM_INSTANCE_BACKEND`, `*_INSTANCE_ENTRYPOINT` and `VMC_*`                                                   | No                                     | -                                                                                                 | -                      |
+| `MCP_TOOLSETS_<NAME>`                    | Mode of the toolset with the given name, for example `MCP_TOOLSETS_ADMIN=dynamic`. See [Toolsets](#toolsets)                                                                                                                                                      | No                                     | `on`                                                                                              | `off`, `on`, `dynamic` |
 | `MCP_SERVER_MODE`                        | Server operation mode. See [Modes](#modes) for details.                                                                                                                                                                                                             | No                                     | `stdio`                                                                                           | `stdio`, `sse`, `http` |
 | `MCP_LISTEN_ADDR`                        | Address for SSE or HTTP server to listen on                                                                                                                                                                                                                         | No                                     | `localhost:8080`                                                                                  | -                      |
-| `MCP_DISABLED_TOOLS`                     | Comma-separated list of tools to disable                                                                                                                                                                                                                            | No                                     | 'export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules' | -                      |
+| `MCP_DISABLED_TOOLS`                     | Comma-separated list of tools to disable                                                                                                                                                                                                                            | No                                     | 'export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules' for `metrics`, empty for `logs` and `traces` | -                      |
 | `MCP_DISABLE_RESOURCES`                  | Disable all resources (documentation tool will continue to work)                                                                                                                                                                                                    | No                                     | `false`                                                                                           | `false`, `true`        |                   
 | `MCP_HEARTBEAT_INTERVAL`                 | Defines the heartbeat interval for the streamable-http protocol. <br /> It means the MCP server will send a heartbeat to the client through the GET connection, <br /> to keep the connection alive from being closed by the network infrastructure (e.g. gateways) | No                                     | `30s`                                                                                             | -                      |
 | `MCP_AUTH_TOKEN`                         | Bearer token for authenticating incoming MCP requests (only applies in `sse`/`http` modes). Public paths (`/health/*`, `/metrics`, `/`, static assets) are excluded from authentication.                                                                           | No                                     | -                                                                                                 | -                      |
@@ -152,6 +156,102 @@ You can use two options to connect to your VictoriaMetrics instance:
 
 - Using `VM_INSTANCE_ENTRYPOINT` + `VM_INSTANCE_TYPE` + `VM_INSTANCE_BEARER_TOKEN` (optional) environment variables to connect to any single-node or cluster instance of VictoriaMetrics.
 - Using `VMC_API_KEY` environment variable to work with your [VictoriaMetrics Cloud](https://victoriametrics.com/products/cloud/) instances.
+
+### VictoriaLogs and VictoriaTraces
+
+The same server works with [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/) and [VictoriaTraces](https://docs.victoriametrics.com/victoriatraces/) when `VM_INSTANCE_BACKEND` is set to `logs` or `traces`.
+With environment variables, one server instance works with a single backend: it exposes the tools of that backend, and the `documentation` tool searches only the docs related to it.
+See [Multiple backends](#multiple-backends) to work with several backends at the same time.
+`VM_INSTANCE_ENTRYPOINT`, `VM_INSTANCE_BEARER_TOKEN`, `VM_INSTANCE_HEADERS`, `VM_DEFAULT_TENANT_ID` and `VMC_API_KEY` are used for all backends; `VM_INSTANCE_TYPE` is used only for `metrics`.
+With `VMC_API_KEY`, the server works with VictoriaMetrics Cloud deployments of the selected backend type (`vlogs_single` for `logs`, `vtraces_single` for `traces`).
+
+Environment variables of the former `mcp-victorialogs` (`VL_*`) and `mcp-victoriatraces` (`VT_*`) servers are still accepted
+for the `logs` and `traces` backends respectively, when the matching `VM_*` variable is not set.
+
+### Multiple backends
+
+One server instance can also work with several backends at the same time.
+
+Set `MCP_CONFIG_FILE` to the path of a YAML file with the list of self-hosted backends in `backends` section,
+VictoriaMetrics Cloud settings in `cloud` section, or both:
+
+```yaml
+toolsets:
+  admin: dynamic
+cloud:
+  api_key: <api-key>
+  backend_types: [metrics, logs]
+backends:
+  - name: prod
+    type: metrics
+    entrypoint: https://vmselect.example.com
+    instance_type: cluster
+    bearer_token: <token>
+    headers:
+      X-Scope-OrgID: prod
+    default_tenant_id: "0:0"
+  - name: staging
+    type: metrics
+    entrypoint: https://vmsingle-staging.example.com
+    instance_type: single
+  - name: onprem-logs
+    type: logs
+    entrypoint: https://vlogs.example.com
+```
+
+Fields of `backends` items:
+
+- `name` (required) - unique name of the backend, may contain letters, digits, `-` and `_`
+- `type` (required) - `metrics`, `logs` or `traces`
+- `entrypoint` (required) - root URL of the instance, same as `VM_INSTANCE_ENTRYPOINT`
+- `instance_type` (required for `metrics`) - `single` or `cluster`, same as `VM_INSTANCE_TYPE`
+- `bearer_token`, `headers`, `default_tenant_id` (optional) - same as `VM_INSTANCE_BEARER_TOKEN`, `VM_INSTANCE_HEADERS` and `VM_DEFAULT_TENANT_ID`
+
+Fields of `cloud` section:
+
+- `api_key` (required) - same as `VMC_API_KEY`
+- `backend_types` (required) - list of backend types to work with: `metrics`, `logs` and `traces`, same as `VMC_BACKEND_TYPES`
+- `name` (optional) - name of VictoriaMetrics Cloud in the `backend` parameter, `cloud` by default. It must differ from names of `backends` items
+- `base_url`, `default_tenant_id` (optional) - same as `VMC_API_BASE_URL` and `VM_DEFAULT_TENANT_ID`
+
+When `MCP_CONFIG_FILE` is set, `VM_INSTANCE_BACKEND`, `*_INSTANCE_ENTRYPOINT` and `VMC_*` environment variables cannot be used.
+Other server settings (`MCP_*`, `VM_TLS_INSECURE_SKIP_VERIFY`) are set with environment variables.
+
+For VictoriaMetrics Cloud without self-hosted backends, you can also use environment variables:
+set `VMC_BACKEND_TYPES` to the list of backend types, for example `VMC_BACKEND_TYPES=metrics,logs,traces`.
+
+The server exposes tools of all configured backend types. Tools provided by a single backend have the same parameters as in single backend mode.
+Tools provided by several backends are selected as follows:
+
+- Only self-hosted backends (for example, `alerts` and `rules`, or `metrics_query` when two `metrics` backends are configured):
+  the tool gets a required `backend` parameter with the name of the backend to send the request to.
+- Only VictoriaMetrics Cloud: the request is sent to the backend that matches the type of the deployment from the `deployment_id` parameter,
+  so the tool doesn't need the `backend` parameter.
+- Both: the `backend` parameter contains names of self-hosted backends and the name of VictoriaMetrics Cloud.
+  The `deployment_id` parameter is required only when `backend` is the name of VictoriaMetrics Cloud.
+
+Default `MCP_DISABLED_TOOLS` are applied per backend type, so `flags` is disabled for `metrics` backends and enabled for `logs` backends.
+
+### Toolsets
+
+Some tools are grouped into toolsets, which can be turned off or loaded on demand to reduce the number of tools exposed to the client.
+Tools of toolsets are registered only for configured backends.
+
+| Toolset | Tools                                                                                                                                                                        | Default |
+|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------:|
+| `admin` | `tsdb_status`, `top_queries`, `active_queries`, `metric_statistics`, `tenants`, `flags`, `export`, `tiers`, `regions`, `cloud_providers`, `access_tokens`, `rule_file`, `rule_filenames` |  `on`   |
+
+The mode of a toolset is set with `MCP_TOOLSETS_<NAME>` environment variable (for example, `MCP_TOOLSETS_ADMIN=off`)
+or in `toolsets` section of `MCP_CONFIG_FILE` (`toolsets: {admin: off}`), but not both:
+
+- `on` - tools of the toolset are available from the start
+- `off` - tools of the toolset are not available
+- `dynamic` - tools of the toolset are not available from the start, the `enable_toolset` tool adds them on request.
+  In `sse` and `http` modes the tools are added only to the session that requested them.
+  The client must support [tools list change notifications](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#list-changed-notification) to see the added tools.
+
+Tools disabled with `MCP_DISABLED_TOOLS` are not available regardless of the toolset mode.
+The `unused_metrics` and `rarely_used_metrics_with_high_cardinality` prompts are available only when `admin` toolset is not `off`.
 
 ### Modes
 
@@ -182,6 +282,14 @@ export MCP_DISABLED_TOOLS="export,metric_statistics,test_rules" # disable export
 
 # For VictoriaMetrics Cloud
 export VMC_API_KEY="<you-api-key>"
+
+# For VictoriaLogs
+export VM_INSTANCE_BACKEND="logs"
+export VM_INSTANCE_ENTRYPOINT="https://play-vmlogs.victoriametrics.com"
+
+# For VictoriaTraces
+export VM_INSTANCE_BACKEND="traces"
+export VM_INSTANCE_ENTRYPOINT="https://play-vtraces.victoriametrics.com"
 
 # Server mode
 export MCP_SERVER_MODE="sse"
@@ -594,10 +702,15 @@ Just take a look into [Dialog example](#dialog-example) section for better under
 
 ### Tools and prompts
 
-MCP Server provides numerous tools for interacting with your VictoriaMetrics instance and pre-defined prompts for common tasks.
+MCP Server provides numerous tools for interacting with your VictoriaMetrics, VictoriaLogs or VictoriaTraces instance,
+and pre-defined prompts for common tasks. The set of available tools and prompts depends on the `VM_INSTANCE_BACKEND` parameter.
 
 <!-- tools:start -->
 <!-- Generated by `make update-readme`, do not edit manually. -->
+
+#### VictoriaMetrics
+
+Available with `VM_INSTANCE_BACKEND=metrics` (default).
 
 Tools:
 
@@ -616,9 +729,9 @@ Tools:
 | `metric_statistics`          | Metric statistics                                      |         ✅         |
 | `metrics`                    | List of metric names                                   |         ✅         |
 | `metrics_metadata`           | List of metrics metadata (name, type, help and unit)   |         ✅         |
+| `metrics_query`              | Instant Query                                          |         ✅         |
+| `metrics_query_range`        | Range Query                                            |         ✅         |
 | `prettify_query`             | Prettify Query                                         |         ✅         |
-| `query`                      | Instant Query                                          |         ✅         |
-| `query_range`                | Range Query                                            |         ✅         |
 | `retention_filters_debug`    | Retention filters debugger                             |         ❌         |
 | `rules`                      | List of alerting and recording rules                   |         ✅         |
 | `series`                     | List of time series                                    |         ✅         |
@@ -634,6 +747,59 @@ Prompts:
 | `documentation`                             | Search by VictoriaMetrics documentation or give context for answering questions       |
 | `rarely_used_metrics_with_high_cardinality` | List of rarely used metrics with high cardinality in the VictoriaMetrics instance API |
 | `unused_metrics`                            | List of unused (never queried) metrics in the VictoriaMetrics instance API            |
+
+#### VictoriaLogs
+
+Available with `VM_INSTANCE_BACKEND=logs`.
+
+Tools:
+
+| Tool                  | Description                            | Enabled by default |
+|-----------------------|----------------------------------------|:------------------:|
+| `alerts`              | List of alerts                         |         ✅         |
+| `documentation`       | Search documentation resources         |         ✅         |
+| `facets`              | Most frequent values                   |         ✅         |
+| `field_names`         | List of field names for the query      |         ✅         |
+| `field_values`        | List of field values for the query     |         ✅         |
+| `flags`               | List of non-default flags (parameters) |         ✅         |
+| `hits`                | Log entries hits                       |         ✅         |
+| `logs_query`          | Query logs                             |         ✅         |
+| `rules`               | List of alerting and recording rules   |         ✅         |
+| `stats_query`         | Querying log stats                     |         ✅         |
+| `stats_query_range`   | Querying log stats                     |         ✅         |
+| `stream_field_names`  | List of stream fields                  |         ✅         |
+| `stream_field_values` | List of stream field values            |         ✅         |
+| `stream_ids`          | Stream IDs list                        |         ✅         |
+| `streams`             | List of log streams                    |         ✅         |
+
+Prompts:
+
+| Prompt          | Description                                                                  |
+|-----------------|------------------------------------------------------------------------------|
+| `documentation` | Search by VictoriaLogs documentation or give context for answering questions |
+
+#### VictoriaTraces
+
+Available with `VM_INSTANCE_BACKEND=traces`.
+
+Tools:
+
+| Tool                 | Description                                  | Enabled by default |
+|----------------------|----------------------------------------------|:------------------:|
+| `alerts`             | List of alerts                               |         ✅         |
+| `dependencies`       | Service dependency graph                     |         ✅         |
+| `documentation`      | Search documentation resources               |         ✅         |
+| `rules`              | List of alerting and recording rules         |         ✅         |
+| `service_operations` | List of span names (operations) of a service |         ✅         |
+| `services`           | List of all services                         |         ✅         |
+| `trace`              | Trace information                            |         ✅         |
+| `traces`             | Query traces                                 |         ✅         |
+
+Prompts:
+
+| Prompt          | Description                                                                    |
+|-----------------|--------------------------------------------------------------------------------|
+| `documentation` | Search by VictoriaTraces documentation or give context for answering questions |
 
 #### VictoriaMetrics Cloud
 

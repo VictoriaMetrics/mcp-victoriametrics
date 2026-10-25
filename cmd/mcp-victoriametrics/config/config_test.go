@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/http"
 	"net/url"
 	"os"
 	"testing"
@@ -403,6 +404,44 @@ func TestInitConfig(t *testing.T) {
 			if h != expected[i] {
 				t.Errorf("Expected header %q at index %d, got %q", expected[i], i, h)
 			}
+		}
+	})
+}
+
+func TestInitConfigTLSInsecureSkipVerify(t *testing.T) {
+	t.Setenv("VM_INSTANCE_ENTRYPOINT", "https://example.com")
+	t.Setenv("VM_INSTANCE_TYPE", "single")
+
+	t.Run("Default", func(t *testing.T) {
+		t.Setenv("VM_TLS_INSECURE_SKIP_VERIFY", "")
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		if cfg.HTTPClient() != http.DefaultClient {
+			t.Error("Expected default HTTP client")
+		}
+	})
+
+	t.Run("Enabled", func(t *testing.T) {
+		t.Setenv("VM_TLS_INSECURE_SKIP_VERIFY", "true")
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		transport, ok := cfg.HTTPClient().Transport.(*http.Transport)
+		if !ok {
+			t.Fatalf("Expected *http.Transport, got: %T", cfg.HTTPClient().Transport)
+		}
+		if transport.TLSClientConfig == nil || !transport.TLSClientConfig.InsecureSkipVerify {
+			t.Error("Expected InsecureSkipVerify to be true")
+		}
+	})
+
+	t.Run("Invalid", func(t *testing.T) {
+		t.Setenv("VM_TLS_INSECURE_SKIP_VERIFY", "maybe")
+		if _, err := InitConfig(); err == nil {
+			t.Error("Expected error for invalid VM_TLS_INSECURE_SKIP_VERIFY")
 		}
 	})
 }

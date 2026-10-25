@@ -10,13 +10,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/VictoriaMetrics/metrics"
+	metrics "github.com/VictoriaMetrics/metrics"
 
 	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/auth"
 	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
@@ -53,11 +54,16 @@ func main() {
 
 	if !c.IsStdio() {
 		slog.Info("Starting mcp-victoriametrics",
+			"backends", backendNames(c),
 			"version", version,
 			"date", date,
 			"mode", c.ServerMode(),
 			"addr", c.ListenAddr(),
 		)
+	}
+
+	for oldName, newName := range c.LegacyToolNames() {
+		slog.Warn("MCP_DISABLED_TOOLS contains deprecated tool name, use the new name instead", "deprecated", oldName, "new", newName)
 	}
 
 	ms := metrics.NewSet()
@@ -68,30 +74,20 @@ func main() {
 	combinedHooks := hooks.Merge(metricsHooks, loggingHooks)
 
 	s := server.NewMCPServer(
-		"VictoriaMetrics",
+		c.ProductName(),
 		fmt.Sprintf("v%s (date: %s)", version, date),
 		server.WithRecovery(),
 		server.WithLogging(),
-		server.WithToolCapabilities(false),
+		server.WithToolCapabilities(c.HasDynamicToolsets()),
 		server.WithResourceCapabilities(false, false),
 		server.WithPromptCapabilities(false),
 		server.WithHooks(combinedHooks),
-		server.WithInstructions(`
-You are Virtual Assistant, a tool for interacting with VictoriaMetrics API and documentation in different tasks related to monitoring and observability.
-
-You have the full documentation about VictoriaMetrics products in your resources, you have to try to use documentation in your answer.
-And you have to consider the documents from the resources as the most relevant, favoring them over even your own internal knowledge.
-Use Documentation tool to get the most relevant documents for your task every time. Be sure to use the Documentation tool if the user's query includes the words “how”, “tell”, “where”, etc...
-
-You have many tools to get data from VictoriaMetrics, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
-
-Try not to second guess information - if you don't know something or lack information, it's better to ask.
-	`),
+		server.WithInstructions(buildInstructions(c)),
 	)
 
 	registry.Register(s, c)
 	if !c.IsToolDisabled(tools.ToolNameDocumentation) {
-		resources.RegisterDocsResources(s, c)
+		resources.Register(s, c)
 	}
 
 	if c.IsStdio() {
@@ -196,4 +192,115 @@ Try not to second guess information - if you don't know something or lack inform
 	}
 
 	slog.Info("Server stopped.")
+}
+
+var instructions = map[config.Backend]string{
+	config.BackendMetrics: `
+You are Virtual Assistant, a tool for interacting with VictoriaMetrics API and documentation in different tasks related to monitoring and observability.
+
+You have the full documentation about VictoriaMetrics products in your resources, you have to try to use documentation in your answer.
+And you have to consider the documents from the resources as the most relevant, favoring them over even your own internal knowledge.
+Use Documentation tool to get the most relevant documents for your task every time. Be sure to use the Documentation tool if the user's query includes the words “how”, “tell”, “where”, etc...
+
+You have many tools to get data from VictoriaMetrics, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
+
+Try not to second guess information - if you don't know something or lack information, it's better to ask.
+	`,
+	config.BackendLogs: `
+You are Virtual Assistant, a tool for interacting with VictoriaLogs API and documentation in different tasks related to logs and observability.
+You use LogsQL language to query logs and get information from the logs stored in VictoriaLogs.
+
+You have the full documentation about VictoriaLogs in your resources, you have to try to use documentation in your answer.
+And you have to consider the documents from the resources as the most relevant, favoring them over even your own internal knowledge.
+Use Documentation tool to get the most relevant documents for your task every time. Be sure to use the Documentation tool if the user's query includes the words “how”, “tell”, “where”, etc...
+
+You have many tools to get data from VictoriaLogs, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
+
+Try not to second guess information - if you don't know something or lack information, it's better to ask.
+	`,
+	config.BackendTraces: `
+You are Virtual Assistant, a tool for interacting with VictoriaTraces API and documentation in different tasks related to distributed tracing and observability.
+
+You have the full documentation about VictoriaTraces in your resources, you have to try to use documentation in your answer.
+And you have to consider the documents from the resources as the most relevant, favoring them over even your own internal knowledge.
+Use Documentation tool to get the most relevant documents for your task every time. Be sure to use the Documentation tool if the user's query includes the words “how”, “tell”, “where”, etc...
+
+You have many tools to get data from VictoriaTraces, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
+
+Try not to second guess information - if you don't know something or lack information, it's better to ask.
+	`,
+}
+
+const multiBackendInstructions = `
+You are Virtual Assistant, a tool for interacting with %[1]s APIs and documentation in different tasks related to monitoring, logs, distributed tracing and observability.
+
+You have the full documentation about %[1]s in your resources, you have to try to use documentation in your answer.
+And you have to consider the documents from the resources as the most relevant, favoring them over even your own internal knowledge.
+Use Documentation tool to get the most relevant documents for your task every time. Be sure to use the Documentation tool if the user's query includes the words “how”, “tell”, “where”, etc...
+
+The following backends are configured:
+%[2]s
+%[3]s
+You use MetricsQL language to query VictoriaMetrics backends and LogsQL language to query VictoriaLogs backends.
+
+You have many tools to get data from these backends, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
+
+Try not to second guess information - if you don't know something or lack information, it's better to ask.
+	`
+
+func buildInstructions(c *config.Config) string {
+	backends := c.Backends()
+	if len(backends) == 1 {
+		return instructions[c.Backend()]
+	}
+	var (
+		list         strings.Builder
+		hasStatic    bool
+		cloudName    string
+		cloudTypes   []string
+		cloudIsNamed bool
+	)
+	for _, b := range backends {
+		if b.IsCloud() {
+			cloudName = b.Name()
+			cloudIsNamed = b.Name() != string(b.Backend())
+			cloudTypes = append(cloudTypes, b.Backend().ProductName())
+			continue
+		}
+		hasStatic = true
+		fmt.Fprintf(&list, "- %s: %s", b.Name(), b.Backend().ProductName())
+		if b.Backend() == config.BackendMetrics && b.InstanceType() != "" {
+			fmt.Fprintf(&list, " (%s)", b.InstanceType())
+		}
+		list.WriteString("\n")
+	}
+	if len(cloudTypes) > 0 {
+		if cloudIsNamed {
+			fmt.Fprintf(&list, "- %s: ", cloudName)
+		} else {
+			list.WriteString("- ")
+		}
+		fmt.Fprintf(&list, "VictoriaMetrics Cloud deployments of %s\n", strings.Join(cloudTypes, ", "))
+	}
+
+	var routing []string
+	if hasStatic {
+		routing = append(routing, `Tools available for several backends have a required "backend" parameter with the name of the backend to send the request to.`)
+	}
+	if len(cloudTypes) > 0 {
+		sentence := `Requests to VictoriaMetrics Cloud require the "deployment_id" parameter and are sent to the backend that matches the type of the deployment.`
+		if hasStatic {
+			sentence = fmt.Sprintf(`For the %q backend, also pass the "deployment_id" parameter: the request is sent to the backend that matches the type of the deployment.`, cloudName)
+		}
+		routing = append(routing, sentence)
+	}
+	return fmt.Sprintf(multiBackendInstructions, c.ProductName(), list.String(), strings.Join(routing, "\n"))
+}
+
+func backendNames(c *config.Config) []string {
+	var names []string
+	for _, b := range c.Backends() {
+		names = append(names, fmt.Sprintf("%s:%s", b.Name(), b.Backend()))
+	}
+	return names
 }
