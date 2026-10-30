@@ -89,34 +89,30 @@ func NewLoggerHooks() *server.Hooks {
 
 	hooks.AddBeforeAny(func(ctx context.Context, id any, method mcp.MCPMethod, message any) {
 		sessionID := extractSessionID(ctx)
-		slog.Info("MCP request received",
+		slog.Info("MCP request received", withPayload(ctx, []any{
 			"request_id", id,
 			"session_id", sessionID,
 			"method", string(method),
-			"message", toJSON(message),
-		)
+		}, "message", message)...)
 	})
 
 	hooks.AddOnSuccess(func(ctx context.Context, id any, method mcp.MCPMethod, message any, result any) {
 		sessionID := extractSessionID(ctx)
-		slog.Info("MCP request succeeded",
+		slog.Info("MCP request succeeded", withPayload(ctx, []any{
 			"request_id", id,
 			"session_id", sessionID,
 			"method", string(method),
-			"message", toJSON(message),
-			"result", toJSON(result),
-		)
+		}, "message", message, "result", result)...)
 	})
 
 	hooks.AddOnError(func(ctx context.Context, id any, method mcp.MCPMethod, message any, err error) {
 		sessionID := extractSessionID(ctx)
-		slog.Error("MCP request failed",
+		slog.Error("MCP request failed", withPayload(ctx, []any{
 			"request_id", id,
 			"session_id", sessionID,
 			"method", string(method),
-			"message", toJSON(message),
 			"error", err.Error(),
-		)
+		}, "message", message)...)
 	})
 
 	hooks.AddAfterInitialize(func(_ context.Context, id any, msg *mcp.InitializeRequest, _ *mcp.InitializeResult) {
@@ -186,6 +182,19 @@ func extractSessionID(ctx context.Context) string {
 		return session.SessionID()
 	}
 	return ""
+}
+
+// withPayload appends JSON-encoded key/value payload pairs to args only when debug logging is enabled.
+// Request and result bodies can be megabytes in size (e.g. resources/list), so at info level
+// they are neither marshaled nor logged.
+func withPayload(ctx context.Context, args []any, kvs ...any) []any {
+	if !slog.Default().Enabled(ctx, slog.LevelDebug) {
+		return args
+	}
+	for i := 0; i+1 < len(kvs); i += 2 {
+		args = append(args, kvs[i], toJSON(kvs[i+1]))
+	}
+	return args
 }
 
 // toJSON converts any value to JSON string for logging
