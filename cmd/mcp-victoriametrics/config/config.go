@@ -14,6 +14,7 @@ import (
 
 const (
 	toolsDisabledByDefault = "export,flags,metric_relabel_debug,downsampling_filters_debug,retention_filters_debug,test_rules"
+	defaultMaxResponseSize = 16 * 1024 * 1024
 )
 
 type Config struct {
@@ -28,6 +29,7 @@ type Config struct {
 	heartbeatInterval          time.Duration
 	stateless                  bool
 	disableLocalhostProtection bool
+	maxResponseSize            int64
 	disableResources           bool
 	customHeaders              map[string]string
 	passthroughHeaders         []string
@@ -99,6 +101,19 @@ func InitConfig() (*Config, error) {
 		heartbeatInterval = interval
 	}
 
+	maxResponseSize := int64(defaultMaxResponseSize)
+	maxResponseSizeStr := os.Getenv("MCP_MAX_RESPONSE_SIZE")
+	if maxResponseSizeStr != "" {
+		size, err := strconv.ParseInt(maxResponseSizeStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse MCP_MAX_RESPONSE_SIZE: %w", err)
+		}
+		if size < 0 {
+			return nil, fmt.Errorf("MCP_MAX_RESPONSE_SIZE must be non-negative")
+		}
+		maxResponseSize = size
+	}
+
 	disableResources := false
 	disableResourcesStr := os.Getenv("MCP_DISABLE_RESOURCES")
 	if disableResourcesStr != "" {
@@ -156,6 +171,7 @@ func InitConfig() (*Config, error) {
 		heartbeatInterval:          heartbeatInterval,
 		stateless:                  stateless,
 		disableLocalhostProtection: disableLocalhostProtection,
+		maxResponseSize:            maxResponseSize,
 		disableResources:           disableResources,
 		customHeaders:              customHeadersMap,
 		passthroughHeaders:         passthroughHeaders,
@@ -286,6 +302,12 @@ func (c *Config) Stateless() bool {
 
 func (c *Config) DisableLocalhostProtection() bool {
 	return c.disableLocalhostProtection
+}
+
+// MaxResponseSize returns the maximum size in bytes of a VictoriaMetrics response
+// a tool reads. Zero means no limit.
+func (c *Config) MaxResponseSize() int64 {
+	return c.maxResponseSize
 }
 
 func (c *Config) CustomHeaders() map[string]string {

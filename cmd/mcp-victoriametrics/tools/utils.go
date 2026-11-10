@@ -246,18 +246,27 @@ func getSelectURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReque
 	return entrypointURL.JoinPath(append(args, path...)...).String(), nil
 }
 
-func GetTextBodyForRequest(req *http.Request, _ *config.Config, f ...func(s string) (string, error)) *mcp.CallToolResult {
+func GetTextBodyForRequest(req *http.Request, cfg *config.Config, f ...func(s string) (string, error)) *mcp.CallToolResult {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to do request: %v", err))
 	}
-	body, err := io.ReadAll(resp.Body)
+	defer func() { _ = resp.Body.Close() }()
+	maxSize := cfg.MaxResponseSize()
+	var bodyReader io.Reader = resp.Body
+	if maxSize > 0 {
+		// Read one byte past the limit to tell a body of exactly maxSize bytes from a larger one.
+		bodyReader = io.LimitReader(resp.Body, maxSize+1)
+	}
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to read response body: %v", err))
 	}
-	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return mcp.NewToolResultError(fmt.Sprintf("unexpected response status code %v: %s", resp.StatusCode, string(body)))
+	}
+	if maxSize > 0 && int64(len(body)) > maxSize {
+		return mcp.NewToolResultError(fmt.Sprintf("response is larger than %d bytes (MCP_MAX_RESPONSE_SIZE); narrow the request with a more specific selector, a shorter time range or a `limit` argument where the tool has one", maxSize))
 	}
 	result := string(body)
 	for _, fn := range f {

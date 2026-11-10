@@ -117,8 +117,8 @@ func toolMetricsMetadataHandler(ctx context.Context, cfg *config.Config, tcr mcp
 	// Get the response from the API
 	result := GetTextBodyForRequest(req, cfg)
 
-	// If no client-side filtering is needed, return the result as-is
-	if search == "" && metricType == "" && unit == "" {
+	// If no client-side filtering is needed or the request failed, return the result as-is
+	if result.IsError || (search == "" && metricType == "" && unit == "") {
 		return result, nil
 	}
 

@@ -1,9 +1,17 @@
 package tools
 
 import (
+	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 func TestMetricsMetadataFiltering(t *testing.T) {
@@ -255,5 +263,39 @@ func TestFilteringLogic(t *testing.T) {
 				t.Errorf("Expected shouldFilter=%v, got %v", tt.shouldFilter, shouldFilter)
 			}
 		})
+	}
+}
+
+// TestMetricsMetadataHandlerReturnsResponseError tests that a filtered request returns
+// the error of the response read as it is instead of trying to parse it
+func TestMetricsMetadataHandlerReturnsResponseError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, strings.Repeat("x", 64))
+	}))
+	defer srv.Close()
+
+	t.Setenv("VM_INSTANCE_ENTRYPOINT", srv.URL)
+	t.Setenv("VM_INSTANCE_TYPE", "single")
+	t.Setenv("MCP_MAX_RESPONSE_SIZE", "16")
+	cfg, err := config.InitConfig()
+	if err != nil {
+		t.Fatalf("Failed to init config: %v", err)
+	}
+
+	tcr := mcp.CallToolRequest{}
+	tcr.Params.Arguments = map[string]any{"search": "http"}
+	result, err := toolMetricsMetadataHandler(context.Background(), cfg, tcr)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if !result.IsError {
+		t.Fatalf("Expected an error result, got success: %+v", result.Content)
+	}
+	textContent, ok := result.Content[0].(mcp.TextContent)
+	if !ok {
+		t.Fatal("Expected TextContent, got different content type")
+	}
+	if !strings.Contains(textContent.Text, "MCP_MAX_RESPONSE_SIZE") {
+		t.Errorf("Expected the response size error, got: %s", textContent.Text)
 	}
 }

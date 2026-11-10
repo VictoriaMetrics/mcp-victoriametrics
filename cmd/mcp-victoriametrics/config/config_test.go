@@ -7,6 +7,62 @@ import (
 	"time"
 )
 
+func TestInitConfigMaxResponseSize(t *testing.T) {
+	testCases := []struct {
+		name          string
+		value         string
+		expectedValue int64
+		expectedError string
+	}{
+		{
+			name:          "default",
+			value:         "",
+			expectedValue: 16 * 1024 * 1024,
+		},
+		{
+			name:          "custom size",
+			value:         "1048576",
+			expectedValue: 1048576,
+		},
+		{
+			name:          "disabled",
+			value:         "0",
+			expectedValue: 0,
+		},
+		{
+			name:          "negative",
+			value:         "-1",
+			expectedError: "MCP_MAX_RESPONSE_SIZE must be non-negative",
+		},
+		{
+			name:          "not a number",
+			value:         "16MiB",
+			expectedError: "failed to parse MCP_MAX_RESPONSE_SIZE: strconv.ParseInt: parsing \"16MiB\": invalid syntax",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+			t.Setenv("VM_INSTANCE_TYPE", "single")
+			t.Setenv("MCP_MAX_RESPONSE_SIZE", tc.value)
+			cfg, err := InitConfig()
+			if tc.expectedError != "" {
+				if err == nil || err.Error() != tc.expectedError {
+					t.Fatalf("Expected error %q, got: %v", tc.expectedError, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Expected no error, got: %v", err)
+			}
+			if cfg.MaxResponseSize() != tc.expectedValue {
+				t.Errorf("Expected max response size %d, got: %d", tc.expectedValue, cfg.MaxResponseSize())
+			}
+		})
+	}
+}
+
 func TestInitConfig(t *testing.T) {
 	// Save original environment variables
 	originalEntrypoint := os.Getenv("VM_INSTANCE_ENTRYPOINT")
