@@ -5,7 +5,9 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -102,6 +104,104 @@ func TestGetTextBodyForRequestError(t *testing.T) {
 	// Check the result
 	if !result.IsError {
 		t.Error("Expected an error result, got success")
+	}
+}
+
+// TestGetTextBodyForRequestMaxResponseSize tests that GetTextBodyForRequest enforces MCP_MAX_RESPONSE_SIZE
+func TestGetTextBodyForRequestMaxResponseSize(t *testing.T) {
+	testCases := []struct {
+		name            string
+		maxResponseSize string
+		status          int
+		bodySize        int
+		expectError     bool
+		expectErrorText []string
+		exactErrorText  string
+	}{
+		{
+			name:            "body below the limit",
+			maxResponseSize: "16",
+			status:          http.StatusOK,
+			bodySize:        15,
+		},
+		{
+			name:            "body of exactly the limit",
+			maxResponseSize: "16",
+			status:          http.StatusOK,
+			bodySize:        16,
+		},
+		{
+			name:            "body above the limit",
+			maxResponseSize: "16",
+			status:          http.StatusOK,
+			bodySize:        17,
+			expectError:     true,
+			expectErrorText: []string{"16 bytes", "MCP_MAX_RESPONSE_SIZE", "selector", "time range", "`limit`"},
+		},
+		{
+			name:            "limit disabled",
+			maxResponseSize: "0",
+			status:          http.StatusOK,
+			bodySize:        1 << 20,
+		},
+		{
+			name:            "error status above the limit",
+			maxResponseSize: "16",
+			status:          http.StatusBadRequest,
+			bodySize:        64,
+			expectError:     true,
+			exactErrorText:  "unexpected response status code 400: " + strings.Repeat("x", 17),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+			t.Setenv("VM_INSTANCE_TYPE", "single")
+			t.Setenv("MCP_MAX_RESPONSE_SIZE", tc.maxResponseSize)
+			cfg, err := config.InitConfig()
+			if err != nil {
+				t.Fatalf("Failed to init config: %v", err)
+			}
+
+			body := strings.Repeat("x", tc.bodySize)
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.status)
+				_, _ = io.WriteString(w, body)
+			}))
+			defer srv.Close()
+
+			req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+
+			result := GetTextBodyForRequest(req, cfg)
+			if result.IsError != tc.expectError {
+				t.Fatalf("Expected IsError=%v, got %v: %+v", tc.expectError, result.IsError, result.Content)
+			}
+			if len(result.Content) == 0 {
+				t.Fatal("Expected content in result, got empty content")
+			}
+			textContent, ok := result.Content[0].(mcp.TextContent)
+			if !ok {
+				t.Fatal("Expected TextContent, got different content type")
+			}
+			if !tc.expectError {
+				if textContent.Text != body {
+					t.Errorf("Expected the full %d-byte body, got %d bytes", len(body), len(textContent.Text))
+				}
+				return
+			}
+			for _, want := range tc.expectErrorText {
+				if !strings.Contains(textContent.Text, want) {
+					t.Errorf("Expected error text to contain %q, got: %s", want, textContent.Text)
+				}
+			}
+			if tc.exactErrorText != "" && textContent.Text != tc.exactErrorText {
+				t.Errorf("Expected error text %q, got: %q", tc.exactErrorText, textContent.Text)
+			}
+		})
 	}
 }
 
