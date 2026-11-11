@@ -8,7 +8,7 @@ require (
 	github.com/VictoriaMetrics/metricsql v0.87.6
 	github.com/VictoriaMetrics/victoriametrics-cloud-api-go v0.2.1
 	github.com/blevesearch/bleve/v2 v2.6.3
-	github.com/mark3labs/mcp-go v1.4.0
+	github.com/mark3labs/mcp-go v1.5.0
 	github.com/tmc/langchaingo v0.1.15
 	gopkg.in/yaml.v2 v2.4.0
 )
