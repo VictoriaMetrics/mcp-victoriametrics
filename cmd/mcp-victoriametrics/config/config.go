@@ -17,20 +17,22 @@ const (
 )
 
 type Config struct {
-	serverMode         string
-	listenAddr         string
-	entrypoint         string
-	instanceType       string
-	bearerToken        string
-	disabledTools      map[string]bool
-	apiKey             string
-	apiBaseURL         string
-	heartbeatInterval  time.Duration
-	disableResources   bool
-	customHeaders      map[string]string
-	passthroughHeaders []string
-	defaultTenantID    string
-	authToken          string
+	serverMode                 string
+	listenAddr                 string
+	entrypoint                 string
+	instanceType               string
+	bearerToken                string
+	disabledTools              map[string]bool
+	apiKey                     string
+	apiBaseURL                 string
+	heartbeatInterval          time.Duration
+	stateless                  bool
+	disableLocalhostProtection bool
+	disableResources           bool
+	customHeaders              map[string]string
+	passthroughHeaders         []string
+	defaultTenantID            string
+	authToken                  string
 
 	// Logging configuration
 	logFormat string
@@ -107,6 +109,26 @@ func InitConfig() (*Config, error) {
 		}
 	}
 
+	stateless := false
+	statelessStr := os.Getenv("MCP_STATELESS")
+	if statelessStr != "" {
+		var err error
+		stateless, err = strconv.ParseBool(statelessStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse MCP_STATELESS: %w", err)
+		}
+	}
+
+	disableLocalhostProtection := false
+	disableLocalhostProtectionStr := os.Getenv("MCP_DISABLE_LOCALHOST_PROTECTION")
+	if disableLocalhostProtectionStr != "" {
+		var err error
+		disableLocalhostProtection, err = strconv.ParseBool(disableLocalhostProtectionStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse MCP_DISABLE_LOCALHOST_PROTECTION: %w", err)
+		}
+	}
+
 	logFormat := strings.ToLower(os.Getenv("MCP_LOG_FORMAT"))
 	if logFormat == "" {
 		logFormat = "text"
@@ -123,22 +145,24 @@ func InitConfig() (*Config, error) {
 		return nil, fmt.Errorf("MCP_LOG_LEVEL must be 'debug', 'info', 'warn' or 'error'")
 	}
 	result := &Config{
-		serverMode:         strings.ToLower(os.Getenv("MCP_SERVER_MODE")),
-		listenAddr:         os.Getenv("MCP_LISTEN_ADDR"),
-		entrypoint:         os.Getenv("VM_INSTANCE_ENTRYPOINT"),
-		instanceType:       os.Getenv("VM_INSTANCE_TYPE"),
-		bearerToken:        os.Getenv("VM_INSTANCE_BEARER_TOKEN"),
-		disabledTools:      disabledToolsMap,
-		apiKey:             os.Getenv("VMC_API_KEY"),
-		apiBaseURL:         os.Getenv("VMC_API_BASE_URL"),
-		heartbeatInterval:  heartbeatInterval,
-		disableResources:   disableResources,
-		customHeaders:      customHeadersMap,
-		passthroughHeaders: passthroughHeaders,
-		authToken:          os.Getenv("MCP_AUTH_TOKEN"),
-		logFormat:          logFormat,
-		logLevel:           logLevel,
-		defaultTenantID:    "0",
+		serverMode:                 strings.ToLower(os.Getenv("MCP_SERVER_MODE")),
+		listenAddr:                 os.Getenv("MCP_LISTEN_ADDR"),
+		entrypoint:                 os.Getenv("VM_INSTANCE_ENTRYPOINT"),
+		instanceType:               os.Getenv("VM_INSTANCE_TYPE"),
+		bearerToken:                os.Getenv("VM_INSTANCE_BEARER_TOKEN"),
+		disabledTools:              disabledToolsMap,
+		apiKey:                     os.Getenv("VMC_API_KEY"),
+		apiBaseURL:                 os.Getenv("VMC_API_BASE_URL"),
+		heartbeatInterval:          heartbeatInterval,
+		stateless:                  stateless,
+		disableLocalhostProtection: disableLocalhostProtection,
+		disableResources:           disableResources,
+		customHeaders:              customHeadersMap,
+		passthroughHeaders:         passthroughHeaders,
+		authToken:                  os.Getenv("MCP_AUTH_TOKEN"),
+		logFormat:                  logFormat,
+		logLevel:                   logLevel,
+		defaultTenantID:            "0",
 	}
 	// Left for backward compatibility
 	if result.listenAddr == "" {
@@ -254,6 +278,14 @@ func (c *Config) IsResourcesDisabled() bool {
 
 func (c *Config) HeartbeatInterval() time.Duration {
 	return c.heartbeatInterval
+}
+
+func (c *Config) Stateless() bool {
+	return c.stateless
+}
+
+func (c *Config) DisableLocalhostProtection() bool {
+	return c.disableLocalhostProtection
 }
 
 func (c *Config) CustomHeaders() map[string]string {

@@ -135,10 +135,18 @@ Try not to second guess information - if you don't know something or lack inform
 		mux.Handle(srv.CompleteSsePath(), srv.SSEHandler())
 		mux.Handle(srv.CompleteMessagePath(), srv.MessageHandler())
 	case "http":
-		slog.Info("Starting server in HTTP mode", "addr", c.ListenAddr())
-		heartBeatOption := server.WithHeartbeatInterval(c.HeartbeatInterval())
-		loggerOption := server.WithStreamableHTTPLogger(logger.SlogLogger())
-		srv := server.NewStreamableHTTPServer(s, heartBeatOption, loggerOption)
+		slog.Info("Starting server in HTTP mode", "addr", c.ListenAddr(), "stateless", c.Stateless())
+		opts := []server.StreamableHTTPOption{
+			server.WithHeartbeatInterval(c.HeartbeatInterval()),
+			server.WithStreamableHTTPLogger(logger.SlogLogger()),
+		}
+		if c.Stateless() {
+			opts = append(opts, server.WithStateLess(true))
+		}
+		if c.DisableLocalhostProtection() {
+			opts = append(opts, server.WithDisableLocalhostProtection(true))
+		}
+		srv := server.NewStreamableHTTPServer(s, opts...)
 		mux.Handle("/mcp", srv)
 		mux.Handle("/", spaHandler())
 	default:
