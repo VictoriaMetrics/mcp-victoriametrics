@@ -17,6 +17,8 @@ func TestInitConfig(t *testing.T) {
 	originalHeartbeatInterval := os.Getenv("MCP_HEARTBEAT_INTERVAL")
 	originalHeaders := os.Getenv("VM_INSTANCE_HEADERS")
 	originalPassthroughHeaders := os.Getenv("MCP_PASSTHROUGH_HEADERS")
+	originalStateless := os.Getenv("MCP_STATELESS")
+	originalDisableLocalhostProtection := os.Getenv("MCP_DISABLE_LOCALHOST_PROTECTION")
 
 	// Restore environment variables after test
 	defer func() {
@@ -28,6 +30,8 @@ func TestInitConfig(t *testing.T) {
 		os.Setenv("MCP_HEARTBEAT_INTERVAL", originalHeartbeatInterval)
 		os.Setenv("VM_INSTANCE_HEADERS", originalHeaders)
 		os.Setenv("MCP_PASSTHROUGH_HEADERS", originalPassthroughHeaders)
+		os.Setenv("MCP_STATELESS", originalStateless)
+		os.Setenv("MCP_DISABLE_LOCALHOST_PROTECTION", originalDisableLocalhostProtection)
 	}()
 
 	// Test case 1: Valid configuration
@@ -404,5 +408,114 @@ func TestInitConfig(t *testing.T) {
 				t.Errorf("Expected header %q at index %d, got %q", expected[i], i, h)
 			}
 		}
+	})
+
+	// Test case: Stateless defaults to false
+	t.Run("Stateless default", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_STATELESS", "")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		if cfg.Stateless() {
+			t.Error("Expected Stateless() to default to false")
+		}
+	})
+
+	// Test case: Stateless enabled
+	t.Run("Stateless enabled", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_STATELESS", "true")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		if !cfg.Stateless() {
+			t.Error("Expected Stateless() to be true when MCP_STATELESS=true")
+		}
+
+		os.Setenv("MCP_STATELESS", "")
+	})
+
+	// Test case: Stateless explicitly false
+	t.Run("Stateless explicit false", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_STATELESS", "false")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		if cfg.Stateless() {
+			t.Error("Expected Stateless() to be false when MCP_STATELESS=false")
+		}
+
+		os.Setenv("MCP_STATELESS", "")
+	})
+
+	// Test case: Invalid stateless value
+	t.Run("Invalid stateless value", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_STATELESS", "notabool")
+
+		_, err := InitConfig()
+		if err == nil {
+			t.Fatal("Expected error for invalid MCP_STATELESS, got nil")
+		}
+
+		os.Setenv("MCP_STATELESS", "")
+	})
+
+	// Test case: DisableLocalhostProtection defaults to false
+	t.Run("DisableLocalhostProtection default", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_DISABLE_LOCALHOST_PROTECTION", "")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		if cfg.DisableLocalhostProtection() {
+			t.Error("Expected DisableLocalhostProtection() to default to false")
+		}
+	})
+
+	// Test case: DisableLocalhostProtection enabled
+	t.Run("DisableLocalhostProtection enabled", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_DISABLE_LOCALHOST_PROTECTION", "true")
+
+		cfg, err := InitConfig()
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		if !cfg.DisableLocalhostProtection() {
+			t.Error("Expected DisableLocalhostProtection() to be true when MCP_DISABLE_LOCALHOST_PROTECTION=true")
+		}
+
+		os.Setenv("MCP_DISABLE_LOCALHOST_PROTECTION", "")
+	})
+
+	// Test case: Invalid DisableLocalhostProtection value
+	t.Run("Invalid DisableLocalhostProtection value", func(t *testing.T) {
+		os.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+		os.Setenv("VM_INSTANCE_TYPE", "single")
+		os.Setenv("MCP_DISABLE_LOCALHOST_PROTECTION", "notabool")
+
+		_, err := InitConfig()
+		if err == nil {
+			t.Fatal("Expected error for invalid MCP_DISABLE_LOCALHOST_PROTECTION, got nil")
+		}
+
+		os.Setenv("MCP_DISABLE_LOCALHOST_PROTECTION", "")
 	})
 }
