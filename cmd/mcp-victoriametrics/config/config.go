@@ -35,6 +35,7 @@ type Config struct {
 	passthroughHeaders         []string
 	defaultTenantID            string
 	authToken                  string
+	instructionsOverride       string
 
 	// Logging configuration
 	logFormat string
@@ -176,6 +177,7 @@ func InitConfig() (*Config, error) {
 		customHeaders:              customHeadersMap,
 		passthroughHeaders:         passthroughHeaders,
 		authToken:                  os.Getenv("MCP_AUTH_TOKEN"),
+		instructionsOverride:       strings.TrimSpace(os.Getenv("MCP_INSTRUCTIONS_OVERRIDE")),
 		logFormat:                  logFormat,
 		logLevel:                   logLevel,
 		defaultTenantID:            "0",
@@ -332,4 +334,10 @@ func (c *Config) DefaultTenantID() string {
 
 func (c *Config) AuthToken() string {
 	return c.authToken
+}
+
+// InstructionsOverride returns text that replaces the default MCP server instructions.
+// Empty means the default instructions are used.
+func (c *Config) InstructionsOverride() string {
+	return c.instructionsOverride
 }
