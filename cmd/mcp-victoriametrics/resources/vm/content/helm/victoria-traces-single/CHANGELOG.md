@@ -1,11 +1,28 @@
 ## Next release
 
+- TODO
+
+## v0.1.13
+
+**Release date:** 09 Nov 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v0.13.0](https://img.shields.io/badge/v0.13.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriatraces%2Fchangelog%2F%23v0130)
+
+- bump version of VT components to [v0.13.0](https://github.com/VictoriaMetrics/VictoriaTraces/releases/tag/v0.13.0)
+
+## v0.1.12
+
+**Release date:** 26 Oct 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v0.12.1](https://img.shields.io/badge/v0.12.1-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriatraces%2Fchangelog%2F%23v0121)
+
 - bump `victoria-metrics-common` dependency to `0.4.*`. Resource names are unchanged.
 - add `server.service.portOverrides`, a map keyed by Service port name to override `port`, `protocol`, `targetPort`, `nodePort` and/or `appProtocol`. It applies to every rendered Service port, including `http[]`, `extraPorts[]` and `otlpgrpc-tcp`. See [#3223](https://github.com/VictoriaMetrics/helm-charts/issues/3223).
 - add `dnsConfig` option to set a custom DNS config for the pod. See [#3174](https://github.com/VictoriaMetrics/helm-charts/issues/3174)
 - fix `server.persistentVolume.volumeAttributesClassName` being ignored because of a typo in the template.
 - rename the container from `vtraces` to `vtsingle`, matching the VictoriaMetrics operator. Pods are restarted once on upgrade.
 - fix `server.persistentVolume.name` in StatefulSet mode: the container mounted the default volume name instead of the overridden claim template name, which produced an invalid pod spec.
+- bump version of VictoriaTraces components to [v0.12.1](https://github.com/VictoriaMetrics/VictoriaTraces/releases/tag/v0.12.1).
 
 ## v0.1.11
 

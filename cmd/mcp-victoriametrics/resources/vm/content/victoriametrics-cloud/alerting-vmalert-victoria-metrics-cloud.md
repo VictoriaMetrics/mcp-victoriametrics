@@ -130,7 +130,7 @@ server:
 EOF
 ```
 
-##### VMalert CRD for vmoperator
+##### VMAlert CRD for vmoperator
 
 ```sh
 export TOKEN=81e8226e-****-****-****-************
@@ -246,7 +246,7 @@ server:
 EOF
 ```
 
-##### VMalert CRD for vmoperator
+##### VMAlert CRD for vmoperator
 
 ```sh
 export TOKEN=76bc5470-****-****-****-************

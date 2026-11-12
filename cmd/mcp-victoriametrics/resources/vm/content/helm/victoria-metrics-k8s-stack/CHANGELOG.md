@@ -1,7 +1,56 @@
 ## Next release
 
+- bump kube-state-metrics dependency chart to version 9.0.0. Its pod now has `nodeSelector: kubernetes.io/os: linux` by default; set `kube-state-metrics.nodeSelector: null` to remove it.
+- bump prometheus-node-exporter dependency chart to version 4.60.1
+- bump grafana dependency chart to version 14.4.0 (Grafana 13.3.0). The chart now validates `grafana` values against a schema, so wrongly typed values (e.g. a numeric `image.tag` or label value, a quoted `service.port`) fail the install or upgrade. Grafana pods no longer have the `helm.sh/chart` label.
+
+## v0.98.1
+
+**Release date:** 09 Nov 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.156.0](https://img.shields.io/badge/v1.156.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11560) ![VM Operator: 0.68.2](https://img.shields.io/badge/VM_Operator-0.68.2-success?logo=kubernetes&logoColor=7B3FE4&labelColor=white&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230682)
+
+- sync-job: apply `global.extraLabels` and `global.extraAnnotations` to the dashboard ConfigMaps/GrafanaDashboards and VMRules it creates.
+
+## v0.98.0
+
+**Release date:** 09 Nov 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.156.0](https://img.shields.io/badge/v1.156.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11560) ![VM Operator: 0.68.2](https://img.shields.io/badge/VM_Operator-0.68.2-success?logo=kubernetes&logoColor=7B3FE4&labelColor=white&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230682)
+
+- bump version of VM components to [v1.156.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.156.0)
+- bump version of VT components to [v0.13.0](https://github.com/VictoriaMetrics/VictoriaTraces/releases/tag/v0.13.0)
+- sync-job: add `defaultDashboards.dashboards.<name>.variables.<variable>` with `query` to replace a dashboard variable query or add a missing variable, and `regex` to replace the variable regex (empty string removes it). The cluster picker is now the variable whose `label_values()` query lists the cluster label, instead of any variable named `cluster`, so the etcd and VictoriaLogs cluster dashboards, which use a `cluster` variable for job names, keep it and get a separate `k8s_cluster` picker. `defaultDashboards.dashboards.<name>.clusterMetric` is deprecated in favor of `variables.<variable>.query: label_values(<metric>, cluster)` and ignored when `variables` is set for the same dashboard; defaults are migrated. See [#3331](https://github.com/VictoriaMetrics/helm-charts/issues/3331).
+
+## v0.97.1
+
+**Release date:** 02 Nov 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.155.0](https://img.shields.io/badge/v1.155.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11550) ![VM Operator: 0.68.2](https://img.shields.io/badge/VM_Operator-0.68.2-success?logo=kubernetes&logoColor=7B3FE4&labelColor=white&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230682)
+
+- bump operator dependency chart to version 0.68.2
+- apply `global.extraAnnotations` to every chart-managed resource (CRs, RBAC, Ingress, HTTPRoute, generated `VMServiceScrape`/`Service`/`VMRule`, the sync-job's Job/ConfigMap/RBAC, and alertmanager/vmalert template ConfigMaps/Secrets), matching how `global.extraLabels` already propagates everywhere. Previously, most of these resources never merged `global.extraAnnotations` in at all, even though the chart declared the value. Resources owned by bundled subcharts (`grafana`, `kube-state-metrics`, `prometheus-node-exporter`) are not covered, since this chart does not control their templates, nor are user-supplied `.Values.extraObjects`, which are rendered verbatim. See [#3202](https://github.com/VictoriaMetrics/helm-charts/issues/3202).
+- bump version of alertmanager to [v0.34.2](https://github.com/prometheus/alertmanager/releases/tag/v0.34.2)
+
+## v0.97.0
+
+**Release date:** 26 Oct 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.155.0](https://img.shields.io/badge/v1.155.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11550) ![VM Operator: 0.68.1](https://img.shields.io/badge/VM_Operator-0.68.1-success?logo=kubernetes&logoColor=7B3FE4&labelColor=white&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230681)
+
+- bump version of VM components to [v1.155.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.155.0)
+- strip the `@sha256:...` digest from `vlsingle.spec.image.tag`, `vlagent.spec.image.tag` and `vtsingle.spec.image.tag` before using it as the `app.kubernetes.io/version` label, since the API server rejects label values containing `@` or longer than 63 characters. See [#3303](https://github.com/VictoriaMetrics/helm-charts/issues/3303).
+- `kubelet.vmScrapes.resources.enabled` now defaults to `false`. `/metrics/resource` exposes the same metric names and labels as `/metrics/cadvisor` (e.g. `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`), so scraping both by default created duplicate series; the bundled rules and dashboards only depend on `/metrics/cadvisor`. Set `kubelet.vmScrapes.resources.enabled: true` to restore the previous behavior. See [#2315](https://github.com/VictoriaMetrics/helm-charts/issues/2315).
+
+## v0.96.1
+
+**Release date:** 25 Oct 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.154.1](https://img.shields.io/badge/v1.154.1-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11541) ![VM Operator: 0.68.1](https://img.shields.io/badge/VM_Operator-0.68.1-success?logo=kubernetes&logoColor=7B3FE4&labelColor=white&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230681)
+
 - bump version of VM components to [v1.154.1](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.154.1), which fixes delayed requests in vmauth when a request with an `Authorization` header is matched to `unauthorized_user`. See [VictoriaMetrics#11774](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/11774).
-- BUGFIX: `vmauth.spec.unauthorizedUserAccessSpec` now routes to vmsingle/vmcluster using `targetRefs` with `crd` references, and `internal.vmauth.spec.unauthorizedUserAccessSpec` (the vmalert datasource proxy) routes to vmsingle/vmcluster/vlsingle/vlcluster the same way, instead of a hand-built `url_map`. The operator now derives backend routes automatically, including `/admin/tenants`, which the old `url_map` missed. This default applies only when `url_map`, `url_prefix` and `targetRefs` are all left unset; setting `url_prefix` or `targetRefs` explicitly now replaces the default read/write routes entirely instead of merging alongside them. See [#3153](https://github.com/VictoriaMetrics/helm-charts/issues/3153).
+- `vmauth.spec.unauthorizedUserAccessSpec` now routes to vmsingle/vmcluster using `targetRefs` with `crd` references, and `internal.vmauth.spec.unauthorizedUserAccessSpec` (the vmalert datasource proxy) routes to vmsingle/vmcluster/vlsingle/vlcluster the same way, instead of a hand-built `url_map`. The operator now derives backend routes automatically, including `/admin/tenants`, which the old `url_map` missed. This default applies only when `url_map`, `url_prefix` and `targetRefs` are all left unset; setting `url_prefix` or `targetRefs` explicitly now replaces the default read/write routes entirely instead of merging alongside them. See [#3153](https://github.com/VictoriaMetrics/helm-charts/issues/3153).
+- docs: clarify which resources receive `global.extraLabels` and `global.extraAnnotations`, and how to set them for bundled subcharts. See [#3202](https://github.com/VictoriaMetrics/helm-charts/issues/3202).
 
 ## v0.96.0
 
@@ -10,7 +59,7 @@
 ![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.154.0](https://img.shields.io/badge/v1.154.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11540) ![VM Operator: 0.68.1](https://img.shields.io/badge/VM_Operator-0.68.1-success?logo=kubernetes&logoColor=7B3FE4&labelColor=white&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230681)
 
 - bump version of VM components to [v1.154.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.154.0)
-- BUGFIX: disable `kube-prometheus-general.rules` group by default. Regression from `v0.85.0` with VMRules installed by `sync-job`.  See [#3274](https://github.com/VictoriaMetrics/helm-charts/issues/3274).
+- disable `kube-prometheus-general.rules` group by default. Regression from `v0.85.0` with VMRules installed by `sync-job`.  See [#3274](https://github.com/VictoriaMetrics/helm-charts/issues/3274).
 
 ## v0.95.2
 
@@ -18,7 +67,7 @@
 
 ![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.153.0](https://img.shields.io/badge/v1.153.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11530) ![VM Operator: 0.68.1](https://img.shields.io/badge/VM_Operator-0.68.1-success?logo=kubernetes&logoColor=7B3FE4&labelColor=white&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230681)
 
-- BUGFIX: fix `templates/route.yaml` and `templates/ingress.yaml` failing with `vm.operator.kind: appKey "alertmanager" is not vm/vl/vt-prefixed` when `alertmanager.route.enabled: true` or `alertmanager.ingress.enabled: true` is set. Regression from the `victoria-metrics-common` 0.4.* bump in v0.95.1, since `alertmanager` is the only top-level component key that isn't itself vm/vl/vt-prefixed (see [#3270](https://github.com/VictoriaMetrics/helm-charts/issues/3270)).
+- fix `templates/route.yaml` and `templates/ingress.yaml` failing with `vm.operator.kind: appKey "alertmanager" is not vm/vl/vt-prefixed` when `alertmanager.route.enabled: true` or `alertmanager.ingress.enabled: true` is set. Regression from the `victoria-metrics-common` 0.4.* bump in v0.95.1, since `alertmanager` is the only top-level component key that isn't itself vm/vl/vt-prefixed (see [#3270](https://github.com/VictoriaMetrics/helm-charts/issues/3270)).
 
 ## v0.95.1
 
@@ -27,7 +76,7 @@
 ![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.153.0](https://img.shields.io/badge/v1.153.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11530) ![VM Operator: 0.68.1](https://img.shields.io/badge/VM_Operator-0.68.1-success?logo=kubernetes&logoColor=7B3FE4&labelColor=white&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-operator%2Fchangelog%2F%230681)
 
 - bump `victoria-metrics-common` dependency to `0.4.*`. Resource names are unchanged.
-- BUGFIX: preserve user-supplied `.Values.alertmanager.config.templates` entries instead of overwriting them with the default `/etc/vm/templates/**/*.tmpl` glob, so custom template paths are no longer silently dropped from the generated config `Secret` (see [#3266](https://github.com/VictoriaMetrics/helm-charts/issues/3266)).
+- preserve user-supplied `.Values.alertmanager.config.templates` entries instead of overwriting them with the default `/etc/vm/templates/**/*.tmpl` glob, so custom template paths are no longer silently dropped from the generated config `Secret` (see [#3266](https://github.com/VictoriaMetrics/helm-charts/issues/3266)).
 
 ## v0.95.0
 

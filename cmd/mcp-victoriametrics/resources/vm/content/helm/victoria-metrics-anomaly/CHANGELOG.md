@@ -2,6 +2,15 @@
 
 - TODO
 
+## v1.12.21
+
+**Release date:** 09 Nov 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.32.0](https://img.shields.io/badge/v1.32.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fanomaly-detection%2Fchangelog%2F%23v1320)
+
+- render `extraContainers` and `extraHostPathMounts` in the vmanomaly pod. Both were documented in `values.yaml` but never used by the templates.
+- upgraded [`vmanomaly`](https://docs.victoriametrics.com/anomaly-detection/) to [1.32.0](https://docs.victoriametrics.com/anomaly-detection/changelog/#v1320)
+
 ## v1.12.20
 
 **Release date:** 15 Oct 2026

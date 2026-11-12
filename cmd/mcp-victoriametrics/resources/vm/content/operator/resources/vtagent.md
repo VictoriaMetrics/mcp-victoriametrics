@@ -33,8 +33,13 @@ metadata:
   name: example
 spec:
   remoteWrite:
-    - url: "http://vtsingle-example:10428/insert/native"
+    - url: "http://vtsingle-example:10428/insert/opentelemetry/v1/traces"
 ```
+
+> **Note**: since [v0.13.0](https://github.com/VictoriaMetrics/VictoriaTraces/releases/tag/v0.13.0), vtagent sends trace spans
+> in OTLP/HTTP protobuf format, so each `remoteWrite.url` must point to an OTLP/HTTP traces endpoint,
+> such as `/insert/opentelemetry/v1/traces` of VictoriaTraces or of any other OTLP-compatible backend.
+> See [Version management](#version-management) for older versions.
 
 For each `VTAgent` resource, the Operator deploys a properly configured `StatefulSet` in the same namespace,
 alongside a headless `Service` and a `VMPodScrape` for self-monitoring with name `vtagent-{metadata.name}`.
@@ -60,7 +65,7 @@ metadata:
   name: example
 spec:
   remoteWrite:
-    - url: "http://vtsingle-example:10428/insert/native"
+    - url: "http://vtsingle-example:10428/insert/opentelemetry/v1/traces"
   grpcSpec:
     listenPort: 4317
 ```
@@ -75,7 +80,7 @@ metadata:
   name: example
 spec:
   remoteWrite:
-    - url: "http://vtsingle-example:10428/insert/native"
+    - url: "http://vtsingle-example:10428/insert/opentelemetry/v1/traces"
   grpcSpec:
     listenPort: 4317
     tlsConfig:
@@ -100,8 +105,8 @@ metadata:
   name: example
 spec:
   remoteWrite:
-    - url: "http://vtsingle-a:10428/insert/native"
-    - url: "http://vtsingle-b:10428/insert/native"
+    - url: "http://vtsingle-a:10428/insert/opentelemetry/v1/traces"
+    - url: "http://vtsingle-b:10428/insert/opentelemetry/v1/traces"
 ```
 
 ## Specification
@@ -123,11 +128,15 @@ metadata:
 spec:
   image:
     repository: victoriametrics/vtagent
-    tag: v0.11.0
+    tag: v0.13.0
     pullPolicy: Always
   remoteWrite:
-    - url: "http://vtsingle-example:10428/insert/native"
+    - url: "http://vtsingle-example:10428/insert/opentelemetry/v1/traces"
 ```
+
+> **Note**: vtagent versions older than v0.13.0 send data in the format set by the deprecated `remoteWrite.format` field,
+> so `remoteWrite.url` must point to the VictoriaTraces endpoint matching this format,
+> such as `/insert/native` for `native`.
 
 Also, you can specify `imagePullSecrets` if you are pulling images from private repo:
 
@@ -139,12 +148,12 @@ metadata:
 spec:
   image:
     repository: victoriametrics/vtagent
-    tag: v0.11.0
+    tag: v0.13.0
     pullPolicy: Always
   imagePullSecrets:
     - name: my-repo-secret
   remoteWrite:
-    - url: "http://vtsingle-example:10428/insert/native"
+    - url: "http://vtsingle-example:10428/insert/opentelemetry/v1/traces"
 ```
 
 ## Resource management
@@ -158,7 +167,7 @@ metadata:
   name: resources-example
 spec:
   remoteWrite:
-    - url: "http://vtsingle-example:10428/insert/native"
+    - url: "http://vtsingle-example:10428/insert/opentelemetry/v1/traces"
   resources:
     requests:
       memory: "64Mi"
@@ -216,6 +225,6 @@ spec:
           requests:
             storage: 10Gi
   remoteWrite:
-    - url: "http://vtsingle-example:10428/insert/native"
+    - url: "http://vtsingle-example:10428/insert/opentelemetry/v1/traces"
       maxDiskUsage: 5GB
 ```

@@ -1,5 +1,38 @@
 ## Next release
 
+- TODO
+
+## v0.53.0
+
+**Release date:** 09 Nov 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.156.0](https://img.shields.io/badge/v1.156.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11560)
+
+- bump version of VM components to [v1.156.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.156.0)
+
+## v0.52.1
+
+**Release date:** 02 Nov 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.155.0](https://img.shields.io/badge/v1.155.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11550)
+
+- bump version of alertmanager to [v0.34.2](https://github.com/prometheus/alertmanager/releases/tag/v0.34.2)
+
+## v0.52.0
+
+**Release date:** 26 Oct 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.155.0](https://img.shields.io/badge/v1.155.0-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11550)
+
+- bump version of VM components to [v1.155.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.155.0)
+
+## v0.51.1
+
+**Release date:** 26 Oct 2026
+
+![Helm: v3](https://img.shields.io/badge/Helm-v3.14%2B-informational?color=informational&logo=helm&link=https%3A%2F%2Fgithub.com%2Fhelm%2Fhelm%2Freleases%2Ftag%2Fv3.14.0) ![AppVersion: v1.154.1](https://img.shields.io/badge/v1.154.1-success?logo=VictoriaMetrics&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fvictoriametrics%2Fchangelog%2F%23v11541)
+
+- bump version of VM components to [v1.154.1](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.154.1)
 - add `server.service.portOverrides` and `alertmanager.service.portOverrides`, maps keyed by Service port name to override `port`, `protocol`, `targetPort`, `nodePort` and/or `appProtocol`. See [#3223](https://github.com/VictoriaMetrics/helm-charts/issues/3223).
 
 ## v0.51.0

@@ -17,7 +17,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.50.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-agent%2Fchangelog%2F%23v0500)
+![Version](https://img.shields.io/badge/0.52.0-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-agent%2Fchangelog%2F%23v0520)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-agent)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -157,6 +157,46 @@ helm uninstall vma -n NAMESPACE
 ```
 
 ## Examples
+
+### Scrape configuration
+
+Default `config.scrape_configs` are a starting point adapted from the archived Prometheus chart.
+They are not kept in sync with upstream, and the chart has no values to tune individual default jobs. To change scraping, either:
+
+- keep the default jobs and append your own via `extraScrapeConfigs`;
+- set `config.scrape_configs` to your own list, using the defaults as a template. Since it is a list, it replaces all default jobs.
+
+For example, to scrape services that expose metrics only over HTTPS while keeping the default jobs, annotate them with `prometheus.io/scrape-https: "true"`
+instead of `prometheus.io/scrape`, so default jobs skip them, and add a job with `tls_config`. `prometheus.io/path` and `prometheus.io/port` annotations work as in default jobs:
+
+```yaml
+# values.yaml
+
+extraScrapeConfigs:
+  - job_name: kubernetes-service-endpoints-https
+    scheme: https
+    tls_config:
+      server_name: my-service.example.com
+    kubernetes_sd_configs:
+      - role: endpointslice
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape_https]
+        action: keep
+        regex: "true"
+      - action: keep_if_equal
+        source_labels: [__meta_kubernetes_service_annotation_prometheus_io_port, __meta_kubernetes_pod_container_port_number]
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        target_label: service
+```
+
+For per-service scrape settings consider the [VictoriaMetrics operator](https://docs.victoriametrics.com/operator/)
+or the [victoria-metrics-k8s-stack](https://docs.victoriametrics.com/helm/victoria-metrics-k8s-stack/) chart, which installs it,
+with [VMServiceScrape](https://docs.victoriametrics.com/operator/resources/vmservicescrape/) resources. They select targets by labels instead of `prometheus.io/*` annotations.
 
 ### Daemonset mode
 
@@ -628,7 +668,7 @@ Change the values according to the need of the environment in ``victoria-metrics
 </span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="nt">target_label</span><span class="p">:</span><span class="w"> </span><span class="l">node</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">useTpl</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span></span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>VMAgent scrape configuration</p>
+      <td><em><code>(object)</code></em><p>VMAgent scrape configuration. Default <code>scrape_configs</code> are a starting point adapted from the archived Prometheus chart and are not kept in sync with upstream. Either keep them and append jobs via <code>extraScrapeConfigs</code>, or set <code>scrape_configs</code> to your own list, which replaces all default jobs. See <a href="https://docs.victoriametrics.com/helm/victoria-metrics-agent/#scrape-configuration" target="_blank">scrape configuration</a> for details</p>
 </td>
     </tr>
     <tr id="config-usetpl">

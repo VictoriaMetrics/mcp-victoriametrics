@@ -65,3 +65,4 @@ The majority of these limits are available under the `Monitor` tab of the
 ## More information about deployments
 - [How to create a deployment](https://docs.victoriametrics.com/victoriametrics-cloud/get-started/quickstart/#creating-deployments)
 - [How to use Access tokens to write and read data](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/access-tokens/)
+- [How to configure stream aggregation](https://docs.victoriametrics.com/victoriametrics-cloud/deployments/stream-aggregation/)

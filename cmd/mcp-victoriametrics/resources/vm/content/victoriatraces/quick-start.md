@@ -49,6 +49,19 @@ This command will make VictoriaTraces run in the foreground, and store the inges
 
 After VictoriaTraces is running, verify VMUI is working by going to `http://<victoria-traces>:10428/select/vmui`.
 
+The Docker image doesn't contain `curl` or `wget`. Use the `-healthcheck` command-line flag{{% available_from "v0.13.0" %}} for Docker `HEALTHCHECK` instead.
+It checks that the running VictoriaTraces accepts connections at `-httpListenAddr` and exits with non-zero code if the check fails.
+Pass the same `-httpListenAddr` as the checked process has. For example, in Docker Compose:
+
+```yaml
+healthcheck:
+  test: ["CMD", "/victoria-traces-prod", "-healthcheck"]
+```
+
+If VictoriaTraces is configured via [environment variables](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#environment-variables),
+then add `-envflag.enable` to the healthcheck command, so it reads the same environment variables.
+The same flag is supported by [vtagent](https://docs.victoriametrics.com/victoriatraces/vtagent/) at `/vtagent-prod`.
+
 See how to [write](#write-data) or [read](#read-data) from VictoriaTraces.
 
 ### Starting VictoriaTraces Single Node from a Binary
@@ -56,13 +69,13 @@ See how to [write](#write-data) or [read](#read-data) from VictoriaTraces.
 - Download the correct binary for your OS and architecture from [GitHub](https://github.com/VictoriaMetrics/VictoriaTraces/releases/). Here's an example for `Linux/amd64`:
 
 ```sh
-curl -L -O https://github.com/VictoriaMetrics/VictoriaTraces/releases/download/v0.12.0/victoria-traces-linux-amd64-v0.12.0.tar.gz
+curl -L -O https://github.com/VictoriaMetrics/VictoriaTraces/releases/download/v0.13.0/victoria-traces-linux-amd64-v0.13.0.tar.gz
 ```
 
 - Extract the archive by running:
 
 ```sh
-tar -xvf victoria-traces-linux-amd64-v0.12.0.tar.gz
+tar -xvf victoria-traces-linux-amd64-v0.13.0.tar.gz
 ```
 
 - Go to the binary's folder and start VictoriaTraces:

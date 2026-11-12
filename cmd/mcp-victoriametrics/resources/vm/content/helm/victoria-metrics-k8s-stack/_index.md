@@ -17,7 +17,7 @@ tags:
   - kubernetes
 ---
 
-![Version](https://img.shields.io/badge/0.96.1-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-k8s-stack%2Fchangelog%2F%23v0961)
+![Version](https://img.shields.io/badge/0.98.1-gray?logo=Helm&labelColor=gray&link=https%3A%2F%2Fdocs.victoriametrics.com%2Fhelm%2Fvictoria-metrics-k8s-stack%2Fchangelog%2F%23v0981)
 ![ArtifactHub](https://img.shields.io/badge/ArtifactHub-informational?logoColor=white&color=417598&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fhelm%2Fvictoriametrics%2Fvictoria-metrics-k8s-stack)
 ![License](https://img.shields.io/github/license/VictoriaMetrics/helm-charts?labelColor=green&label=&link=https%3A%2F%2Fgithub.com%2FVictoriaMetrics%2Fhelm-charts%2Fblob%2Fmaster%2FLICENSE)
 ![Slack](https://img.shields.io/badge/Join-4A154B?logo=slack&link=https%3A%2F%2Fslack.victoriametrics.com)
@@ -43,6 +43,17 @@ Kubernetes monitoring on VictoriaMetrics stack. Includes VictoriaMetrics Operato
 This chart is an All-in-one solution to start monitoring and logging in a Kubernetes cluster.
 It installs multiple dependency charts like [grafana](https://github.com/grafana/helm-charts/tree/main/charts/grafana), [node-exporter](https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-node-exporter), [kube-state-metrics](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics) and [victoria-metrics-operator](https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-operator).
 Also it installs Custom Resources like [VMSingle](https://docs.victoriametrics.com/operator/resources/vmsingle/), [VMCluster](https://docs.victoriametrics.com/operator/resources/vmcluster/), [VMAgent](https://docs.victoriametrics.com/operator/resources/vmagent/), [VMAlert](https://docs.victoriametrics.com/operator/resources/vmalert/) for metrics, optionally [VLSingle](https://docs.victoriametrics.com/operator/resources/vlsingle/), [VLCluster](https://docs.victoriametrics.com/operator/resources/vlcluster/), [VLAgent](https://docs.victoriametrics.com/operator/resources/vlagent/) for logs, and [VTSingle](https://docs.victoriametrics.com/operator/resources/vtsingle/), [VTCluster](https://docs.victoriametrics.com/operator/resources/vtcluster/) for traces.
+
+> [!NOTE]
+> This chart doesn't render Deployments, StatefulSets, DaemonSets or Services for VictoriaMetrics, VictoriaLogs and VictoriaTraces components.
+> It renders custom resources, and the [VictoriaMetrics operator](https://docs.victoriametrics.com/operator/) creates and manages workloads from them.
+> Component values like `vmsingle.spec`, `vmagent.spec` or `vmcluster.spec` are passed to the custom resource spec as is,
+> so only fields described in the [operator API reference](https://docs.victoriametrics.com/operator/api/) can be configured.
+> If you need full control over Kubernetes resources, use standalone charts instead: [victoria-metrics-single](https://docs.victoriametrics.com/helm/victoria-metrics-single/),
+> [victoria-metrics-cluster](https://docs.victoriametrics.com/helm/victoria-metrics-cluster/), [victoria-metrics-agent](https://docs.victoriametrics.com/helm/victoria-metrics-agent/),
+> [victoria-metrics-alert](https://docs.victoriametrics.com/helm/victoria-metrics-alert/), [victoria-metrics-auth](https://docs.victoriametrics.com/helm/victoria-metrics-auth/),
+> [victoria-logs-single](https://docs.victoriametrics.com/helm/victoria-logs-single/), [victoria-logs-cluster](https://docs.victoriametrics.com/helm/victoria-logs-cluster/),
+> [victoria-traces-single](https://docs.victoriametrics.com/helm/victoria-traces-single/) and [victoria-traces-cluster](https://docs.victoriametrics.com/helm/victoria-traces-cluster/).
 
 By default, the operator [converts all existing prometheus-operator API objects](https://docs.victoriametrics.com/operator/integrations/prometheus/#objects-conversion) into corresponding VictoriaMetrics Operator objects.
 
@@ -380,7 +391,7 @@ No additional configuration is needed — the routing is handled transparently. 
 
 ### Traces storage
 
-This chart supports {{% available_from "v0.85.0" "helm-metrics-k8s-stack" %}} deploying [VictoriaTraces](https://docs.victoriametrics.com/victorialogs/) alongside VictoriaMetrics for distributed traces storage.
+This chart supports {{% available_from "v0.85.0" "helm-metrics-k8s-stack" %}} deploying [VictoriaTraces](https://docs.victoriametrics.com/victoriatraces/) alongside VictoriaMetrics for distributed traces storage.
 
 #### VTSingle (single-node)
 
@@ -746,7 +757,7 @@ kubectl delete daemonset -l app=prometheus-node-exporter
  All `CRD` must be update to the latest version with command:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/VictoriaMetrics/helm-charts/master/charts/victoria-metrics-k8s-stack/crds/crd.yaml
+kubectl apply -f https://raw.githubusercontent.com/VictoriaMetrics/helm-charts/master/charts/victoria-metrics-operator/charts/crds/crds/crd.yaml
 
 ```
 
@@ -755,7 +766,7 @@ kubectl apply -f https://raw.githubusercontent.com/VictoriaMetrics/helm-charts/m
  All `CRD` must be update to `v1` version with command:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/VictoriaMetrics/helm-charts/master/charts/victoria-metrics-k8s-stack/crds/crd.yaml
+kubectl apply -f https://raw.githubusercontent.com/VictoriaMetrics/helm-charts/master/charts/victoria-metrics-operator/charts/crds/crds/crd.yaml
 
 ```
 
@@ -1040,7 +1051,7 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     <tr id="defaultdashboards-annotations">
       <td><a href="#defaultdashboards-annotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">defaultDashboards.annotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Additional annotations for dashboard resources</p>
+      <td><em><code>(object)</code></em><p>Additional annotations for dashboard resources, merged over <code>global.extraAnnotations</code></p>
 </td>
     </tr>
     <tr id="defaultdashboards-dashboards">
@@ -1049,41 +1060,67 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{ .Values.alertmanager.enabled }}&#39;</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">controller-manager</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{ .Values.kubeControllerManager.enabled }}&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">etcd</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">k8s_cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(etcd_server_has_leader, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">grafana-overview</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{ .Values.grafana.enabled }}&#39;</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">kubelet</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{ .Values.kubelet.enabled }}&#39;</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">node-exporter-full</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">node_uname_info</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(node_uname_info, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">proxy</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{ .Values.kubeProxy.enabled }}&#39;</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">scheduler</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;{{ .Values.kubeScheduler.enabled }}&#39;</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victorialogs-cluster</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">k8s_cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victorialogs-single-node</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victorialogs-vlagent</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victoriametrics-cluster</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victoriametrics-operator</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victoriametrics-single-node</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victoriametrics-vmagent</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victoriametrics-vmalert</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victoriatraces-cluster</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">victoriatraces-single-node</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">clusterMetric</span><span class="p">:</span><span class="w"> </span><span class="l">vm_app_version</span></span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">variables</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">cluster</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="l">label_values(vm_app_version, cluster)</span></span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Per-dashboard configuration. Keys match dashboard names from JSON content. Set enabled: false to skip a dashboard. Set clusterMetric to patch the cluster variable query.</p>
+      <td><em><code>(object)</code></em><p>Per-dashboard configuration. Keys match dashboard names from JSON content. <code>enabled: false</code> skips a dashboard. <code>variables.&lt;name&gt;</code> sets a variable <code>query</code> (adds the variable if missing) and <code>regex</code> (&ldquo;&rdquo; removes it). The cluster picker is the variable with a label_values(&hellip;, cluster) query.</p>
 </td>
     </tr>
     <tr id="defaultdashboards-enabled">
@@ -1111,7 +1148,7 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     <tr id="defaultdashboards-labels">
       <td><a href="#defaultdashboards-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">defaultDashboards.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Additional labels for dashboard resources (ConfigMaps or GrafanaDashboard CRDs)</p>
+      <td><em><code>(object)</code></em><p>Additional labels for dashboard resources (ConfigMaps or GrafanaDashboard CRDs), merged over <code>global.extraLabels</code></p>
 </td>
     </tr>
     <tr id="defaultdashboards-sources">
@@ -1461,7 +1498,7 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     <tr id="defaultrules-annotations">
       <td><a href="#defaultrules-annotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">defaultRules.annotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Annotations for default rules</p>
+      <td><em><code>(object)</code></em><p>Annotations for default rules, merged over <code>global.extraAnnotations</code></p>
 </td>
     </tr>
     <tr id="defaultrules-extragroupbylabels">
@@ -1634,7 +1671,7 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     <tr id="defaultrules-labels">
       <td><a href="#defaultrules-labels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">defaultRules.labels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Labels for default rules</p>
+      <td><em><code>(object)</code></em><p>Labels for default rules, merged over <code>global.extraLabels</code></p>
 </td>
     </tr>
     <tr id="defaultrules-recording">
@@ -1826,13 +1863,13 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     <tr id="global-extraannotations">
       <td><a href="#global-extraannotations"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">global.extraAnnotations</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Annotations added to all resources</p>
+      <td><em><code>(object)</code></em><p>Annotations passed to the operator (<code>VM_COMMON_ANNOTATIONS</code>), which adds them to every resource it creates from VM CRs. Also added to dashboards and rules created by the sync-job. Not applied to bundled subcharts</p>
 </td>
     </tr>
     <tr id="global-extralabels">
       <td><a href="#global-extralabels"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">global.extraLabels</span><span class="p">:</span><span class="w"> </span>{}</span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Labels added to all resources</p>
+      <td><em><code>(object)</code></em><p>Labels added to resources templated by this chart and the embedded operator chart, and to dashboards and rules created by the sync-job. Also passed to the operator (<code>VM_COMMON_LABELS</code>), which adds them to every resource it creates from VM CRs. Not applied to CRDs, <code>extraObjects</code> and bundled subcharts, use <code>grafana.extraLabels</code>, <code>kube-state-metrics.customLabels</code> and <code>prometheus-node-exporter.commonLabels</code> for the latter</p>
 </td>
     </tr>
     <tr id="global-license">
@@ -1845,11 +1882,11 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     </tr>
     <tr id="global-versions">
       <td><a href="#global-versions"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">global.versions</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">alertmanager</span><span class="p">:</span><span class="w"> </span><span class="l">v0.34.0</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">anomaly</span><span class="p">:</span><span class="w"> </span><span class="l">v1.30.4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">alertmanager</span><span class="p">:</span><span class="w"> </span><span class="l">v0.34.2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">anomaly</span><span class="p">:</span><span class="w"> </span><span class="l">v1.32.0</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">logs</span><span class="p">:</span><span class="w"> </span><span class="l">v1.53.0</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">metrics</span><span class="p">:</span><span class="w"> </span><span class="l">v1.154.1</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">traces</span><span class="p">:</span><span class="w"> </span><span class="l">v0.10.0</span></span></span></code></pre>
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">metrics</span><span class="p">:</span><span class="w"> </span><span class="l">v1.156.0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">traces</span><span class="p">:</span><span class="w"> </span><span class="l">v0.13.0</span></span></span></code></pre>
 </a></td>
       <td><em><code>(object)</code></em><p>Default component versions. Propagated automatically (as a global value) to the embedded operator chart&rsquo;s own <code>global.versions</code>, which it uses to populate its default-version env vars, so that CRs created outside this chart (no explicit spec.image.tag) get the same version this chart deploys. Keep in sync with the corresponding renovate-tracked tags/appVersion below.</p>
 </td>
@@ -2345,7 +2382,7 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
 </span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">spec</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/metrics/probes</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">resources</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">spec</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/metrics/resource</span></span></span></code></pre>
 </a></td>
@@ -2406,11 +2443,11 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     </tr>
     <tr id="kubelet-vmscrapes-resources">
       <td><a href="#kubelet-vmscrapes-resources"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">kubelet.vmScrapes.resources</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l">/metrics/resource</span></span></span></code></pre>
 </a></td>
-      <td><em><code>(object)</code></em><p>Enabled scraping /metrics/resource from kubelet&rsquo;s service</p>
+      <td><em><code>(object)</code></em><p>Enable scraping /metrics/resource from kubelet&rsquo;s service. Disabled by default to avoid duplicating /metrics/cadvisor series, which the bundled rules and dashboards rely on.</p>
 </td>
     </tr>
     <tr id="nameoverride">
@@ -2547,7 +2584,7 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
       <td><em><code>(string)</code></em></td>
     </tr>
     <tr id="syncjob-image-tag">
-      <td><a href="#syncjob-image-tag"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">syncJob.image.tag</span><span class="p">:</span><span class="w"> </span><span class="l">v0.0.17</span></span></span></code></pre>
+      <td><a href="#syncjob-image-tag"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">syncJob.image.tag</span><span class="p">:</span><span class="w"> </span><span class="l">v0.0.18</span></span></span></code></pre>
 </a></td>
       <td><em><code>(string)</code></em></td>
     </tr>
@@ -3167,7 +3204,6 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     </tr>
     <tr id="vlcluster-spec">
       <td><a href="#vlcluster-spec"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vlcluster.spec</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">clusterVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1.53.0</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">vlinsert</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">extraArgs</span><span class="p">:</span><span class="w"> </span>{}<span class="w">
@@ -3240,7 +3276,6 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">zoneCommon</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">vlcluster</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="nt">spec</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">clusterVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v1.53.0</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">vlinsert</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">                    </span><span class="nt">replicaCount</span><span class="p">:</span><span class="w"> </span><span class="m">2</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="nt">vlselect</span><span class="p">:</span><span class="w">
@@ -4752,7 +4787,6 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     </tr>
     <tr id="vtcluster-spec">
       <td><a href="#vtcluster-spec"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vtcluster.spec</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">clusterVersion</span><span class="p">:</span><span class="w"> </span><span class="l">v0.9.4</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">vtinsert</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">extraArgs</span><span class="p">:</span><span class="w"> </span>{}<span class="w">

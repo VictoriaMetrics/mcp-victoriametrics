@@ -7,6 +7,8 @@ menu:
     weight: 15
 tags:
    - metrics
+   - logs
+   - traces
    - cloud
    - enterprise
    - guide
@@ -15,13 +17,14 @@ aliases:
   - /managed-victoriametrics/alertmanager-setup-for-deployment/index.html
 ---
 VictoriaMetrics Cloud supports configuring alerting rules, powered by vmalert, and sending notifications with hosted Alertmanager.
+This is supported for `VictoriaMetrics`, `VictoriaLogs` and `VictoriaTraces` deployments.
 
 ## Configure Alertmanager
 
 You have two options to configure Cloud Alertmanager:
 
 1. From integrations section: Menu **"Integrations" `->` "Cloud Alertmanager" `->` "New configuration"**:
-   ![Setup for deployment integrations](alertmanager-setup-for-deployment_integrations.webp)
+   ![Setup for deployment integrations](alertmanager-setup-for-deployment_integrations.webp?card)
 2. From deployment page: **"Deployment page" `->` "Rules" tab `->` "Settings" `->` "Connect notifier" `/` "New notifier"**:
    ![Setup for deployment connect notifier](alertmanager-setup-for-deployment_connect_notifier.webp)
 
@@ -58,6 +61,11 @@ But with respect to the specification, there are the following limitations:
    * `telegram_configs`
    * `webex_configs`
    * `msteams_configs`
+   * `msteamsv2_configs`
+   * `jira_configs`
+   * `rocketchat_configs`
+   * `mattermost_configs`
+   * `incidentio_configs`
 2. All configuration params with `_file` suffix are not allowed for security reasons.
 3. The maximum file size is 20mb.
 
@@ -152,6 +160,11 @@ You can click on the upload area or drag and drop the files with rules there.
 Files should be in the [Prometheus alerting rules definition format](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
 or [Prometheus recording rules definition format](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/).
 
+For `VictoriaLogs` and `VictoriaTraces` deployments, each rule group must set `type: vlogs` and use
+[LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/) expressions instead of MetricsQL/PromQL
+ones (`VictoriaTraces` rule groups also use `type: vlogs`, since both query languages share the same
+underlying evaluation engine). See the [example below](#example-of-alerting-rules-for-victorialogs-and-victoriatraces).
+
 There are limitations for the rules files:
 
 1. All files may contain no more than 100 rules in total. If you need to upload more rules contact us via [support-cloud@victoriametrics.com](mailto:support-cloud@victoriametrics.com).
@@ -173,6 +186,8 @@ You can use the following API endpoints for the automation with rules:
 For more details, please check [OpenAPI Reference](https://console.victoriametrics.cloud/api-docs).
 
 ### Example of alerting rules
+
+#### VictoriaMetrics
 
 Here is an example of alerting rules in the Prometheus alerting rules format:
 
@@ -197,6 +212,44 @@ groups:
         annotations:
           summary: "rule must be always at firing state"
 ```
+
+#### VictoriaLogs and VictoriaTraces {#example-of-alerting-rules-for-victorialogs-and-victoriatraces}
+
+Here is an example of an alerting rule for a `VictoriaLogs` or `VictoriaTraces` deployment, using
+`type: vlogs` and a LogsQL expression instead of a PromQL one:
+
+```yaml
+groups:
+  - name: vlogs-group
+    type: vlogs
+    rules:
+      - alert: too-many-errors
+        expr: |
+          _time:5m error
+          | stats count() as errors
+          | filter errors > 100
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "more than 100 errors logged in the last 5 minutes"
+```
+
+## Linking a metrics deployment for VictoriaLogs and VictoriaTraces alerting
+
+`VictoriaLogs` and `VictoriaTraces` deployments don't store Prometheus-style metrics themselves, so
+vmalert needs a `VictoriaMetrics` deployment to write recording rule output and alert state to. You can
+link one on **"Deployment page" `->` "Rules" tab `->` "Settings"**, under "Configure remote-write
+target". Only `VictoriaMetrics` deployments in the same region can be linked.
+
+Without a linked metrics deployment:
+
+- Recording rules are not supported: files containing recording rules are rejected on upload.
+- Alerting rules still run normally and fire alerts to Alertmanager, but alert state won't survive
+  vmalert restarts, since there's nowhere to persist it.
+
+Unlinking an already-linked deployment deletes any recording rule files, since their output would
+otherwise have nowhere to be written.
 
 ## Troubleshooting
 

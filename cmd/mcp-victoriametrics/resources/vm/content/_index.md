@@ -40,7 +40,7 @@ sections:
 
       - title: "VictoriaTraces"
         url: "/victoriatraces/"
-        text: "Preview: Our new database designed for storing and querying distributed tracing data."
+        text: "VictoriaTraces is an open-source, user-friendly database designed for storing and querying distributed tracing data."
         links:
           - label: "Quick Start"
             url: "/victoriatraces/quick-start/"
@@ -52,6 +52,18 @@ sections:
             url: "/victoriatraces/"
         upcoming: false
 
+      - title: "VictoriaStack"
+        url: "/victoriastack/"
+        text: "VictoriaStack is an open source observability stack for metrics, logs, and traces. Based on VictoriaMetrics, VictoriaLogs, and VictoriaTraces."
+        links:
+          - label: "Quick Start"
+            url: "/victoriastack/quick-start/"
+          - label: "Deployment"
+            url: "/victoriastack/deployment/"
+          - label: "See all"
+            url: "/victoriastack/"
+        upcoming: false
+        
   - title: "Enterprise"
     items:
       - title: "VictoriaMetrics Enterprise"

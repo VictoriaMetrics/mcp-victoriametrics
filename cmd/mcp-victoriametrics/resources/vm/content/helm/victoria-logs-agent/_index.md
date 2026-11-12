@@ -689,6 +689,12 @@ Change the values according to the need of the environment in ``victoria-logs-ag
       <td><em><code>(object)</code></em><p>Extra labels for Pods only</p>
 </td>
     </tr>
+    <tr id="podmanagementpolicy">
+      <td><a href="#podmanagementpolicy"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podManagementPolicy</span><span class="p">:</span><span class="w"> </span><span class="l">OrderedReady</span></span></span></code></pre>
+</a></td>
+      <td><em><code>(string)</code></em><p>Deploy order policy for StatefulSet pods</p>
+</td>
+    </tr>
     <tr id="podsecuritycontext">
       <td><a href="#podsecuritycontext"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">podSecurityContext</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span></span></span></code></pre>

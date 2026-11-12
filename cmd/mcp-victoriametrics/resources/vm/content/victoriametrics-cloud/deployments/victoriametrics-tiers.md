@@ -6,6 +6,7 @@ menu:
     parent: "deployments"
     weight: 1
     name: "VictoriaMetrics"
+    identifier: "victoriametrics-deployments"
 aliases:
   - /victoriametrics-cloud/tiers-parameters/index.html
   - /victoriametrics-cloud/tiers-parameters/

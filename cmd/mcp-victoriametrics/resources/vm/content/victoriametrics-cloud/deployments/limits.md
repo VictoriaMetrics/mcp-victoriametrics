@@ -35,6 +35,7 @@ is hitting a limit, a higher tier will be needed. Here are several examples of s
 - Max samples per series - default 30M (search.maxSamplesPerSeries)
 - Max samples per query - default to 1B (search.maxSamplesPerQuery)
 - Max search timeout - default 30 seconds
+- Max warning log lines per second - default 10 (loggerWarnsPerSecondLimit)
 
 For reference:
 - A comprehensive list of these limits may be found [here](https://docs.victoriametrics.com/victoriametrics/#resource-usage-limits)
