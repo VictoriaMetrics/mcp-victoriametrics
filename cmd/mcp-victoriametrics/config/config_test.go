@@ -63,6 +63,29 @@ func TestInitConfigMaxResponseSize(t *testing.T) {
 	}
 }
 
+func TestInitConfigInstructionsOverride(t *testing.T) {
+	t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+	t.Setenv("VM_INSTANCE_TYPE", "single")
+
+	t.Setenv("MCP_INSTRUCTIONS_OVERRIDE", "")
+	cfg, err := InitConfig()
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if cfg.InstructionsOverride() != "" {
+		t.Errorf("Expected empty instructions override, got: %q", cfg.InstructionsOverride())
+	}
+
+	t.Setenv("MCP_INSTRUCTIONS_OVERRIDE", "  This instance stores production metrics.\n")
+	cfg, err = InitConfig()
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if expected := "This instance stores production metrics."; cfg.InstructionsOverride() != expected {
+		t.Errorf("Expected instructions override %q, got: %q", expected, cfg.InstructionsOverride())
+	}
+}
+
 func TestInitConfig(t *testing.T) {
 	// Save original environment variables
 	originalEntrypoint := os.Getenv("VM_INSTANCE_ENTRYPOINT")
