@@ -1,0 +1,89 @@
+package metrics
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+
+	vmcloud "github.com/VictoriaMetrics/victoriametrics-cloud-api-go/v1"
+
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/tools"
+)
+
+const toolNameFlags = "flags"
+
+func toolFlags(c *config.Config) mcp.Tool {
+	options := []mcp.ToolOption{
+		mcp.WithDescription("List of non-default flags (parameters) of the VictoriaMetrics instance. This tools uses `/flags` endpoint of VictoriaMetrics API."),
+		mcp.WithToolAnnotation(mcp.ToolAnnotation{
+			Title:           "List of non-default flags (parameters)",
+			ReadOnlyHint:    ptr(true),
+			DestructiveHint: ptr(false),
+			OpenWorldHint:   ptr(true),
+		}),
+	}
+	if c.IsCloud() {
+		options = append(
+			options,
+			mcp.WithString("deployment_id",
+				mcp.Required(),
+				mcp.Title("Deployment ID"),
+				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
+				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
+			),
+		)
+	}
+	return mcp.NewTool(toolNameFlags, options...)
+}
+
+func toolFlagsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if cfg.IsCloud() {
+		deploymentID, err := tools.GetToolReqParam[string](tcr, "deployment_id", true)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment_id parameter: %v", err)), nil
+		}
+		if deploymentID == "" {
+			return mcp.NewToolResultError("deployment_id parameter is required for cloud mode"), nil
+		}
+		if cfg.IsCloudSharedInstance() {
+			ctx = tools.WithCloudAccessKey(ctx, tcr)
+		}
+		dd, err := cfg.VMC().GetDeploymentDetails(ctx, deploymentID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to get deployment details: %v", err)), nil
+		}
+		result := map[string]any{}
+		switch dd.Type {
+		case vmcloud.DeploymentTypeSingleNode:
+			result["vmsingle"] = dd.VMSingleSettings
+		case vmcloud.DeploymentTypeCluster:
+			result["vmselect"] = dd.VMSelectSettings
+			result["vmstorage"] = dd.VMStorageSettings
+			result["vminsert"] = dd.VMInsertSettings
+		}
+		data, err := json.Marshal(result)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to marshal deployment details: %v", err)), nil
+		}
+		return mcp.NewToolResultText(string(data)), nil
+	}
+
+	req, err := CreateAdminRequest(ctx, cfg, tcr, "flags")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to create request: %v", err)), nil
+	}
+	return tools.GetTextBodyForRequest(req, cfg), nil
+}
+
+func registerToolFlags(s *server.MCPServer, c *config.Config) {
+	if c.IsToolDisabled(toolNameFlags) {
+		return
+	}
+	s.AddTool(toolFlags(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return toolFlagsHandler(ctx, c, request)
+	})
+}
