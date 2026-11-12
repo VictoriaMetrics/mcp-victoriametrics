@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"log/slog"
@@ -51,6 +52,16 @@ const (
 )
 
 func main() {
+	// Use a dedicated FlagSet: VictoriaMetrics packages register their own
+	// flags (including -version) on flag.CommandLine.
+	fs := flag.NewFlagSet("mcp-victoriametrics", flag.ExitOnError)
+	showVersion := fs.Bool("version", false, "Print version and exit")
+	_ = fs.Parse(os.Args[1:]) // ExitOnError: Parse exits on failure and never returns an error
+	if *showVersion {
+		fmt.Printf("mcp-victoriametrics v%s (date: %s)\n", version, date)
+		return
+	}
+
 	c, err := config.InitConfig()
 	if err != nil {
 		log.Fatalf("FATAL: Error initializing config: %v\n", err)
