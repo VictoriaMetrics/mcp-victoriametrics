@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -34,7 +35,7 @@ var (
 			mcp.Description(`List of rule yaml files contents in vmalert/prometheus format. Each item in the list should be a string containing the yaml content of a rule file.`),
 			mcp.Items(map[string]any{
 				"type": "object",
-				"parameters": map[string]any{
+				"properties": map[string]any{
 					"filename": map[string]any{
 						"type":        "string",
 						"description": "Optional filename for the rule file. If not provided, a default name will be used.",
@@ -73,7 +74,7 @@ var (
 							"properties": map[string]any{
 								"series": map[string]any{
 									"type": "string",
-									"description": `series in the following format '<metric name>{<label name>=<label value>, ...}'. 
+									"description": `series in the following format '<metric name>{<label name>=<label value>, ...}'.
 Examples:
   - series_name{label1="value1", label2="value2"}
   - go_goroutines{job="prometheus", instance="localhost:9090"}`,
@@ -169,7 +170,7 @@ Examples:
 										"properties": map[string]any{
 											"labels": map[string]any{
 												"type": "string",
-												"description": `Labels of the sample in usual series notation '<metric name>{<label name>=<label value>, ...}'. 
+												"description": `Labels of the sample in usual series notation '<metric name>{<label name>=<label value>, ...}'.
 Examples:
  - series_name{label1="value1", label2="value2"}
  - go_goroutines{job="prometheus", instance="localhost:9090"}`,
@@ -230,6 +231,10 @@ func toolTestRulesHandler(_ context.Context, _ *config.Config, tcr mcp.CallToolR
 		filename, ok := rfMap["filename"].(string)
 		if !ok || filename == "" {
 			filename = fmt.Sprintf("rules_%d.yml", i)
+		}
+		// filename is used only as a name of the file inside tmpDir, so it must not contain path elements
+		if filename != filepath.Base(filename) || filename == "." || filename == ".." || strings.ContainsAny(filename, `/\`) {
+			return mcp.NewToolResultError(fmt.Sprintf("invalid filename in rule file %d: it must be a plain file name without path elements", i)), nil
 		}
 		content, ok := rfMap["content"].(string)
 		if !ok {
