@@ -23,6 +23,10 @@ a high-performance log storage and processing system.
 1. Build dashboards and setup alerts.
 1. Use Ad Hoc filters.
 
+<!-- vlcompat:min-version:start -->
+The plugin requires VictoriaLogs `v1.54.0` or newer: see [VictoriaLogs compatibility](https://github.com/VictoriaMetrics/victorialogs-datasource/tree/main#victorialogs-compatibility) for what each feature needs and how the plugin reports an unsupported version.
+<!-- vlcompat:min-version:end -->
+
 Try it at [VictoriaMetrics playground](https://play-grafana.victoriametrics.com/d/be5zidev72m80f/k8s-logs-demo)!
 
 ## Installation

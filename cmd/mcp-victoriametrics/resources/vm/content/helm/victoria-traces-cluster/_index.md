@@ -530,7 +530,7 @@ Change the values according to the need of the environment in ``victoria-traces-
 </td>
     </tr>
     <tr id="vmauth-image-tag">
-      <td><a href="#vmauth-image-tag"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.image.tag</span><span class="p">:</span><span class="w"> </span><span class="l">v1.155.0</span></span></span></code></pre>
+      <td><a href="#vmauth-image-tag"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">vmauth.image.tag</span><span class="p">:</span><span class="w"> </span><span class="l">v1.156.0</span></span></span></code></pre>
 </a></td>
       <td><em><code>(string)</code></em><p>Image tag override the default Chart.AppVersion, which is for vtraces components</p>
 </td>

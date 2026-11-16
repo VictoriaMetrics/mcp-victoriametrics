@@ -1882,9 +1882,9 @@ If you&rsquo;re migrating existing config, please make sure that <code>.Values.a
     </tr>
     <tr id="global-versions">
       <td><a href="#global-versions"><pre class="chroma"><code><span class="line"><span class="cl"><span class="nt">global.versions</span><span class="p">:</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">alertmanager</span><span class="p">:</span><span class="w"> </span><span class="l">v0.34.2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">alertmanager</span><span class="p">:</span><span class="w"> </span><span class="l">v0.35.0</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">anomaly</span><span class="p">:</span><span class="w"> </span><span class="l">v1.32.0</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">logs</span><span class="p">:</span><span class="w"> </span><span class="l">v1.53.0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">logs</span><span class="p">:</span><span class="w"> </span><span class="l">v1.54.0</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">metrics</span><span class="p">:</span><span class="w"> </span><span class="l">v1.156.0</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">traces</span><span class="p">:</span><span class="w"> </span><span class="l">v0.13.0</span></span></span></code></pre>
 </a></td>
