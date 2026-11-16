@@ -7,7 +7,5 @@ import (
 )
 
 func Register(s *server.MCPServer, c *config.Config) {
-	registerPromptUnusedMetrics(s, c)
 	registerPromptDocumentation(s, c)
-	registerPromptRarelyUsedCardinalMetrics(s, c)
 }
