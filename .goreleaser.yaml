@@ -49,7 +49,30 @@ snapshot:
   version_template: "{{ .Tag }}-next"
 
 changelog:
+  # Lists every commit (including direct pushes to main, which GitHub's
+  # PR-based notes skip) with GitHub author handles.
+  use: github
   sort: asc
+  filters:
+    exclude:
+      - '^Merge pull request'
+      - '^Merge branch'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Dependency updates
+      regexp: '^.*?[Bb]ump .+$'
+      order: 2
+    - title: Other changes
+      order: 999
+
+release:
+  footer: |
+    **Full Changelog**: https://github.com/VictoriaMetrics/mcp-victoriametrics/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 dockers_v2:
   - images:
