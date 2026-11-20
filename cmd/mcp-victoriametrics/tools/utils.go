@@ -247,7 +247,7 @@ func getSelectURL(ctx context.Context, cfg *config.Config, tcr mcp.CallToolReque
 }
 
 func GetTextBodyForRequest(req *http.Request, cfg *config.Config, f ...func(s string) (string, error)) *mcp.CallToolResult {
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := cfg.HTTPClient().Do(req)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to do request: %v", err))
 	}

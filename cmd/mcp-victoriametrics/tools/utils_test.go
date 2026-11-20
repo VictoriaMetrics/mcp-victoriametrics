@@ -17,9 +17,6 @@ import (
 
 // TestGetTextBodyForRequest tests the GetTextBodyForRequest function
 func TestGetTextBodyForRequest(t *testing.T) {
-	// Create a mock config
-	cfg := &config.Config{}
-
 	// Save the original HTTP client
 	originalClient := http.DefaultClient
 
@@ -33,6 +30,17 @@ func TestGetTextBodyForRequest(t *testing.T) {
 		},
 	}
 	defer func() { http.DefaultClient = originalClient }()
+
+	// InitConfig picks up the mocked http.DefaultClient unless a custom CA or cloud mode is inherited
+	t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+	t.Setenv("VM_INSTANCE_TYPE", "single")
+	t.Setenv("VM_INSTANCE_CA_CERT", "")
+	t.Setenv("VM_INSTANCE_CA_CERT_FILE", "")
+	t.Setenv("VMC_API_KEY", "")
+	cfg, err := config.InitConfig()
+	if err != nil {
+		t.Fatalf("Failed to init config: %v", err)
+	}
 
 	// Create a test request
 	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
@@ -75,9 +83,6 @@ func (m *mockTransport) RoundTrip(*http.Request) (*http.Response, error) {
 
 // TestGetTextBodyForRequestError tests the error handling in GetTextBodyForRequest
 func TestGetTextBodyForRequestError(t *testing.T) {
-	// Create a mock config
-	cfg := &config.Config{}
-
 	// Save the original HTTP client
 	originalClient := http.DefaultClient
 
@@ -92,6 +97,17 @@ func TestGetTextBodyForRequestError(t *testing.T) {
 	}
 	defer func() { http.DefaultClient = originalClient }()
 
+	// InitConfig picks up the mocked http.DefaultClient unless a custom CA or cloud mode is inherited
+	t.Setenv("VM_INSTANCE_ENTRYPOINT", "http://example.com")
+	t.Setenv("VM_INSTANCE_TYPE", "single")
+	t.Setenv("VM_INSTANCE_CA_CERT", "")
+	t.Setenv("VM_INSTANCE_CA_CERT_FILE", "")
+	t.Setenv("VMC_API_KEY", "")
+	cfg, err := config.InitConfig()
+	if err != nil {
+		t.Fatalf("Failed to init config: %v", err)
+	}
+
 	// Create a test request
 	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	if err != nil {
@@ -103,7 +119,17 @@ func TestGetTextBodyForRequestError(t *testing.T) {
 
 	// Check the result
 	if !result.IsError {
-		t.Error("Expected an error result, got success")
+		t.Fatal("Expected an error result, got success")
+	}
+	if len(result.Content) == 0 {
+		t.Fatal("Expected content in result, got empty content")
+	}
+	textContent, ok := result.Content[0].(mcp.TextContent)
+	if !ok {
+		t.Fatal("Expected TextContent, got different content type")
+	}
+	if want := "unexpected response status code 500: error message"; textContent.Text != want {
+		t.Errorf("Expected %q, got: %q", want, textContent.Text)
 	}
 }
 
