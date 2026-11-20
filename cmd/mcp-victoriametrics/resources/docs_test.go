@@ -2,8 +2,10 @@ package resources
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/blevesearch/bleve/v2"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -80,8 +82,51 @@ func TestGetDocResourceContent(t *testing.T) {
 	}
 }
 
-// Skip TestSearchDocResources for now as it requires more complex mocking
-// of the bleve search index which is causing nil pointer dereference issues
+// TestSearchDocResources covers queries that match fewer documents than limit.
+// bleve returns at most min(matches, limit) hits, and its result slice may have
+// spare capacity filled with nil pointers (limit <= 10) or none at all (limit > 10).
+func TestSearchDocResources(t *testing.T) {
+	origIndex, origResources := searchIndex, resources
+	defer func() { searchIndex, resources = origIndex, origResources }()
+
+	var err error
+	if searchIndex, err = bleve.NewMemOnly(bleve.NewIndexMapping()); err != nil {
+		t.Fatalf("error creating index: %v", err)
+	}
+	resources = map[string]mcp.Resource{}
+	for i := range 3 {
+		uri := fmt.Sprintf("docs://doc%d.md#0", i)
+		resources[uri] = mcp.NewResource(uri, uri)
+		if err := searchIndex.Index(uri, DocFileInfo{Content: "vmagent remote write"}); err != nil {
+			t.Fatalf("error indexing %s: %v", uri, err)
+		}
+	}
+
+	testCases := []struct {
+		name  string
+		limit int
+		want  int
+	}{
+		{name: "limit below matches", limit: 2, want: 2},
+		{name: "limit above matches, small", limit: 5, want: 3},
+		{name: "limit above matches, large", limit: 30, want: 3},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rs, err := SearchDocResources("vmagent", tc.limit)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if len(rs) != tc.want {
+				t.Errorf("Expected %d results, got: %d", tc.want, len(rs))
+			}
+		})
+	}
+
+	if _, err := SearchDocResources("nonexistentterm", 5); err == nil {
+		t.Error("Expected an error for a query without matches, got nil")
+	}
+}
 
 // TestDocResourcesHandler tests the docResourcesHandler function
 func TestDocResourcesHandler(t *testing.T) {
