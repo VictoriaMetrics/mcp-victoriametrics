@@ -32,12 +32,6 @@ var (
 )
 
 func RegisterDocsResources(s *server.MCPServer, cfg *config.Config) {
-	var err error
-	mapping := bleve.NewIndexMapping()
-	if searchIndex, err = bleve.NewMemOnly(mapping); err != nil {
-		log.Fatal(fmt.Errorf("error creating index: %w", err))
-	}
-
 	docFiles, err := ListDocFiles()
 	if err != nil {
 		log.Fatal(fmt.Errorf("error listing docs files: %w", err))
@@ -45,7 +39,7 @@ func RegisterDocsResources(s *server.MCPServer, cfg *config.Config) {
 	resources = make(map[string]mcp.Resource, len(docFiles))
 	contents = make(map[string]mcp.ResourceContents, len(docFiles))
 	for _, docFile := range docFiles {
-		resourceURI := fmt.Sprintf("%s%s#%d", docsURIPrefix, docFile.Path, docFile.ChunkNum)
+		resourceURI := docResourceURI(docFile)
 		resource := mcp.NewResource(
 			resourceURI,
 			docFile.Name,
@@ -61,10 +55,12 @@ func RegisterDocsResources(s *server.MCPServer, cfg *config.Config) {
 			MIMEType: "text/markdown",
 			Text:     docFile.Content,
 		}
-		if err = searchIndex.Index(resourceURI, docFile); err != nil {
-			log.Fatal(fmt.Errorf("error indexing file %s: %w", docFile.Path, err))
-		}
 	}
+	searchIndex = openDocsIndex(docFiles)
+}
+
+func docResourceURI(docFile DocFileInfo) string {
+	return fmt.Sprintf("%s%s#%d", docsURIPrefix, docFile.Path, docFile.ChunkNum)
 }
 
 func SearchDocResources(query string, limit int) ([]mcp.Resource, error) {

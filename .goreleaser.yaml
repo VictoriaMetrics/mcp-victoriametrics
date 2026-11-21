@@ -4,6 +4,7 @@ project_name: mcp-victoriametrics
 before:
   hooks:
     - make ui-build
+    - make docs-index
 
 builds:
   - env:

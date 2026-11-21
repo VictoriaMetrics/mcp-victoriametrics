@@ -1,8 +1,15 @@
 package resources
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/blevesearch/bleve/v2"
@@ -203,5 +210,136 @@ func TestDocResourcesHandler(t *testing.T) {
 				t.Errorf("Expected URI '%s', got: '%s'", tc.uri, textContent.URI)
 			}
 		})
+	}
+}
+
+func testDocFiles() []DocFileInfo {
+	return []DocFileInfo{
+		{Path: "vm/a.md", Content: "# Retention\n\nRetention filters drop old samples.", Name: "Retention"},
+		{Path: "vm/b.md", Content: "# Downsampling\n\nDownsampling reduces resolution.", Name: "Downsampling"},
+	}
+}
+
+func buildTestDocsIndexArchive(t *testing.T, docFiles []DocFileInfo) []byte {
+	t.Helper()
+	tmpDir := t.TempDir()
+	indexDir := filepath.Join(tmpDir, "index")
+	if err := buildDocsIndex(indexDir, docFiles); err != nil {
+		t.Fatalf("buildDocsIndex: %v", err)
+	}
+	archivePath := filepath.Join(tmpDir, "docs-index.tar.gz")
+	if err := writeDocsIndexArchive(indexDir, archivePath); err != nil {
+		t.Fatalf("writeDocsIndexArchive: %v", err)
+	}
+	archive, err := os.ReadFile(archivePath)
+	if err != nil {
+		t.Fatalf("read archive: %v", err)
+	}
+	return archive
+}
+
+func searchTestIndex(t *testing.T, index bleve.Index, query string) []string {
+	t.Helper()
+	result, err := index.Search(bleve.NewSearchRequest(bleve.NewMatchQuery(query)))
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	ids := make([]string, 0, len(result.Hits))
+	for _, hit := range result.Hits {
+		ids = append(ids, hit.ID)
+	}
+	return ids
+}
+
+func TestArchivedDocsIndex(t *testing.T) {
+	docFiles := testDocFiles()
+	hash := docsHash(docFiles)
+	archive := buildTestDocsIndexArchive(t, docFiles)
+	dir := filepath.Join(t.TempDir(), "docs-index")
+
+	index, err := openArchivedDocsIndex(archive, dir, hash)
+	if err != nil {
+		t.Fatalf("openArchivedDocsIndex: %v", err)
+	}
+	if got := searchTestIndex(t, index, "downsampling"); len(got) != 1 || got[0] != "docs://vm/b.md#0" {
+		t.Fatalf("unexpected search result: %v", got)
+	}
+	_ = index.Close()
+
+	marker := filepath.Join(dir, "marker")
+	if err := os.WriteFile(marker, nil, 0o644); err != nil {
+		t.Fatalf("write marker: %v", err)
+	}
+	index, err = openArchivedDocsIndex(archive, dir, hash)
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	_ = index.Close()
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatal("expected the unpacked index to be reused")
+	}
+
+	changed := testDocFiles()
+	changed[1].Content += " More."
+	if _, err := openArchivedDocsIndex(archive, dir, docsHash(changed)); err == nil {
+		t.Fatal("expected an error for an index built from different docs")
+	}
+	if _, err := openArchivedDocsIndex([]byte("not an archive"), filepath.Join(t.TempDir(), "x"), hash); err == nil {
+		t.Fatal("expected an error for a damaged archive")
+	}
+}
+
+func TestArchivedDocsIndexReadOnly(t *testing.T) {
+	docFiles := testDocFiles()
+	hash := docsHash(docFiles)
+	dir := filepath.Join(t.TempDir(), "docs-index")
+	index, err := openArchivedDocsIndex(buildTestDocsIndexArchive(t, docFiles), dir, hash)
+	if err != nil {
+		t.Fatalf("openArchivedDocsIndex: %v", err)
+	}
+	_ = index.Close()
+	if err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		mode := os.FileMode(0o444)
+		if d.IsDir() {
+			mode = 0o555
+		}
+		return os.Chmod(p, mode)
+	}); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = filepath.WalkDir(dir, func(p string, _ fs.DirEntry, _ error) error { return os.Chmod(p, 0o755) })
+	})
+	index, err = openPrebuiltDocsIndex(dir, hash)
+	if err != nil {
+		t.Fatalf("openPrebuiltDocsIndex on read-only files: %v", err)
+	}
+	_ = index.Close()
+}
+
+func TestExtractDocsIndexArchiveRejectsUnsafePaths(t *testing.T) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	if err := tw.WriteHeader(&tar.Header{Name: "../escape", Typeflag: tar.TypeReg, Mode: 0o644}); err != nil {
+		t.Fatal(err)
+	}
+	if err := errors.Join(tw.Close(), gz.Close()); err != nil {
+		t.Fatal(err)
+	}
+	if err := extractDocsIndexArchive(buf.Bytes(), t.TempDir()); err == nil {
+		t.Fatal("expected an error for a path outside the target directory")
+	}
+}
+
+func TestOpenDocsIndexFallback(t *testing.T) {
+	docFiles := testDocFiles()
+	index := openDocsIndex(docFiles)
+	defer func() { _ = index.Close() }()
+	if got := searchTestIndex(t, index, "retention"); len(got) != 1 || got[0] != "docs://vm/a.md#0" {
+		t.Fatalf("unexpected search result: %v", got)
 	}
 }
