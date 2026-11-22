@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 // captureLogs sets a JSON slog default logger with the given level for the duration of the test
@@ -139,6 +141,31 @@ func TestWithPayload(t *testing.T) {
 	for i := range want {
 		if got[i] != want[i] {
 			t.Fatalf("expected %v, got %v", want, got)
+		}
+	}
+}
+
+func TestMergeKeepsEveryHookKind(t *testing.T) {
+	// Fill every hook slice of two Hooks values with one no-op callback each.
+	fill := func() *server.Hooks {
+		h := &server.Hooks{}
+		v := reflect.ValueOf(h).Elem()
+		for i := range v.NumField() {
+			field := v.Field(i)
+			if field.Kind() != reflect.Slice {
+				continue
+			}
+			fn := reflect.MakeFunc(field.Type().Elem(), func([]reflect.Value) []reflect.Value { return nil })
+			field.Set(reflect.Append(field, fn))
+		}
+		return h
+	}
+
+	merged := Merge(fill(), nil, fill())
+	v := reflect.ValueOf(merged).Elem()
+	for i := range v.NumField() {
+		if field := v.Field(i); field.Kind() == reflect.Slice && field.Len() != 2 {
+			t.Errorf("%s has %d hooks after merge, want 2", v.Type().Field(i).Name, field.Len())
 		}
 	}
 }
