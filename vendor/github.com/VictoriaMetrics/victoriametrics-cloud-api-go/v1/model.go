@@ -149,6 +149,18 @@ type TierInfoCommon struct {
 	AccessTokenConcurrentRequests int `json:"access_token_concurrent_requests"`
 	// AccessTokenLimit is the maximum number of access tokens for deployments of this tier
 	AccessTokenLimit int `json:"access_token_limit"`
+	// Version is the tier generation. A cluster cannot be moved to a tier of another
+	// version through the API, such a change requires a support request.
+	Version int `json:"version"`
+	// ComputeUnits is the number of compute units of the tier, nil when the API does not report it
+	ComputeUnits *int `json:"compute_units,omitempty"`
+	// CPUMillicores is the total CPU of the tier across all components and zones
+	CPUMillicores int `json:"cpu_millicores,omitempty"`
+	// MemoryMB is the total memory of the tier across all components and zones
+	MemoryMB int `json:"memory_mb,omitempty"`
+	// StorageNodes is the number of vmstorage nodes per zone, set for cluster tiers only.
+	// A cluster cannot be moved to a tier with fewer storage nodes.
+	StorageNodes int `json:"storage_nodes,omitempty"`
 }
 
 // MetricsTierInfo holds the limits reported by single_node and cluster tiers.
@@ -331,6 +343,10 @@ type DeploymentPrice struct {
 	StorageCost float64 `json:"storage_cost"`
 	// TotalCost - total cost of the deployment (without network costs)
 	TotalCost float64 `json:"total_cost"`
+	// AgentDiskCost - cost of the vmagent queue storage, set for v3 cluster tiers
+	AgentDiskCost float64 `json:"agent_disk_cost"`
+	// AgentDiskSize - total vmagent queue disk size in bytes across all zones
+	AgentDiskSize uint64 `json:"agent_disk_size"`
 }
 
 // DeploymentInfo - deployment details for the public API
