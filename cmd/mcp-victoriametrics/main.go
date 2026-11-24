@@ -85,10 +85,9 @@ func main() {
 
 	ms := metrics.NewSet()
 
-	// Combine metrics and logging hooks
-	metricsHooks := hooks.New(ms)
-	loggingHooks := hooks.NewLoggerHooks()
-	combinedHooks := hooks.Merge(metricsHooks, loggingHooks)
+	serverHooks := &server.Hooks{}
+	hooks.RegisterMetrics(serverHooks, ms)
+	hooks.RegisterLogging(serverHooks)
 
 	instructions := defaultInstructions
 	if override := c.InstructionsOverride(); override != "" {
@@ -103,7 +102,7 @@ func main() {
 		server.WithToolCapabilities(false),
 		server.WithResourceCapabilities(false, false),
 		server.WithPromptCapabilities(false),
-		server.WithHooks(combinedHooks),
+		server.WithHooks(serverHooks),
 		server.WithInstructions(instructions),
 	)
 
@@ -159,17 +158,13 @@ func main() {
 			server.WithStreamableHTTPLogger(logger.SlogLogger()),
 		}
 		if c.Stateless() {
-			opts = append(opts, server.WithStateLess(true))
+			opts = append(opts, server.WithStateLess(true), server.WithDisableStreaming(true))
 		}
 		if c.DisableLocalhostProtection() {
 			opts = append(opts, server.WithDisableLocalhostProtection(true))
 		}
 		srv := server.NewStreamableHTTPServer(s, opts...)
-		if c.Stateless() {
-			mux.Handle("/mcp", rejectStandaloneGET(srv))
-		} else {
-			mux.Handle("/mcp", srv)
-		}
+		mux.Handle("/mcp", srv)
 		mux.Handle("/", spaHandler())
 	default:
 		slog.Error("Unknown server mode", "mode", c.ServerMode())
@@ -226,19 +221,4 @@ func main() {
 	}
 
 	slog.Info("Server stopped.")
-}
-
-// rejectStandaloneGET answers GET with 405 in stateless mode.
-// Without session ids, mcp-go keeps every standalone GET stream under the same empty
-// session id, so the first client to disconnect unregisters the session of all others.
-// The MCP specification allows 405 for servers that don't offer a standalone SSE stream.
-func rejectStandaloneGET(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.Header().Set("Allow", "POST, DELETE, HEAD")
-			http.Error(w, "GET streams are not available in stateless mode", http.StatusMethodNotAllowed)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }

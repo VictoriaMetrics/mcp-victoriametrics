@@ -34,17 +34,6 @@ func (rw *responseWriter) Flush() {
 	}
 }
 
-// requestSessionID returns the MCP session id sent by the client: the Mcp-Session-Id header
-// (streamable HTTP) or the sessionId query parameter (SSE message endpoint).
-// server.ClientSessionFromContext can't be used here: mcp-go attaches the session
-// to its own request context after this middleware has run, so it is always nil.
-func requestSessionID(r *http.Request) string {
-	if id := r.Header.Get(server.HeaderKeySessionID); id != "" {
-		return id
-	}
-	return r.URL.Query().Get("sessionId")
-}
-
 // Middleware creates HTTP logging middleware
 func (l *Logger) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -56,9 +45,10 @@ func (l *Logger) Middleware(next http.Handler) http.Handler {
 
 		start := time.Now()
 
-		// session id can be empty if not provided, e.g. for the initialize request,
-		// which gets its session id in the response header
-		sessionID := requestSessionID(r)
+		sessionID := r.Header.Get(server.HeaderKeySessionID)
+		if sessionID == "" {
+			sessionID = r.URL.Query().Get("sessionId")
+		}
 
 		// Log request start
 		slog.Info("HTTP request started",

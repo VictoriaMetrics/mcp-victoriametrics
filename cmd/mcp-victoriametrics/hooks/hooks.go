@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"reflect"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -13,9 +12,7 @@ import (
 	"github.com/VictoriaMetrics/metrics"
 )
 
-func New(ms *metrics.Set) *server.Hooks {
-	hooks := &server.Hooks{}
-
+func RegisterMetrics(hooks *server.Hooks, ms *metrics.Set) {
 	hooks.AddAfterInitialize(func(_ context.Context, _ any, message *mcp.InitializeRequest, _ *mcp.InitializeResult) {
 		ms.GetOrCreateCounter(fmt.Sprintf(
 			`mcp_victoriametrics_initialize_total{client_name="%s",client_version="%s"}`,
@@ -69,13 +66,9 @@ func New(ms *metrics.Set) *server.Hooks {
 			err,
 		)).Inc()
 	})
-
-	return hooks
 }
 
-func NewLoggerHooks() *server.Hooks {
-	hooks := &server.Hooks{}
-
+func RegisterLogging(hooks *server.Hooks) {
 	hooks.AddOnRegisterSession(func(_ context.Context, session server.ClientSession) {
 		slog.Info("Session registered",
 			"session_id", session.SessionID(),
@@ -137,27 +130,6 @@ func NewLoggerHooks() *server.Hooks {
 		)
 	})
 
-	return hooks
-}
-
-// Merge combines hooks so that every registered callback runs, in argument order.
-// It copies every hook slice of server.Hooks via reflection, so hook kinds added
-// in new mcp-go versions are not silently dropped.
-func Merge(hooksList ...*server.Hooks) *server.Hooks {
-	combined := &server.Hooks{}
-	dst := reflect.ValueOf(combined).Elem()
-	for _, h := range hooksList {
-		if h == nil {
-			continue
-		}
-		src := reflect.ValueOf(h).Elem()
-		for i := range dst.NumField() {
-			if field := dst.Field(i); field.Kind() == reflect.Slice && field.CanSet() {
-				field.Set(reflect.AppendSlice(field, src.Field(i)))
-			}
-		}
-	}
-	return combined
 }
 
 // extractSessionID extracts session ID from context
