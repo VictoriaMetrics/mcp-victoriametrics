@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 // captureLogs sets a JSON slog default logger with the given level for the duration of the test
@@ -44,7 +45,8 @@ func TestLoggerHooksPayloads(t *testing.T) {
 		Resources: []mcp.Resource{mcp.NewResource("docs://"+strings.Repeat("a", 1<<20), "doc")},
 	}
 
-	hooks := NewLoggerHooks()
+	hooks := &server.Hooks{}
+	RegisterLogging(hooks)
 	calls := []struct {
 		name         string
 		call         func()

@@ -85,10 +85,9 @@ func main() {
 
 	ms := metrics.NewSet()
 
-	// Combine metrics and logging hooks
-	metricsHooks := hooks.New(ms)
-	loggingHooks := hooks.NewLoggerHooks()
-	combinedHooks := hooks.Merge(metricsHooks, loggingHooks)
+	serverHooks := &server.Hooks{}
+	hooks.RegisterMetrics(serverHooks, ms)
+	hooks.RegisterLogging(serverHooks)
 
 	instructions := defaultInstructions
 	if override := c.InstructionsOverride(); override != "" {
@@ -103,7 +102,7 @@ func main() {
 		server.WithToolCapabilities(false),
 		server.WithResourceCapabilities(false, false),
 		server.WithPromptCapabilities(false),
-		server.WithHooks(combinedHooks),
+		server.WithHooks(serverHooks),
 		server.WithInstructions(instructions),
 	)
 
@@ -159,7 +158,7 @@ func main() {
 			server.WithStreamableHTTPLogger(logger.SlogLogger()),
 		}
 		if c.Stateless() {
-			opts = append(opts, server.WithStateLess(true))
+			opts = append(opts, server.WithStateLess(true), server.WithDisableStreaming(true))
 		}
 		if c.DisableLocalhostProtection() {
 			opts = append(opts, server.WithDisableLocalhostProtection(true))

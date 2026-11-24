@@ -45,12 +45,9 @@ func (l *Logger) Middleware(next http.Handler) http.Handler {
 
 		start := time.Now()
 
-		// Extract session ID from header or query param
-		// session id can be empty if not provided
-		var sessionID string
-		clientSession := server.ClientSessionFromContext(r.Context())
-		if clientSession != nil {
-			sessionID = clientSession.SessionID()
+		sessionID := r.Header.Get(server.HeaderKeySessionID)
+		if sessionID == "" {
+			sessionID = r.URL.Query().Get("sessionId")
 		}
 
 		// Log request start
@@ -69,6 +66,9 @@ func (l *Logger) Middleware(next http.Handler) http.Handler {
 
 		// Call next handler
 		next.ServeHTTP(wrapped, r)
+		if sessionID == "" {
+			sessionID = wrapped.Header().Get(server.HeaderKeySessionID)
+		}
 
 		// Log request completion
 		duration := time.Since(start)
