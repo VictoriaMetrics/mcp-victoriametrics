@@ -33,9 +33,23 @@
         {
           "name": "VM_INSTANCE_BEARER_TOKEN",
           "description": "Authentication token for VictoriaMetrics API",
-          "isRequired": true,
+          "isRequired": false,
           "format": "string",
           "isSecret": true
+        },
+        {
+          "name": "VM_INSTANCE_CA_CERT",
+          "description": "PEM-encoded CA certificate(s) to verify the TLS certificates of VictoriaMetrics and the VictoriaMetrics Cloud API with, instead of the system CA bundle. Literal \\n sequences are treated as newlines. Cannot be used with VM_INSTANCE_CA_CERT_FILE",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VM_INSTANCE_CA_CERT_FILE",
+          "description": "Path to a file with PEM-encoded CA certificate(s) to verify the TLS certificates of VictoriaMetrics and the VictoriaMetrics Cloud API with, instead of the system CA bundle. Cannot be used with VM_INSTANCE_CA_CERT",
+          "isRequired": false,
+          "format": "filepath",
+          "isSecret": false
         },
         {
           "name": "VMC_API_KEY",
@@ -62,7 +76,7 @@
           "name": "MCP_PASSTHROUGH_HEADERS",
           "description": "HTTP header names to forward from incoming MCP requests to VictoriaMetrics (comma-separated list). Overrides VM_INSTANCE_HEADERS on collision.",
           "isRequired": false,
-          "format": "boolean",
+          "format": "string",
           "isSecret": false
         }
       ]
