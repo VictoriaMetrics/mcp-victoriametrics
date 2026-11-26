@@ -619,7 +619,7 @@ Tools:
 |------------------------------|--------------------------------------------------------|:------------------:|
 | `active_queries`             | Active queries                                         |         ✅         |
 | `alerts`                     | List of alerts                                         |         ✅         |
-| `documentation`              | Search documentation resources                         |         ✅         |
+| `documentation`              | Search VictoriaMetrics documentation                   |         ✅         |
 | `downsampling_filters_debug` | Downsampling filters debugger                          |         ❌         |
 | `explain_query`              | Explain Query                                          |         ✅         |
 | `export`                     | Export time series                                     |         ❌         |

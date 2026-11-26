@@ -16,9 +16,9 @@ const defaultDocSearchLimit = 30
 
 var (
 	toolDocumentation = mcp.NewTool(ToolNameDocumentation,
-		mcp.WithDescription("Search documentation resources for the given search query, returning the URIs of the resources that match the search criteria sorted by relevance. This tool can help to get context for any VictoriaMetrics related question."),
+		mcp.WithDescription("Search the embedded VictoriaMetrics documentation and blog posts, returning the matching documents sorted by relevance. Use only for questions about VictoriaMetrics products, not for other software."),
 		mcp.WithToolAnnotation(mcp.ToolAnnotation{
-			Title:           "Search documentation resources",
+			Title:           "Search VictoriaMetrics documentation",
 			ReadOnlyHint:    ptr(true),
 			DestructiveHint: ptr(false),
 			OpenWorldHint:   ptr(false),
