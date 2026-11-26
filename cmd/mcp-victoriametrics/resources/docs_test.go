@@ -14,6 +14,8 @@ import (
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
 )
 
 // TestGetDocResourceContent tests the GetDocResourceContent function
@@ -337,7 +339,7 @@ func TestExtractDocsIndexArchiveRejectsUnsafePaths(t *testing.T) {
 
 func TestOpenDocsIndexFallback(t *testing.T) {
 	docFiles := testDocFiles()
-	index := openDocsIndex(docFiles)
+	index := openDocsIndex(config.BackendMetrics, docFiles)
 	defer func() { _ = index.Close() }()
 	if got := searchTestIndex(t, index, "retention"); len(got) != 1 || got[0] != "docs://vm/a.md#0" {
 		t.Fatalf("unexpected search result: %v", got)

@@ -1,0 +1,102 @@
+package metrics
+
+import (
+	"context"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
+	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/tools"
+)
+
+const toolNameMetrics = "metrics"
+
+func toolMetrics(c *config.Config) mcp.Tool {
+	options := []mcp.ToolOption{
+		mcp.WithDescription("List of available metrics of the VictoriaMetrics instance. This tool uses `/api/v1/label/__name__/values` endpoint of VictoriaMetrics API."),
+		mcp.WithToolAnnotation(mcp.ToolAnnotation{
+			Title:           "List of metric names",
+			ReadOnlyHint:    ptr(true),
+			DestructiveHint: ptr(false),
+			OpenWorldHint:   ptr(true),
+		}),
+	}
+	if c.IsCloud() {
+		options = append(
+			options,
+			mcp.WithString("deployment_id",
+				mcp.Required(),
+				mcp.Title("Deployment ID"),
+				mcp.Description("Unique identifier of the deployment in VictoriaMetrics Cloud"),
+				mcp.Pattern(`^[a-zA-Z0-9\-_]+$`),
+			),
+		)
+	}
+	if c.IsCluster() || c.IsCloud() {
+		options = append(
+			options,
+			tools.WithTenantParam("Name of the tenant for which the list of metrics will be displayed"),
+		)
+	}
+	options = append(
+		options,
+		mcp.WithString("match",
+			mcp.Title("Match series for metric names"),
+			mcp.Description("Time series selector argument that selects the series from which to read the metrics"),
+			mcp.DefaultString(""),
+		),
+		mcp.WithString("start",
+			mcp.Title("Start timestamp"),
+			mcp.Description("Start timestamp for selection metric names"),
+			mcp.DefaultString(""),
+			mcp.Pattern(`^((?:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)|([0-9]+)$`),
+		),
+		mcp.WithString("end",
+			mcp.Title("End timestamp"),
+			mcp.Description("End timestamp for selection metric names"),
+			mcp.DefaultString(""),
+			mcp.Pattern(`^((?:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)|([0-9]+)$`),
+		),
+		mcp.WithNumber("limit",
+			mcp.Title("Maximum number of metric names"),
+			mcp.Description("Maximum number of metric names to return"),
+			mcp.DefaultNumber(0),
+			mcp.Min(0),
+		),
+	)
+	return mcp.NewTool(toolNameMetrics, options...)
+}
+
+func toolMetricsHandler(ctx context.Context, cfg *config.Config, tcr mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	match, err := tools.GetToolReqParam[string](tcr, "match", false)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	start, err := tools.GetToolReqParam[string](tcr, "start", false)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	end, err := tools.GetToolReqParam[string](tcr, "end", false)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	limit, err := tools.GetToolReqParam[float64](tcr, "limit", false)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	return getLabelValues(ctx, cfg, tcr, "__name__", match, start, end, limit)
+}
+
+func registerToolMetrics(s *server.MCPServer, c *config.Config) {
+	if c.IsToolDisabled(toolNameMetrics) {
+		return
+	}
+	s.AddTool(toolMetrics(c), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return toolMetricsHandler(ctx, c, request)
+	})
+}

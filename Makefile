@@ -11,7 +11,7 @@ update-blog: download-blog
 update-resources: update-docs update-blog
 
 docs-index:
-	rm -f ./cmd/mcp-victoriametrics/resources/docsindex/docs-index.tar.gz
+	rm -f ./cmd/mcp-victoriametrics/resources/docsindex/*.tar.gz
 	go run ./scripts/docsindex
 
 update-readme:
@@ -38,11 +38,25 @@ ui-build: ui-install
 ui-dev:
 	cd web && npm run dev
 
-dev-playground: build
-	VM_INSTANCE_ENTRYPOINT=https://play.victoriametrics.com \
-	VM_INSTANCE_TYPE=cluster \
+dev-run: build
 	MCP_SERVER_MODE=http \
 	MCP_LISTEN_ADDR=:8080 \
 	./mcp-victoriametrics
+
+dev-logs: export VM_INSTANCE_BACKEND = logs
+dev-logs: dev-run
+
+dev-traces: export VM_INSTANCE_BACKEND = traces
+dev-traces: dev-run
+
+dev-playground: export VM_INSTANCE_ENTRYPOINT = https://play.victoriametrics.com
+dev-playground: export VM_INSTANCE_TYPE = cluster
+dev-playground: dev-run
+
+dev-playground-logs: export VM_INSTANCE_ENTRYPOINT = https://play-vmlogs.victoriametrics.com
+dev-playground-logs: dev-logs
+
+dev-playground-traces: export VM_INSTANCE_ENTRYPOINT = https://play-vtraces.victoriametrics.com
+dev-playground-traces: dev-traces
 
 all: test check lint build

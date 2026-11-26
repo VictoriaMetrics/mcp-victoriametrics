@@ -17,7 +17,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/VictoriaMetrics/metrics"
+	metrics "github.com/VictoriaMetrics/metrics"
 
 	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/auth"
 	"github.com/VictoriaMetrics/mcp-victoriametrics/cmd/mcp-victoriametrics/config"
@@ -32,18 +32,6 @@ var (
 	version = "dev"
 	date    = "unknown"
 )
-
-const defaultInstructions = `
-You are Virtual Assistant, a tool for interacting with VictoriaMetrics API and documentation in different tasks related to monitoring and observability.
-
-You have the full documentation about VictoriaMetrics products in your resources.
-For questions about VictoriaMetrics products, use the documentation tool and favor the found documents over your own internal knowledge.
-Do not use this server's tools for questions unrelated to VictoriaMetrics products.
-
-You have many tools to get data from VictoriaMetrics, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
-
-Try not to second guess information - if you don't know something or lack information, it's better to ask.
-`
 
 const (
 	_shutdownPeriod      = 15 * time.Second
@@ -76,6 +64,7 @@ func main() {
 
 	if !c.IsStdio() {
 		slog.Info("Starting mcp-victoriametrics",
+			"backend", c.Backend(),
 			"version", version,
 			"date", date,
 			"mode", c.ServerMode(),
@@ -89,13 +78,13 @@ func main() {
 	hooks.RegisterMetrics(serverHooks, ms)
 	hooks.RegisterLogging(serverHooks)
 
-	instructions := defaultInstructions
+	instructions := defaultInstructions[c.Backend()]
 	if override := c.InstructionsOverride(); override != "" {
 		instructions = override
 	}
 
 	s := server.NewMCPServer(
-		"VictoriaMetrics",
+		c.Backend().ProductName(),
 		fmt.Sprintf("v%s (date: %s)", version, date),
 		server.WithRecovery(),
 		server.WithLogging(),
@@ -108,7 +97,7 @@ func main() {
 
 	registry.Register(s, c)
 	if !c.IsToolDisabled(tools.ToolNameDocumentation) {
-		resources.RegisterDocsResources(s, c)
+		resources.Register(s, c)
 	}
 
 	if c.IsStdio() {
@@ -221,4 +210,41 @@ func main() {
 	}
 
 	slog.Info("Server stopped.")
+}
+
+var defaultInstructions = map[config.Backend]string{
+	config.BackendMetrics: `
+You are Virtual Assistant, a tool for interacting with VictoriaMetrics API and documentation in different tasks related to monitoring and observability.
+
+You have the full documentation about VictoriaMetrics products in your resources.
+For questions about VictoriaMetrics products, use the documentation tool and favor the found documents over your own internal knowledge.
+Do not use this server's tools for questions unrelated to VictoriaMetrics products.
+
+You have many tools to get data from VictoriaMetrics, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
+
+Try not to second guess information - if you don't know something or lack information, it's better to ask.
+	`,
+	config.BackendLogs: `
+You are Virtual Assistant, a tool for interacting with VictoriaLogs API and documentation in different tasks related to logs and observability.
+You use LogsQL language to query logs and get information from the logs stored in VictoriaLogs.
+
+You have the full documentation about VictoriaLogs in your resources.
+For questions about VictoriaLogs, use the documentation tool and favor the found documents over your own internal knowledge.
+Do not use this server's tools for questions unrelated to VictoriaLogs.
+
+You have many tools to get data from VictoriaLogs, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
+
+Try not to second guess information - if you don't know something or lack information, it's better to ask.
+	`,
+	config.BackendTraces: `
+You are Virtual Assistant, a tool for interacting with VictoriaTraces API and documentation in different tasks related to distributed tracing and observability.
+
+You have the full documentation about VictoriaTraces in your resources.
+For questions about VictoriaTraces, use the documentation tool and favor the found documents over your own internal knowledge.
+Do not use this server's tools for questions unrelated to VictoriaTraces.
+
+You have many tools to get data from VictoriaTraces, but try to specify the query as accurately as possible, reducing the resulting sample, as some queries can be query heavy.
+
+Try not to second guess information - if you don't know something or lack information, it's better to ask.
+	`,
 }
